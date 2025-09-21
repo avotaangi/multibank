@@ -107,7 +107,7 @@ const BankCardStack = () => {
     <div className="relative w-full flex justify-center pb-8">
       {/* Bank Cards Stack - Horizontal */}
       <div 
-        className="relative h-[220px] w-[400px] cursor-pointer select-none overflow-hidden"
+        className="relative h-[220px] w-[450px] cursor-pointer select-none overflow-hidden"
         onTouchStart={handleStart}
         onTouchMove={handleMove}
         onTouchEnd={handleEnd}
