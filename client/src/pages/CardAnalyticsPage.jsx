@@ -162,21 +162,23 @@ const CardAnalyticsPage = () => {
         onMouseLeave={handleEnd}
         style={{ touchAction: 'pan-y' }}
       >
-        {/* Background cards */}
-        {cards.map((card, index) => {
-          if (index === currentCardIndex) return null; // Пропускаем текущую выбранную карту
-          
-          console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}`);
-          
-          const isPrevious = index < currentCardIndex; // Предыдущие карты (выше в списке)
-          const isNext = index > currentCardIndex; // Следующие карты (ниже в списке)
-          const distance = Math.abs(index - currentCardIndex);
-          const scale = Math.max(0.95 - distance * 0.03, 0.85);
-          
-          // Предыдущие карты (выше в списке) - слева, следующие (ниже в списке) - справа
-          const translateX = isPrevious ? -distance * 20 : distance * 20;
-          const translateY = distance * 8;
-          const opacity = Math.max(0.8 - distance * 0.1, 0.5);
+        {/* Background cards - отображаем в правильном порядке */}
+        {cards
+          .map((card, index) => ({ card, index }))
+          .filter(({ index }) => index !== currentCardIndex) // Убираем текущую карту
+          .sort((a, b) => Math.abs(a.index - currentCardIndex) - Math.abs(b.index - currentCardIndex)) // Сортируем по расстоянию
+          .map(({ card, index }, sortedIndex) => {
+            console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}, sorted: ${sortedIndex}`);
+            
+            const isPrevious = index < currentCardIndex; // Предыдущие карты (выше в списке)
+            const isNext = index > currentCardIndex; // Следующие карты (ниже в списке)
+            const distance = Math.abs(index - currentCardIndex);
+            const scale = Math.max(0.95 - sortedIndex * 0.05, 0.8);
+            
+            // Предыдущие карты (выше в списке) - слева, следующие (ниже в списке) - справа
+            const translateX = isPrevious ? -20 - sortedIndex * 15 : 20 + sortedIndex * 15;
+            const translateY = sortedIndex * 10;
+            const opacity = Math.max(0.8 - sortedIndex * 0.15, 0.4);
           
           return (
             <div
@@ -186,7 +188,7 @@ const CardAnalyticsPage = () => {
                 backgroundColor: card.color,
                 transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
                 opacity: opacity,
-                zIndex: 10 - distance,
+                zIndex: 15 - sortedIndex,
               }}
             >
               <div className="p-6 h-full flex flex-col justify-between">
@@ -222,7 +224,7 @@ const CardAnalyticsPage = () => {
               </div>
             </div>
           );
-        })}
+          })}
         
         {/* Current selected card */}
         <div 
