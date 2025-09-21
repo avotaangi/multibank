@@ -176,21 +176,12 @@ const CardAnalyticsPage = () => {
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева от главной
+            // Все предыдущие карты - слева от главной
             const position = currentCardIndex - index; // 1, 2, 3...
-            if (position === 1) {
-              // Первая предыдущая карта - слева на том же уровне
-              translateX = -25;
-              translateY = 0;
-              scale = 0.9;
-              opacity = 0.8;
-            } else {
-              // Остальные предыдущие карты - под главной
-              translateX = -30 - (position - 2) * 18;
-              translateY = 15 + (position - 1) * 8;
-              scale = 0.85 - (position - 2) * 0.03;
-              opacity = 0.7 - (position - 2) * 0.1;
-            }
+            translateX = -25 - (position - 1) * 20; // Все карты слева, с интервалом 20px
+            translateY = (position - 1) * 5; // Небольшое смещение вниз для каждой карты
+            scale = 0.9 - (position - 1) * 0.03;
+            opacity = 0.8 - (position - 1) * 0.1;
           } else {
             // Следующие карты - справа, под главной картой
             const position = index - currentCardIndex; // 1, 2, 3...
