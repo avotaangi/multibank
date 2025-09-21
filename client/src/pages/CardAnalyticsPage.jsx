@@ -176,19 +176,19 @@ const CardAnalyticsPage = () => {
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева
+            // Предыдущие карты - слева, под главной картой
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -25 - (position - 1) * 15;
-            translateY = position * 6;
-            scale = 0.9 - (position - 1) * 0.03;
-            opacity = 0.8 - (position - 1) * 0.1;
+            translateX = -30 - (position - 1) * 18;
+            translateY = 15 + position * 8; // Смещаем вниз под главную карту
+            scale = 0.85 - (position - 1) * 0.03;
+            opacity = 0.7 - (position - 1) * 0.1;
           } else {
-            // Следующие карты - справа
+            // Следующие карты - справа, под главной картой
             const position = index - currentCardIndex; // 1, 2, 3...
-            translateX = 25 + (position - 1) * 15;
-            translateY = position * 6;
-            scale = 0.9 - (position - 1) * 0.03;
-            opacity = 0.8 - (position - 1) * 0.1;
+            translateX = 30 + (position - 1) * 18;
+            translateY = 15 + position * 8; // Смещаем вниз под главную карту
+            scale = 0.85 - (position - 1) * 0.03;
+            opacity = 0.7 - (position - 1) * 0.1;
           }
           
           // Ограничиваем значения
@@ -205,7 +205,7 @@ const CardAnalyticsPage = () => {
                 backgroundColor: card.color,
                 transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
                 opacity: opacity,
-                zIndex: 10 - distance,
+                zIndex: 15 - distance,
               }}
             >
               <div className="p-6 h-full flex flex-col justify-between">
