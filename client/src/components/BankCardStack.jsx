@@ -115,14 +115,14 @@ const BankCardStack = () => {
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
-        style={{ transform: `translateX(${swipeOffset * 0.1}px)` }}
+        style={{ transform: `translateX(-${swipeOffset * 0.1}px)` }}
       >
         {/* VTB Card */}
         <div 
           className="absolute top-0 left-0 w-[280px] h-[200px] rounded-[27px] z-30 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[0].color,
-            transform: `translateX(${swipeOffset > 50 ? swipeOffset * 0.3 : 0}px)`
+            transform: `translateX(-${swipeOffset > 50 ? swipeOffset * 0.3 : 0}px)`
           }}
         >
           <div className="p-6 h-full flex items-center justify-between">
@@ -136,7 +136,7 @@ const BankCardStack = () => {
           className="absolute top-0 left-[20px] w-[280px] h-[200px] rounded-[27px] z-20 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[1].color,
-            transform: `translateX(${swipeOffset > 100 ? swipeOffset * 0.2 : 0}px)`
+            transform: `translateX(-${swipeOffset > 100 ? swipeOffset * 0.2 : 0}px)`
           }}
         >
           <div className="p-6 h-full flex items-center justify-between">
@@ -155,7 +155,7 @@ const BankCardStack = () => {
           className="absolute top-0 left-[40px] w-[280px] h-[200px] rounded-[27px] z-10 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[2].color,
-            transform: `translateX(${swipeOffset > 150 ? swipeOffset * 0.1 : 0}px)`
+            transform: `translateX(-${swipeOffset > 150 ? swipeOffset * 0.1 : 0}px)`
           }}
         >
           <div className="p-6 h-full flex flex-col justify-between">
