@@ -1,9 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const MyCardsPage = () => {
   const navigate = useNavigate();
   const [selectedCard, setSelectedCard] = useState(null);
+  const [cardsVisible, setCardsVisible] = useState(false);
+
+  useEffect(() => {
+    // Анимация входа карт с задержкой
+    const timer = setTimeout(() => {
+      setCardsVisible(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const cards = [
     {
@@ -102,8 +112,13 @@ const MyCardsPage = () => {
         {cards.map((card, index) => (
           <div
             key={card.id}
-            className="relative w-full h-[189px] rounded-[27px] cursor-pointer transition-transform duration-200 hover:scale-105"
-            style={{ backgroundColor: card.color }}
+            className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-500 ease-out hover:scale-105 ${
+              cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ 
+              backgroundColor: card.color,
+              transitionDelay: `${index * 150}ms`
+            }}
             onClick={() => handleCardClick(card)}
           >
             {/* Card Content */}

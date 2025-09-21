@@ -53,6 +53,27 @@
   .smooth-transition {
     transition: all 0.3s ease-in-out;
   }
+  
+  /* Card stack to list transition */
+  .card-stack-to-list {
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Card entrance animation */
+  .card-entrance {
+    animation: cardEntrance 0.5s ease-out forwards;
+  }
+  
+  @keyframes cardEntrance {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 }
 
 @layer components {

@@ -95,14 +95,21 @@ const BankCardStack = () => {
     
     // Если свайп больше 100px влево - переходим на страницу "Мои карты"
     if (deltaX < -100) {
-      // Добавляем плавный переход
+      // Анимация разворачивания карт
       const container = e.currentTarget;
-      container.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-      container.style.transform = 'translateX(-100%)';
+      const cards = container.querySelectorAll('[data-card]');
       
+      // Анимация каждой карты
+      cards.forEach((card, index) => {
+        card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+        card.style.transform = `translateX(-${100 + index * 20}%) scale(0.9)`;
+        card.style.opacity = '0.8';
+      });
+      
+      // Переход на страницу через 400ms
       setTimeout(() => {
         navigate('/my-cards');
-      }, 200);
+      }, 400);
     }
     
     setIsDragging(false);
@@ -126,6 +133,7 @@ const BankCardStack = () => {
       >
         {/* VTB Card */}
         <div 
+          data-card="0"
           className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[320px] h-[220px] rounded-[27px] z-30 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[0].color,
@@ -140,6 +148,7 @@ const BankCardStack = () => {
         
         {/* T-Bank Card */}
         <div 
+          data-card="1"
           className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[320px] h-[220px] rounded-[27px] z-20 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[1].color,
@@ -159,6 +168,7 @@ const BankCardStack = () => {
         
         {/* Alpha Bank Card */}
         <div 
+          data-card="2"
           className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[320px] h-[220px] rounded-[27px] z-10 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[2].color,
