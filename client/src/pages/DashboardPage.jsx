@@ -50,10 +50,10 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Bank Cards Stack */}
-      <div className="relative z-10 px-6 py-4">
-        <BankCardStack />
-      </div>
+            {/* Bank Cards Stack */}
+            <div className="relative z-10 px-2 py-4">
+              <BankCardStack />
+            </div>
 
       {/* Add Bank Button */}
       <div className="relative z-10 text-center py-8">

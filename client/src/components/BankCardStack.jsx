@@ -5,8 +5,8 @@ const BankCardStack = () => {
   const navigate = useNavigate();
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const startY = useRef(0);
-  const currentY = useRef(0);
+  const startX = useRef(0);
+  const currentX = useRef(0);
 
   const cards = [
     {
@@ -70,31 +70,31 @@ const BankCardStack = () => {
 
   const handleStart = (e) => {
     setIsDragging(true);
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    startY.current = clientY;
-    currentY.current = clientY;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    startX.current = clientX;
+    currentX.current = clientX;
   };
 
   const handleMove = (e) => {
     if (!isDragging) return;
     
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    currentY.current = clientY;
-    const deltaY = currentY.current - startY.current;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    currentX.current = clientX;
+    const deltaX = currentX.current - startX.current;
     
-    // Ограничиваем свайп только вниз
-    if (deltaY > 0) {
-      setSwipeOffset(deltaY);
+    // Ограничиваем свайп только влево (отрицательные значения)
+    if (deltaX < 0) {
+      setSwipeOffset(Math.abs(deltaX));
     }
   };
 
   const handleEnd = (e) => {
     if (!isDragging) return;
     
-    const deltaY = currentY.current - startY.current;
+    const deltaX = currentX.current - startX.current;
     
-    // Если свайп больше 100px - переходим на страницу "Мои карты"
-    if (deltaY > 100) {
+    // Если свайп больше 100px влево - переходим на страницу "Мои карты"
+    if (deltaX < -100) {
       navigate('/my-cards');
     }
     
@@ -104,10 +104,10 @@ const BankCardStack = () => {
 
 
   return (
-    <div className="relative w-full max-w-sm mx-auto pb-8">
-      {/* Bank Cards Stack */}
+    <div className="relative w-full max-w-md mx-auto pb-8">
+      {/* Bank Cards Stack - Horizontal */}
       <div 
-        className="relative h-[200px] cursor-pointer select-none"
+        className="relative h-[200px] cursor-pointer select-none overflow-hidden"
         onTouchStart={handleStart}
         onTouchMove={handleMove}
         onTouchEnd={handleEnd}
@@ -115,14 +115,14 @@ const BankCardStack = () => {
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
-        style={{ transform: `translateY(${swipeOffset * 0.1}px)` }}
+        style={{ transform: `translateX(${swipeOffset * 0.1}px)` }}
       >
         {/* VTB Card */}
         <div 
-          className="absolute top-0 left-0 w-full h-[207px] rounded-[27px] z-30 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-0 w-[280px] h-[200px] rounded-[27px] z-30 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[0].color,
-            transform: `translateY(${swipeOffset > 50 ? swipeOffset * 0.3 : 0}px)`
+            transform: `translateX(${swipeOffset > 50 ? swipeOffset * 0.3 : 0}px)`
           }}
         >
           <div className="p-6 h-full flex items-center justify-between">
@@ -133,10 +133,10 @@ const BankCardStack = () => {
         
         {/* T-Bank Card */}
         <div 
-          className="absolute top-7 left-0 w-full h-[200px] rounded-[27px] z-20 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-[20px] w-[280px] h-[200px] rounded-[27px] z-20 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[1].color,
-            transform: `translateY(${swipeOffset > 100 ? swipeOffset * 0.2 : 0}px)`
+            transform: `translateX(${swipeOffset > 100 ? swipeOffset * 0.2 : 0}px)`
           }}
         >
           <div className="p-6 h-full flex items-center justify-between">
@@ -152,10 +152,10 @@ const BankCardStack = () => {
         
         {/* Alpha Bank Card */}
         <div 
-          className="absolute top-14 left-0 w-full h-[189px] rounded-[27px] z-10 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-[40px] w-[280px] h-[200px] rounded-[27px] z-10 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[2].color,
-            transform: `translateY(${swipeOffset > 150 ? swipeOffset * 0.1 : 0}px)`
+            transform: `translateX(${swipeOffset > 150 ? swipeOffset * 0.1 : 0}px)`
           }}
         >
           <div className="p-6 h-full flex flex-col justify-between">
@@ -179,13 +179,11 @@ const BankCardStack = () => {
       {isDragging && swipeOffset > 20 && (
         <div className="absolute top-[220px] left-1/2 transform -translate-x-1/2 text-center">
           <div className="text-gray-500 text-sm font-ibm">
-            Свайпните вниз для просмотра всех карт
+            Свайпните влево для просмотра всех карт
           </div>
           <div className="w-8 h-1 bg-gray-300 rounded mx-auto mt-2"></div>
         </div>
       )}
-
-
     </div>
   );
 };
