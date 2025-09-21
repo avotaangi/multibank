@@ -79,6 +79,8 @@ const CardAnalyticsPage = () => {
   }, [location.state]);
 
   const currentCard = cards[currentCardIndex];
+  
+  console.log(`Current card: ${currentCard.name} at index ${currentCardIndex}`);
 
   // Swipe handlers
   const handleStart = (e) => {
@@ -164,15 +166,17 @@ const CardAnalyticsPage = () => {
         {cards.map((card, index) => {
           if (index === currentCardIndex) return null; // Пропускаем текущую выбранную карту
           
+          console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}`);
+          
           const isPrevious = index < currentCardIndex; // Предыдущие карты (выше в списке)
           const isNext = index > currentCardIndex; // Следующие карты (ниже в списке)
           const distance = Math.abs(index - currentCardIndex);
-          const scale = Math.max(0.9 - distance * 0.05, 0.8);
+          const scale = Math.max(0.95 - distance * 0.03, 0.85);
           
           // Предыдущие карты (выше в списке) - слева, следующие (ниже в списке) - справа
-          const translateX = isPrevious ? -distance * 15 : distance * 15;
-          const translateY = distance * 5;
-          const opacity = Math.max(0.6 - distance * 0.15, 0.3);
+          const translateX = isPrevious ? -distance * 20 : distance * 20;
+          const translateY = distance * 8;
+          const opacity = Math.max(0.8 - distance * 0.1, 0.5);
           
           return (
             <div
