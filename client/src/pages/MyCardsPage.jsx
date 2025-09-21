@@ -128,7 +128,7 @@ const MyCardsPage = () => {
     
     const deltaX = currentX.current - startX.current;
     
-    // Если свайп больше 100px влево - переключаем на следующую карту
+    // Если свайп больше 100px влево - переключаем на следующую карту (ниже в списке)
     if (deltaX < -100 && currentCardIndex < cards.length - 1) {
       const nextIndex = currentCardIndex + 1;
       setCurrentCardIndex(nextIndex);
@@ -136,7 +136,7 @@ const MyCardsPage = () => {
       setShowAnalytics(true); // Открываем аналитику при свайпе
       setHideBackgroundCards(true); // Скрываем карты за первой при свайпе
     }
-    // Если свайп больше 100px вправо - переключаем на предыдущую карту
+    // Если свайп больше 100px вправо - переключаем на предыдущую карту (выше в списке)
     else if (deltaX > 100 && currentCardIndex > 0) {
       const prevIndex = currentCardIndex - 1;
       setCurrentCardIndex(prevIndex);
@@ -195,15 +195,15 @@ const MyCardsPage = () => {
         >
           {/* Background cards with beautiful transition */}
           {!hideBackgroundCards && cards.map((card, index) => {
-            if (index === currentCardIndex) return null; // Skip current card
+            if (index === currentCardIndex) return null; // Пропускаем текущую выбранную карту
             
-            const isAbove = index < currentCardIndex; // Карты выше выбранной
-            const isBelow = index > currentCardIndex; // Карты ниже выбранной
+            const isPrevious = index < currentCardIndex; // Предыдущие карты (выше в списке)
+            const isNext = index > currentCardIndex; // Следующие карты (ниже в списке)
             const distance = Math.abs(index - currentCardIndex);
             const scale = Math.max(0.9 - distance * 0.05, 0.8);
             
-            // Карты выше выбранной - слева, ниже - справа
-            const translateX = isAbove ? -distance * 15 : distance * 15;
+            // Предыдущие карты (выше в списке) - слева, следующие (ниже в списке) - справа
+            const translateX = isPrevious ? -distance * 15 : distance * 15;
             const translateY = distance * 5;
             const opacity = Math.max(0.6 - distance * 0.15, 0.3);
             
