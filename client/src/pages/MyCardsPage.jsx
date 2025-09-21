@@ -77,6 +77,15 @@ const MyCardsPage = () => {
 
   const handleCardClick = (card) => {
     setSelectedCard(card);
+    
+    // Перемещаем выбранную карту наверх
+    const cardElement = document.querySelector(`[data-card-id="${card.id}"]`);
+    if (cardElement) {
+      cardElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
   };
 
   const closeAnalytics = () => {
@@ -112,9 +121,10 @@ const MyCardsPage = () => {
         {cards.map((card, index) => (
           <div
             key={card.id}
+            data-card-id={card.id}
             className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
               cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20'
-            }`}
+            } ${selectedCard?.id === card.id ? 'ring-4 ring-blue-500 ring-opacity-50 scale-105' : ''}`}
             style={{ 
               backgroundColor: card.color,
               transitionDelay: `${index * 100}ms`
