@@ -162,23 +162,36 @@ const CardAnalyticsPage = () => {
         onMouseLeave={handleEnd}
         style={{ touchAction: 'pan-y' }}
       >
-        {/* Background cards - отображаем в правильном порядке */}
-        {cards
-          .map((card, index) => ({ card, index }))
-          .filter(({ index }) => index !== currentCardIndex) // Убираем текущую карту
-          .sort((a, b) => Math.abs(a.index - currentCardIndex) - Math.abs(b.index - currentCardIndex)) // Сортируем по расстоянию
-          .map(({ card, index }, sortedIndex) => {
-            console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}, sorted: ${sortedIndex}`);
-            
-            const isPrevious = index < currentCardIndex; // Предыдущие карты (выше в списке)
-            const isNext = index > currentCardIndex; // Следующие карты (ниже в списке)
-            const distance = Math.abs(index - currentCardIndex);
-            const scale = Math.max(0.95 - sortedIndex * 0.05, 0.8);
-            
-            // Предыдущие карты (выше в списке) - слева, следующие (ниже в списке) - справа
-            const translateX = isPrevious ? -20 - sortedIndex * 15 : 20 + sortedIndex * 15;
-            const translateY = sortedIndex * 10;
-            const opacity = Math.max(0.8 - sortedIndex * 0.15, 0.4);
+        {/* Background cards - упрощенная логика */}
+        {cards.map((card, index) => {
+          if (index === currentCardIndex) return null; // Пропускаем текущую выбранную карту
+          
+          console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}`);
+          
+          const isPrevious = index < currentCardIndex; // Предыдущие карты (выше в списке)
+          const isNext = index > currentCardIndex; // Следующие карты (ниже в списке)
+          const distance = Math.abs(index - currentCardIndex);
+          
+          // Простая логика позиционирования
+          let translateX, translateY, scale, opacity;
+          
+          if (isPrevious) {
+            // Предыдущие карты - слева, ближе к выбранной
+            translateX = -30 - (currentCardIndex - index - 1) * 20;
+            translateY = (currentCardIndex - index) * 8;
+            scale = 0.9 - (currentCardIndex - index - 1) * 0.05;
+            opacity = 0.7 - (currentCardIndex - index - 1) * 0.1;
+          } else {
+            // Следующие карты - справа, ближе к выбранной
+            translateX = 30 + (index - currentCardIndex - 1) * 20;
+            translateY = (index - currentCardIndex) * 8;
+            scale = 0.9 - (index - currentCardIndex - 1) * 0.05;
+            opacity = 0.7 - (index - currentCardIndex - 1) * 0.1;
+          }
+          
+          // Ограничиваем значения
+          scale = Math.max(scale, 0.8);
+          opacity = Math.max(opacity, 0.4);
           
           return (
             <div
@@ -188,7 +201,7 @@ const CardAnalyticsPage = () => {
                 backgroundColor: card.color,
                 transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
                 opacity: opacity,
-                zIndex: 15 - sortedIndex,
+                zIndex: 10 - distance,
               }}
             >
               <div className="p-6 h-full flex flex-col justify-between">
@@ -224,7 +237,7 @@ const CardAnalyticsPage = () => {
               </div>
             </div>
           );
-          })}
+        })}
         
         {/* Current selected card */}
         <div 
