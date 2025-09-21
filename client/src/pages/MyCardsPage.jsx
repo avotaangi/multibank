@@ -101,6 +101,7 @@ const MyCardsPage = () => {
   const closeAnalytics = () => {
     setShowAnalytics(false);
     setHideBackgroundCards(false); // Показываем карты за первой снова
+    // Не сбрасываем выбранную карту, оставляем её зафиксированной наверху
   };
 
   // Swipe handlers - Only work when card is selected
@@ -132,14 +133,16 @@ const MyCardsPage = () => {
       const nextIndex = currentCardIndex + 1;
       setCurrentCardIndex(nextIndex);
       setSelectedCard(cards[nextIndex]);
-      setHideBackgroundCards(false); // Показываем карты за первой при свайпе
+      setShowAnalytics(true); // Открываем аналитику при свайпе
+      setHideBackgroundCards(true); // Скрываем карты за первой при свайпе
     }
     // Если свайп больше 100px вправо - переключаем на предыдущую карту
     else if (deltaX > 100 && currentCardIndex > 0) {
       const prevIndex = currentCardIndex - 1;
       setCurrentCardIndex(prevIndex);
       setSelectedCard(cards[prevIndex]);
-      setHideBackgroundCards(false); // Показываем карты за первой при свайпе
+      setShowAnalytics(true); // Открываем аналитику при свайпе
+      setHideBackgroundCards(true); // Скрываем карты за первой при свайпе
     }
     
     setIsDragging(false);
@@ -150,13 +153,21 @@ const MyCardsPage = () => {
     navigate('/dashboard');
   };
 
+  const resetCardSelection = () => {
+    setSelectedCard(null);
+    setCurrentCardIndex(0);
+    setShowAnalytics(false);
+    setHideBackgroundCards(false);
+    setIsTransitioning(false);
+  };
+
   return (
     <div className="min-h-screen bg-white animate-slide-up">
       {/* Header */}
       <div className="relative z-10 px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <button 
-            onClick={handleBackToDashboard}
+            onClick={selectedCard ? resetCardSelection : handleBackToDashboard}
             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,11 +197,13 @@ const MyCardsPage = () => {
           {!hideBackgroundCards && cards.map((card, index) => {
             if (index === currentCardIndex) return null; // Skip current card
             
-            const isBehind = index < currentCardIndex;
+            const isAbove = index < currentCardIndex; // Карты выше выбранной
+            const isBelow = index > currentCardIndex; // Карты ниже выбранной
             const distance = Math.abs(index - currentCardIndex);
             const scale = Math.max(0.9 - distance * 0.05, 0.8);
-            // Все карты за первой картой располагаются справа
-            const translateX = distance * 15;
+            
+            // Карты выше выбранной - слева, ниже - справа
+            const translateX = isAbove ? -distance * 15 : distance * 15;
             const translateY = distance * 5;
             const opacity = Math.max(0.6 - distance * 0.15, 0.3);
             
