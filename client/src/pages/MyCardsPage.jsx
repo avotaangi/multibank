@@ -72,6 +72,7 @@ const MyCardsPage = () => {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [hideBackgroundCards, setHideBackgroundCards] = useState(false);
   const startX = useRef(0);
   const currentX = useRef(0);
 
@@ -88,6 +89,7 @@ const MyCardsPage = () => {
     setSelectedCard(card);
     setCurrentCardIndex(cards.findIndex(c => c.id === card.id));
     setShowAnalytics(true);
+    setHideBackgroundCards(true); // Скрываем карты за первой
     setIsTransitioning(true);
     
     // Завершаем переход через 600ms
@@ -98,6 +100,7 @@ const MyCardsPage = () => {
 
   const closeAnalytics = () => {
     setShowAnalytics(false);
+    setHideBackgroundCards(false); // Показываем карты за первой снова
   };
 
   // Swipe handlers
@@ -129,12 +132,14 @@ const MyCardsPage = () => {
       const nextIndex = currentCardIndex + 1;
       setCurrentCardIndex(nextIndex);
       setSelectedCard(cards[nextIndex]);
+      setHideBackgroundCards(false); // Показываем карты за первой при свайпе
     }
     // Если свайп больше 100px вправо - переключаем на предыдущую карту
     else if (deltaX > 100 && currentCardIndex > 0) {
       const prevIndex = currentCardIndex - 1;
       setCurrentCardIndex(prevIndex);
       setSelectedCard(cards[prevIndex]);
+      setHideBackgroundCards(false); // Показываем карты за первой при свайпе
     }
     
     setIsDragging(false);
@@ -178,7 +183,7 @@ const MyCardsPage = () => {
           onMouseLeave={handleEnd}
         >
           {/* Background cards with beautiful transition */}
-          {cards.map((card, index) => {
+          {!hideBackgroundCards && cards.map((card, index) => {
             if (index === currentCardIndex) return null; // Skip current card
             
             const isBehind = index < currentCardIndex;
