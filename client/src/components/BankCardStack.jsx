@@ -99,11 +99,11 @@ const BankCardStack = () => {
       const container = e.currentTarget;
       const cards = container.querySelectorAll('[data-card]');
       
-      // Анимация каждой карты - свайп справа налево
+      // Анимация каждой карты - свайп налево и сразу вверх
       cards.forEach((card, index) => {
         card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-        // Карты свайпаются влево с небольшой задержкой
-        card.style.transform = `translateX(-${100 + index * 20}%)`;
+        // Карты улетают налево и сразу вверх
+        card.style.transform = `translateX(-${100 + index * 20}%) translateY(-${200 + index * 50}px)`;
         card.style.opacity = '0.8';
       });
       
