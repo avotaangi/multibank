@@ -78,7 +78,7 @@ const MyCardsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white animate-slide-up">
       {/* Header */}
       <div className="relative z-10 px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">

@@ -95,7 +95,14 @@ const BankCardStack = () => {
     
     // Если свайп больше 100px влево - переходим на страницу "Мои карты"
     if (deltaX < -100) {
-      navigate('/my-cards');
+      // Добавляем плавный переход
+      const container = e.currentTarget;
+      container.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      container.style.transform = 'translateX(-100%)';
+      
+      setTimeout(() => {
+        navigate('/my-cards');
+      }, 200);
     }
     
     setIsDragging(false);
