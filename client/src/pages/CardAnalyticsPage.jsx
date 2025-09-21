@@ -166,32 +166,36 @@ const CardAnalyticsPage = () => {
         {cards.map((card, index) => {
           if (index === currentCardIndex) return null; // Пропускаем текущую выбранную карту
           
-          console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}`);
-          
           const isPrevious = index < currentCardIndex; // Предыдущие карты (выше в списке)
           const isNext = index > currentCardIndex; // Следующие карты (ниже в списке)
           const distance = Math.abs(index - currentCardIndex);
           
-          // Простая логика позиционирования
+          console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}, isPrevious: ${isPrevious}, isNext: ${isNext}, distance: ${distance}`);
+          
+          // Простая и понятная логика позиционирования
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева, ближе к выбранной
-            translateX = -30 - (currentCardIndex - index - 1) * 20;
-            translateY = (currentCardIndex - index) * 8;
-            scale = 0.9 - (currentCardIndex - index - 1) * 0.05;
-            opacity = 0.7 - (currentCardIndex - index - 1) * 0.1;
+            // Предыдущие карты - слева
+            const position = currentCardIndex - index; // 1, 2, 3...
+            translateX = -25 - (position - 1) * 15;
+            translateY = position * 6;
+            scale = 0.9 - (position - 1) * 0.03;
+            opacity = 0.8 - (position - 1) * 0.1;
           } else {
-            // Следующие карты - справа, ближе к выбранной
-            translateX = 30 + (index - currentCardIndex - 1) * 20;
-            translateY = (index - currentCardIndex) * 8;
-            scale = 0.9 - (index - currentCardIndex - 1) * 0.05;
-            opacity = 0.7 - (index - currentCardIndex - 1) * 0.1;
+            // Следующие карты - справа
+            const position = index - currentCardIndex; // 1, 2, 3...
+            translateX = 25 + (position - 1) * 15;
+            translateY = position * 6;
+            scale = 0.9 - (position - 1) * 0.03;
+            opacity = 0.8 - (position - 1) * 0.1;
           }
           
           // Ограничиваем значения
           scale = Math.max(scale, 0.8);
-          opacity = Math.max(opacity, 0.4);
+          opacity = Math.max(opacity, 0.5);
+          
+          console.log(`Card ${card.name}: translateX=${translateX}, translateY=${translateY}, scale=${scale}, opacity=${opacity}`);
           
           return (
             <div
