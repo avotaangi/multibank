@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit } from 'lucide-react';
 
@@ -6,8 +6,6 @@ const MyCardsPage = () => {
   const navigate = useNavigate();
   const [selectedCard, setSelectedCard] = useState(null);
   const [cardsVisible, setCardsVisible] = useState(false);
-  const [expandedCards, setExpandedCards] = useState(new Set());
-  const cardRefs = useRef({});
 
   useEffect(() => {
     // Анимация входа карт сверху вниз с эффектом "улетания"
@@ -80,32 +78,10 @@ const MyCardsPage = () => {
 
   const handleCardClick = (card) => {
     setSelectedCard(card);
-    
-    // Добавляем карту в развернутые
-    setExpandedCards(prev => new Set([...prev, card.id]));
-    
-    // Прокручиваем к карте
-    setTimeout(() => {
-      if (cardRefs.current[card.id]) {
-        cardRefs.current[card.id].scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }
-    }, 100);
   };
 
-  const closeAnalytics = (cardId) => {
-    if (cardId) {
-      setExpandedCards(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(cardId);
-        return newSet;
-      });
-    } else {
-      setSelectedCard(null);
-      setExpandedCards(new Set());
-    }
+  const closeAnalytics = () => {
+    setSelectedCard(null);
   };
 
   const handleBackToDashboard = () => {
@@ -132,137 +108,108 @@ const MyCardsPage = () => {
         </div>
       </div>
 
-      {/* Cards List with Analytics */}
-      <div className="relative z-10 px-6 py-4 space-y-6">
-        {cards.map((card, index) => (
-          <div key={card.id} ref={el => cardRefs.current[card.id] = el}>
-            {/* Card */}
-            <div
-              className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
-                cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20'
-              } ${expandedCards.has(card.id) ? 'ring-4 ring-blue-500 ring-opacity-50 scale-105' : ''}`}
-              style={{ 
-                backgroundColor: card.color,
-                transitionDelay: `${index * 100}ms`
-              }}
-              onClick={() => handleCardClick(card)}
-            >
-              {/* Card Content */}
-              <div className="p-6 h-full flex flex-col justify-between">
-                {/* Top Row */}
-                <div className="flex items-center justify-between">
-                  {card.id === 'vtb' && (
-                    <div className="w-12 h-4 bg-white rounded"></div>
-                  )}
-                  {card.id === 'tbank' && (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
-                        <span className="text-gray-800 font-bold text-sm">{card.logo}</span>
-                      </div>
-                      <div className="text-white text-lg font-bold font-ibm">БАНК</div>
-                    </div>
-                  )}
-                  {card.id === 'alfa' && (
-                    <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-                      <span className="text-red-500 font-bold text-lg">{card.logo}</span>
-                    </div>
-                  )}
-                  
-                  {/* Edit Icon */}
-                  <div className="w-5 h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
-                    <Edit size={12} className="text-white" />
+      {/* Selected Card Preview */}
+      {selectedCard && (
+        <div className="px-6 py-4">
+          <div className="relative w-full h-[189px] rounded-[27px] p-6 flex flex-col justify-between"
+               style={{ backgroundColor: selectedCard.color }}>
+            {/* Top Row */}
+            <div className="flex items-center justify-between">
+              {selectedCard.id === 'vtb' && (
+                <div className="w-12 h-4 bg-white rounded"></div>
+              )}
+              {selectedCard.id === 'tbank' && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
+                    <span className="text-gray-800 font-bold text-sm">{selectedCard.logo}</span>
                   </div>
+                  <div className="text-white text-xl font-bold font-ibm">БАНК</div>
                 </div>
-
-                {/* Balance */}
-                <div className="text-white text-2xl font-normal font-ibm text-right">
-                  {card.balance}
+              )}
+              {selectedCard.id === 'alfa' && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
+                    <span className="text-red-500 font-bold text-lg">{selectedCard.logo}</span>
+                  </div>
+                  <div className="text-white text-xl font-bold font-ibm">БАНК</div>
                 </div>
+              )}
+              <div className="w-5 h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                <Edit size={12} className="text-white" />
+              </div>
+            </div>
+            
+            {/* Balance */}
+            <div className="text-white text-2xl font-normal font-ibm text-right">{selectedCard.balance}</div>
+            
+            {/* Card Number */}
+            <div className="text-white text-base font-normal font-ibm text-right">{selectedCard.cardNumber}</div>
+          </div>
+          
+          {/* Imitation of other cards behind */}
+          <div className="relative -mt-4 ml-4">
+            <div className="w-full h-[189px] rounded-[27px] bg-gray-200 opacity-30"></div>
+          </div>
+          <div className="relative -mt-4 ml-8">
+            <div className="w-full h-[189px] rounded-[27px] bg-gray-300 opacity-20"></div>
+          </div>
+        </div>
+      )}
 
-                {/* Card Number */}
-                <div className="text-white text-base font-normal font-ibm">
-                  {card.cardNumber}
+      {/* Cards List */}
+      <div className="relative z-10 px-6 py-4 space-y-4">
+        {cards.map((card, index) => (
+          <div
+            key={card.id}
+            className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
+              cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20'
+            } ${selectedCard?.id === card.id ? 'opacity-50' : ''}`}
+            style={{ 
+              backgroundColor: card.color,
+              transitionDelay: `${index * 100}ms`
+            }}
+            onClick={() => handleCardClick(card)}
+          >
+            {/* Card Content */}
+            <div className="p-6 h-full flex flex-col justify-between">
+              {/* Top Row */}
+              <div className="flex items-center justify-between">
+                {card.id === 'vtb' && (
+                  <div className="w-12 h-4 bg-white rounded"></div>
+                )}
+                {card.id === 'tbank' && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
+                      <span className="text-gray-800 font-bold text-sm">{card.logo}</span>
+                    </div>
+                    <div className="text-white text-lg font-bold font-ibm">БАНК</div>
+                  </div>
+                )}
+                {card.id === 'alfa' && (
+                  <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
+                    <span className="text-red-500 font-bold text-lg">{card.logo}</span>
+                  </div>
+                )}
+                
+                {/* Edit Icon */}
+                <div className="w-5 h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                  <Edit size={12} className="text-white" />
                 </div>
               </div>
 
-              {/* Bottom Right Circle */}
-              <div className="absolute bottom-4 right-4 w-7 h-7 bg-white/20 border border-white rounded-full"></div>
+              {/* Balance */}
+              <div className="text-white text-2xl font-normal font-ibm text-right">
+                {card.balance}
+              </div>
+
+              {/* Card Number */}
+              <div className="text-white text-base font-normal font-ibm">
+                {card.cardNumber}
+              </div>
             </div>
 
-            {/* Analytics for this card */}
-            {expandedCards.has(card.id) && (
-              <div className="mt-4 bg-white w-full rounded-3xl p-6 shadow-lg">
-                {/* Close Button */}
-                <div className="flex justify-end mb-6">
-                  <button 
-                    onClick={() => closeAnalytics(card.id)}
-                    className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Balance */}
-                <div className="text-center mb-6">
-                  <div className="text-3xl font-bold font-ibm">{card.balance}</div>
-                  <div className="text-sm text-gray-500 font-ibm">Текущий баланс</div>
-                </div>
-
-                {/* Analytics Summary */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center">
-                    <div className="text-lg font-semibold text-green-600 font-ibm">{card.analytics.income}</div>
-                    <div className="text-xs text-gray-500 font-ibm">Доходы</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-semibold text-red-600 font-ibm">{card.analytics.expenses}</div>
-                    <div className="text-xs text-gray-500 font-ibm">Расходы</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-semibold text-blue-600 font-ibm">{card.analytics.transactions}</div>
-                    <div className="text-xs text-gray-500 font-ibm">Операций</div>
-                  </div>
-                </div>
-
-                {/* Categories */}
-                <div>
-                  <div className="text-lg font-semibold font-ibm mb-4">Расходы по категориям</div>
-                  <div className="space-y-3">
-                    {card.analytics.categories.map((category, catIndex) => (
-                      <div key={catIndex} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ 
-                              backgroundColor: [
-                                '#3B82F6', '#10B981', '#F59E0B', '#EF4444'
-                              ][catIndex % 4]
-                            }}
-                          ></div>
-                          <div className="text-sm font-ibm">{category.name}</div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full rounded-full"
-                              style={{ 
-                                width: `${category.percentage}%`,
-                                backgroundColor: [
-                                  '#3B82F6', '#10B981', '#F59E0B', '#EF4444'
-                                ][catIndex % 4]
-                              }}
-                            ></div>
-                          </div>
-                          <div className="text-sm font-semibold font-ibm w-16 text-right">{category.amount}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Bottom Right Circle */}
+            <div className="absolute bottom-4 right-4 w-7 h-7 bg-white/20 border border-white rounded-full"></div>
           </div>
         ))}
       </div>
@@ -276,6 +223,97 @@ const MyCardsPage = () => {
         </button>
       </div>
 
+
+      {/* Bottom Analytics Modal */}
+      {selectedCard && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+          <div className="bg-white w-full rounded-t-3xl p-6 max-h-[70vh] overflow-y-auto">
+            {/* Close Button */}
+            <div className="flex justify-end mb-6">
+              <button 
+                onClick={closeAnalytics}
+                className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Card Header */}
+            <div className="flex items-center space-x-3 mb-6">
+              <div 
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: selectedCard.color }}
+              >
+                <span className="text-white text-xl font-bold">{selectedCard.logo}</span>
+              </div>
+              <div>
+                <div className="text-lg font-semibold font-ibm">{selectedCard.name}</div>
+                <div className="text-sm text-gray-500 font-ibm">{selectedCard.cardNumber}</div>
+              </div>
+            </div>
+
+            {/* Balance */}
+            <div className="text-center mb-6">
+              <div className="text-3xl font-bold font-ibm">{selectedCard.balance}</div>
+              <div className="text-sm text-gray-500 font-ibm">Текущий баланс</div>
+            </div>
+
+            {/* Analytics Summary */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="text-center">
+                <div className="text-lg font-semibold text-green-600 font-ibm">{selectedCard.analytics.income}</div>
+                <div className="text-xs text-gray-500 font-ibm">Доходы</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-red-600 font-ibm">{selectedCard.analytics.expenses}</div>
+                <div className="text-xs text-gray-500 font-ibm">Расходы</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-600 font-ibm">{selectedCard.analytics.transactions}</div>
+                <div className="text-xs text-gray-500 font-ibm">Операций</div>
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div>
+              <div className="text-lg font-semibold font-ibm mb-4">Расходы по категориям</div>
+              <div className="space-y-3">
+                {selectedCard.analytics.categories.map((category, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ 
+                          backgroundColor: [
+                            '#3B82F6', '#10B981', '#F59E0B', '#EF4444'
+                          ][index % 4]
+                        }}
+                      ></div>
+                      <div className="text-sm font-ibm">{category.name}</div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full"
+                          style={{ 
+                            width: `${category.percentage}%`,
+                            backgroundColor: [
+                              '#3B82F6', '#10B981', '#F59E0B', '#EF4444'
+                            ][index % 4]
+                          }}
+                        ></div>
+                      </div>
+                      <div className="text-sm font-semibold font-ibm w-16 text-right">{category.amount}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
