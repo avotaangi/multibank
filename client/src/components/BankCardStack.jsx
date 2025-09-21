@@ -95,22 +95,8 @@ const BankCardStack = () => {
     
     // Если свайп больше 100px влево - переходим на страницу "Мои карты"
     if (deltaX < -100) {
-      // Анимация свайпа карт справа налево
-      const container = e.currentTarget;
-      const cards = container.querySelectorAll('[data-card]');
-      
-      // Анимация каждой карты - свайп налево и сразу вверх
-      cards.forEach((card, index) => {
-        card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-        // Карты улетают налево и сразу вверх
-        card.style.transform = `translateX(-${100 + index * 20}%) translateY(-${200 + index * 50}px)`;
-        card.style.opacity = '0.8';
-      });
-      
-      // Переход на страницу через 400ms
-      setTimeout(() => {
-        navigate('/my-cards');
-      }, 400);
+      // Сразу переходим на страницу без анимации возврата
+      navigate('/my-cards');
     }
     
     setIsDragging(false);

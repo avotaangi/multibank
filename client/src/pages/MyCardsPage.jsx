@@ -7,10 +7,10 @@ const MyCardsPage = () => {
   const [cardsVisible, setCardsVisible] = useState(false);
 
   useEffect(() => {
-    // Анимация входа карт в том же порядке сверху вниз
+    // Анимация входа карт сверху вниз с эффектом "улетания"
     const timer = setTimeout(() => {
       setCardsVisible(true);
-    }, 100);
+    }, 50);
     
     return () => clearTimeout(timer);
   }, []);
@@ -112,12 +112,12 @@ const MyCardsPage = () => {
         {cards.map((card, index) => (
           <div
             key={card.id}
-            className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-500 ease-out hover:scale-105 ${
-              cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
+              cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20'
             }`}
             style={{ 
               backgroundColor: card.color,
-              transitionDelay: `${index * 150}ms`
+              transitionDelay: `${index * 100}ms`
             }}
             onClick={() => handleCardClick(card)}
           >
