@@ -65,7 +65,7 @@ const MyCardsPage = () => {
     }
   ];
 
-  const [selectedCard, setSelectedCard] = useState(cards[0]); // Первая карта выбрана по умолчанию
+  const [selectedCard, setSelectedCard] = useState(null); // Никакая карта не выбрана изначально
   const [cardsVisible, setCardsVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -103,7 +103,7 @@ const MyCardsPage = () => {
     setHideBackgroundCards(false); // Показываем карты за первой снова
   };
 
-  // Swipe handlers
+  // Swipe handlers - Only work when card is selected
   const handleStart = (e) => {
     if (!selectedCard) return;
     setIsDragging(true);
@@ -170,7 +170,7 @@ const MyCardsPage = () => {
         </div>
       </div>
 
-      {/* Fixed Card Stack at Top */}
+      {/* Fixed Card Stack at Top - Only when card is selected */}
       {selectedCard && (
         <div 
           className="px-6 py-4 relative"
