@@ -133,7 +133,7 @@ const BankCardStack = () => {
         
         {/* T-Bank Card */}
         <div 
-          className="absolute top-0 left-[20px] w-[280px] h-[200px] rounded-[27px] z-20 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-[-20px] w-[280px] h-[200px] rounded-[27px] z-20 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[1].color,
             transform: `translateX(-${swipeOffset > 100 ? swipeOffset * 0.2 : 0}px)`
@@ -152,7 +152,7 @@ const BankCardStack = () => {
         
         {/* Alpha Bank Card */}
         <div 
-          className="absolute top-0 left-[40px] w-[280px] h-[200px] rounded-[27px] z-10 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-[-40px] w-[280px] h-[200px] rounded-[27px] z-10 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[2].color,
             transform: `translateX(-${swipeOffset > 150 ? swipeOffset * 0.1 : 0}px)`
