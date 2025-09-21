@@ -103,13 +103,13 @@ const CardAnalyticsPage = () => {
     
     const deltaX = currentX.current - startX.current;
     
-    // Если свайп больше 100px влево - переключаем на следующую карту
-    if (deltaX < -100 && currentCardIndex < cards.length - 1) {
-      setCurrentCardIndex(currentCardIndex + 1);
-    }
-    // Если свайп больше 100px вправо - переключаем на предыдущую карту
-    else if (deltaX > 100 && currentCardIndex > 0) {
+    // Если свайп больше 100px влево - переключаем на предыдущую карту
+    if (deltaX < -100 && currentCardIndex > 0) {
       setCurrentCardIndex(currentCardIndex - 1);
+    }
+    // Если свайп больше 100px вправо - переключаем на следующую карту
+    else if (deltaX > 100 && currentCardIndex < cards.length - 1) {
+      setCurrentCardIndex(currentCardIndex + 1);
     }
     
     setIsDragging(false);
@@ -257,7 +257,7 @@ const CardAnalyticsPage = () => {
         {isDragging && Math.abs(swipeOffset) > 20 && (
           <div className="absolute top-[220px] left-1/2 transform -translate-x-1/2 text-center">
             <div className="text-gray-500 text-sm font-ibm">
-              {swipeOffset < 0 ? 'Свайпните влево для следующей карты' : 'Свайпните вправо для предыдущей карты'}
+              {swipeOffset < 0 ? 'Свайпните влево для предыдущей карты' : 'Свайпните вправо для следующей карты'}
             </div>
             <div className="w-8 h-1 bg-gray-300 rounded mx-auto mt-2"></div>
           </div>
