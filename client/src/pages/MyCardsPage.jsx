@@ -182,21 +182,22 @@ const MyCardsPage = () => {
             
             const isBehind = index < currentCardIndex;
             const distance = Math.abs(index - currentCardIndex);
-            const scale = Math.max(0.85 - distance * 0.1, 0.7);
-            const translateX = isBehind ? -distance * 20 : distance * 20;
-            const translateY = distance * 8;
-            const opacity = Math.max(0.3 - distance * 0.1, 0.1);
+            const scale = Math.max(0.9 - distance * 0.05, 0.8);
+            const translateX = isBehind ? -distance * 15 : distance * 15;
+            const translateY = distance * 5;
+            const opacity = Math.max(0.6 - distance * 0.15, 0.3);
             
             return (
               <div
                 key={`bg-${card.id}`}
-                className="absolute top-4 left-6 w-full h-[189px] rounded-[27px] transition-all duration-600 ease-out"
+                className="absolute top-4 left-6 w-full h-[189px] rounded-[27px] transition-all duration-600 ease-out shadow-lg"
                 style={{
                   backgroundColor: card.color,
                   transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
                   opacity: opacity,
                   zIndex: 10 - distance,
-                  transitionDelay: isTransitioning ? `${distance * 100}ms` : '0ms'
+                  transitionDelay: isTransitioning ? `${distance * 100}ms` : '0ms',
+                  boxShadow: `0 4px 20px rgba(0, 0, 0, ${0.1 + distance * 0.05})`
                 }}
               >
                 <div className="p-6 h-full flex flex-col justify-between">
@@ -221,7 +222,7 @@ const MyCardsPage = () => {
                   </div>
                   
                   {/* Balance */}
-                  <div className="text-white text-xl font-normal font-ibm text-right">
+                  <div className="text-white text-lg font-normal font-ibm text-right">
                     {card.balance}
                   </div>
                   
@@ -236,10 +237,11 @@ const MyCardsPage = () => {
           
           {/* Current selected card */}
           <div 
-            className="relative w-full h-[189px] rounded-[27px] p-6 flex flex-col justify-between z-20 transition-all duration-600 ease-out"
+            className="relative w-full h-[189px] rounded-[27px] p-6 flex flex-col justify-between z-20 transition-all duration-600 ease-out shadow-2xl"
             style={{ 
               backgroundColor: selectedCard.color,
-              transform: `translateX(${swipeOffset * 0.1}px)`
+              transform: `translateX(${swipeOffset * 0.1}px)`,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
             }}
           >
             {/* Top Row */}
