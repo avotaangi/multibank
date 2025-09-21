@@ -95,30 +95,22 @@ const BankCardStack = () => {
     
     // Если свайп больше 100px влево - переходим на страницу "Мои карты"
     if (deltaX < -100) {
-      // Анимация разворачивания карт по всей длине страницы
+      // Анимация свайпа карт справа налево
       const container = e.currentTarget;
       const cards = container.querySelectorAll('[data-card]');
       
-      // Анимация каждой карты - распределяем по всей длине
+      // Анимация каждой карты - свайп справа налево
       cards.forEach((card, index) => {
-        card.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
-        // Карты разлетаются в разные стороны и увеличиваются
-        const spreadAngle = (index - 1) * 30; // Угол разлета
-        const spreadDistance = 200 + index * 100; // Расстояние разлета
-        card.style.transform = `
-          translateX(${Math.cos(spreadAngle * Math.PI / 180) * spreadDistance}px) 
-          translateY(${Math.sin(spreadAngle * Math.PI / 180) * spreadDistance}px) 
-          scale(${1.2 + index * 0.1}) 
-          rotate(${spreadAngle}deg)
-        `;
-        card.style.opacity = '0.9';
-        card.style.zIndex = '50';
+        card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+        // Карты свайпаются влево с небольшой задержкой
+        card.style.transform = `translateX(-${100 + index * 20}%)`;
+        card.style.opacity = '0.8';
       });
       
-      // Переход на страницу через 600ms
+      // Переход на страницу через 400ms
       setTimeout(() => {
         navigate('/my-cards');
-      }, 600);
+      }, 400);
     }
     
     setIsDragging(false);
