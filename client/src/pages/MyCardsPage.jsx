@@ -4,24 +4,7 @@ import { Edit } from 'lucide-react';
 
 const MyCardsPage = () => {
   const navigate = useNavigate();
-  const [selectedCard, setSelectedCard] = useState(null);
-  const [cardsVisible, setCardsVisible] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [swipeOffset, setSwipeOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const startX = useRef(0);
-  const currentX = useRef(0);
-
-  useEffect(() => {
-    // Анимация входа карт сверху вниз с эффектом "улетания"
-    const timer = setTimeout(() => {
-      setCardsVisible(true);
-    }, 50);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
+  
   const cards = [
     {
       id: 'vtb',
@@ -82,9 +65,29 @@ const MyCardsPage = () => {
     }
   ];
 
+  const [selectedCard, setSelectedCard] = useState(cards[0]); // Первая карта выбрана по умолчанию
+  const [cardsVisible, setCardsVisible] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const startX = useRef(0);
+  const currentX = useRef(0);
+
+  useEffect(() => {
+    // Анимация входа карт сверху вниз с эффектом "улетания"
+    const timer = setTimeout(() => {
+      setCardsVisible(true);
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleCardClick = (card) => {
     setSelectedCard(card);
     setCurrentCardIndex(cards.findIndex(c => c.id === card.id));
+    setShowAnalytics(true);
     setIsTransitioning(true);
     
     // Завершаем переход через 600ms
@@ -94,9 +97,7 @@ const MyCardsPage = () => {
   };
 
   const closeAnalytics = () => {
-    setSelectedCard(null);
-    setCurrentCardIndex(0);
-    setIsTransitioning(false);
+    setShowAnalytics(false);
   };
 
   // Swipe handlers
@@ -183,7 +184,8 @@ const MyCardsPage = () => {
             const isBehind = index < currentCardIndex;
             const distance = Math.abs(index - currentCardIndex);
             const scale = Math.max(0.9 - distance * 0.05, 0.8);
-            const translateX = isBehind ? -distance * 15 : distance * 15;
+            // Все карты за первой картой располагаются справа
+            const translateX = distance * 15;
             const translateY = distance * 5;
             const opacity = Math.max(0.6 - distance * 0.15, 0.3);
             
@@ -289,9 +291,8 @@ const MyCardsPage = () => {
         </div>
       )}
 
-      {/* Cards List - Hidden when card is selected */}
-      {!selectedCard && (
-        <div className="relative z-10 px-6 py-4 space-y-4">
+      {/* Cards List - Always visible */}
+      <div className="relative z-10 px-6 py-4 space-y-4">
           {cards.map((card, index) => (
             <div
               key={card.id}
@@ -347,20 +348,11 @@ const MyCardsPage = () => {
             </div>
           ))}
         </div>
-      )}
 
-      {/* Show as List Button */}
-      <div className="relative z-10 px-6 py-4">
-        <button className="w-full h-7 border border-black rounded-[10px] bg-white flex items-center justify-center hover:bg-gray-50 transition-colors">
-          <div className="text-black font-manrope font-light text-xs leading-[110%]">
-            Показать списком
-          </div>
-        </button>
-      </div>
 
 
       {/* Fixed Bottom Analytics */}
-      {selectedCard && (
+      {selectedCard && showAnalytics && (
         <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 max-h-[70vh] overflow-y-auto z-50 shadow-2xl border-t border-gray-200">
             {/* Close Button */}
             <div className="flex justify-end mb-6">
