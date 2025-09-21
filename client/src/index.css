@@ -74,6 +74,22 @@
       transform: translateY(0) scale(1);
     }
   }
+  
+  /* Card collection animation - собирание карт из разлетевшихся позиций */
+  .card-collection {
+    animation: cardCollection 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  
+  @keyframes cardCollection {
+    from {
+      opacity: 0;
+      transform: translateX(var(--start-x, 0)) translateY(var(--start-y, 0)) scale(var(--start-scale, 1)) rotate(var(--start-rotate, 0deg));
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) translateY(0) scale(1) rotate(0deg);
+    }
+  }
 }
 
 @layer components {
