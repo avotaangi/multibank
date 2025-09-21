@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit } from 'lucide-react';
 
@@ -6,6 +6,12 @@ const MyCardsPage = () => {
   const navigate = useNavigate();
   const [selectedCard, setSelectedCard] = useState(null);
   const [cardsVisible, setCardsVisible] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startX = useRef(0);
+  const currentX = useRef(0);
 
   useEffect(() => {
     // Анимация входа карт сверху вниз с эффектом "улетания"
@@ -78,10 +84,60 @@ const MyCardsPage = () => {
 
   const handleCardClick = (card) => {
     setSelectedCard(card);
+    setCurrentCardIndex(cards.findIndex(c => c.id === card.id));
+    setIsTransitioning(true);
+    
+    // Завершаем переход через 600ms
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 600);
   };
 
   const closeAnalytics = () => {
     setSelectedCard(null);
+    setCurrentCardIndex(0);
+    setIsTransitioning(false);
+  };
+
+  // Swipe handlers
+  const handleStart = (e) => {
+    if (!selectedCard) return;
+    setIsDragging(true);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    startX.current = clientX;
+    currentX.current = clientX;
+  };
+
+  const handleMove = (e) => {
+    if (!isDragging || !selectedCard) return;
+    
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    currentX.current = clientX;
+    const deltaX = currentX.current - startX.current;
+    
+    setSwipeOffset(deltaX);
+  };
+
+  const handleEnd = (e) => {
+    if (!isDragging || !selectedCard) return;
+    
+    const deltaX = currentX.current - startX.current;
+    
+    // Если свайп больше 100px влево - переключаем на следующую карту
+    if (deltaX < -100 && currentCardIndex < cards.length - 1) {
+      const nextIndex = currentCardIndex + 1;
+      setCurrentCardIndex(nextIndex);
+      setSelectedCard(cards[nextIndex]);
+    }
+    // Если свайп больше 100px вправо - переключаем на предыдущую карту
+    else if (deltaX > 100 && currentCardIndex > 0) {
+      const prevIndex = currentCardIndex - 1;
+      setCurrentCardIndex(prevIndex);
+      setSelectedCard(cards[prevIndex]);
+    }
+    
+    setIsDragging(false);
+    setSwipeOffset(0);
   };
 
   const handleBackToDashboard = () => {
@@ -108,11 +164,84 @@ const MyCardsPage = () => {
         </div>
       </div>
 
-      {/* Selected Card Preview */}
+      {/* Fixed Card Stack at Top */}
       {selectedCard && (
-        <div className="px-6 py-4">
-          <div className="relative w-full h-[189px] rounded-[27px] p-6 flex flex-col justify-between"
-               style={{ backgroundColor: selectedCard.color }}>
+        <div 
+          className="px-6 py-4 relative"
+          onTouchStart={handleStart}
+          onTouchMove={handleMove}
+          onTouchEnd={handleEnd}
+          onMouseDown={handleStart}
+          onMouseMove={handleMove}
+          onMouseUp={handleEnd}
+          onMouseLeave={handleEnd}
+        >
+          {/* Background cards with beautiful transition */}
+          {cards.map((card, index) => {
+            if (index === currentCardIndex) return null; // Skip current card
+            
+            const isBehind = index < currentCardIndex;
+            const distance = Math.abs(index - currentCardIndex);
+            const scale = Math.max(0.85 - distance * 0.1, 0.7);
+            const translateX = isBehind ? -distance * 20 : distance * 20;
+            const translateY = distance * 8;
+            const opacity = Math.max(0.3 - distance * 0.1, 0.1);
+            
+            return (
+              <div
+                key={`bg-${card.id}`}
+                className="absolute top-4 left-6 w-full h-[189px] rounded-[27px] transition-all duration-600 ease-out"
+                style={{
+                  backgroundColor: card.color,
+                  transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
+                  opacity: opacity,
+                  zIndex: 10 - distance,
+                  transitionDelay: isTransitioning ? `${distance * 100}ms` : '0ms'
+                }}
+              >
+                <div className="p-6 h-full flex flex-col justify-between">
+                  {/* Top Row */}
+                  <div className="flex items-center justify-between">
+                    {card.id === 'vtb' && (
+                      <div className="w-12 h-4 bg-white rounded"></div>
+                    )}
+                    {card.id === 'tbank' && (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
+                          <span className="text-gray-800 font-bold text-sm">{card.logo}</span>
+                        </div>
+                        <div className="text-white text-lg font-bold font-ibm">БАНК</div>
+                      </div>
+                    )}
+                    {card.id === 'alfa' && (
+                      <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
+                        <span className="text-red-500 font-bold text-lg">{card.logo}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Balance */}
+                  <div className="text-white text-xl font-normal font-ibm text-right">
+                    {card.balance}
+                  </div>
+                  
+                  {/* Card Number */}
+                  <div className="text-white text-sm font-normal font-ibm text-right">
+                    {card.cardNumber}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          
+          {/* Current selected card */}
+          <div 
+            className="relative w-full h-[189px] rounded-[27px] p-6 flex flex-col justify-between z-20 transition-all duration-600 ease-out"
+            style={{ 
+              backgroundColor: selectedCard.color,
+              transform: `translateX(${swipeOffset * 0.1}px)`
+            }}
+          >
             {/* Top Row */}
             <div className="flex items-center justify-between">
               {selectedCard.id === 'vtb' && (
@@ -146,73 +275,77 @@ const MyCardsPage = () => {
             <div className="text-white text-base font-normal font-ibm text-right">{selectedCard.cardNumber}</div>
           </div>
           
-          {/* Imitation of other cards behind */}
-          <div className="relative -mt-4 ml-4">
-            <div className="w-full h-[189px] rounded-[27px] bg-gray-200 opacity-30"></div>
-          </div>
-          <div className="relative -mt-4 ml-8">
-            <div className="w-full h-[189px] rounded-[27px] bg-gray-300 opacity-20"></div>
-          </div>
+          {/* Swipe indicator */}
+          {isDragging && Math.abs(swipeOffset) > 20 && (
+            <div className="absolute top-[220px] left-1/2 transform -translate-x-1/2 text-center">
+              <div className="text-gray-500 text-sm font-ibm">
+                {swipeOffset < 0 ? 'Свайпните влево для следующей карты' : 'Свайпните вправо для предыдущей карты'}
+              </div>
+              <div className="w-8 h-1 bg-gray-300 rounded mx-auto mt-2"></div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Cards List */}
-      <div className="relative z-10 px-6 py-4 space-y-4">
-        {cards.map((card, index) => (
-          <div
-            key={card.id}
-            className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
-              cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20'
-            } ${selectedCard?.id === card.id ? 'opacity-50' : ''}`}
-            style={{ 
-              backgroundColor: card.color,
-              transitionDelay: `${index * 100}ms`
-            }}
-            onClick={() => handleCardClick(card)}
-          >
-            {/* Card Content */}
-            <div className="p-6 h-full flex flex-col justify-between">
-              {/* Top Row */}
-              <div className="flex items-center justify-between">
-                {card.id === 'vtb' && (
-                  <div className="w-12 h-4 bg-white rounded"></div>
-                )}
-                {card.id === 'tbank' && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
-                      <span className="text-gray-800 font-bold text-sm">{card.logo}</span>
+      {/* Cards List - Hidden when card is selected */}
+      {!selectedCard && (
+        <div className="relative z-10 px-6 py-4 space-y-4">
+          {cards.map((card, index) => (
+            <div
+              key={card.id}
+              className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
+                cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20'
+              }`}
+              style={{ 
+                backgroundColor: card.color,
+                transitionDelay: `${index * 100}ms`
+              }}
+              onClick={() => handleCardClick(card)}
+            >
+              {/* Card Content */}
+              <div className="p-6 h-full flex flex-col justify-between">
+                {/* Top Row */}
+                <div className="flex items-center justify-between">
+                  {card.id === 'vtb' && (
+                    <div className="w-12 h-4 bg-white rounded"></div>
+                  )}
+                  {card.id === 'tbank' && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
+                        <span className="text-gray-800 font-bold text-sm">{card.logo}</span>
+                      </div>
+                      <div className="text-white text-lg font-bold font-ibm">БАНК</div>
                     </div>
-                    <div className="text-white text-lg font-bold font-ibm">БАНК</div>
+                  )}
+                  {card.id === 'alfa' && (
+                    <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
+                      <span className="text-red-500 font-bold text-lg">{card.logo}</span>
+                    </div>
+                  )}
+                  
+                  {/* Edit Icon */}
+                  <div className="w-5 h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                    <Edit size={12} className="text-white" />
                   </div>
-                )}
-                {card.id === 'alfa' && (
-                  <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-                    <span className="text-red-500 font-bold text-lg">{card.logo}</span>
-                  </div>
-                )}
-                
-                {/* Edit Icon */}
-                <div className="w-5 h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
-                  <Edit size={12} className="text-white" />
+                </div>
+
+                {/* Balance */}
+                <div className="text-white text-2xl font-normal font-ibm text-right">
+                  {card.balance}
+                </div>
+
+                {/* Card Number */}
+                <div className="text-white text-base font-normal font-ibm">
+                  {card.cardNumber}
                 </div>
               </div>
 
-              {/* Balance */}
-              <div className="text-white text-2xl font-normal font-ibm text-right">
-                {card.balance}
-              </div>
-
-              {/* Card Number */}
-              <div className="text-white text-base font-normal font-ibm">
-                {card.cardNumber}
-              </div>
+              {/* Bottom Right Circle */}
+              <div className="absolute bottom-4 right-4 w-7 h-7 bg-white/20 border border-white rounded-full"></div>
             </div>
-
-            {/* Bottom Right Circle */}
-            <div className="absolute bottom-4 right-4 w-7 h-7 bg-white/20 border border-white rounded-full"></div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Show as List Button */}
       <div className="relative z-10 px-6 py-4">
@@ -224,10 +357,9 @@ const MyCardsPage = () => {
       </div>
 
 
-      {/* Bottom Analytics Modal */}
+      {/* Fixed Bottom Analytics */}
       {selectedCard && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-          <div className="bg-white w-full rounded-t-3xl p-6 max-h-[70vh] overflow-y-auto">
+        <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 max-h-[70vh] overflow-y-auto z-50 shadow-2xl border-t border-gray-200">
             {/* Close Button */}
             <div className="flex justify-end mb-6">
               <button 
@@ -311,7 +443,6 @@ const MyCardsPage = () => {
                 ))}
               </div>
             </div>
-          </div>
         </div>
       )}
 
