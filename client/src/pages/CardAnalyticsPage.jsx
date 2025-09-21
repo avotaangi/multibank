@@ -82,33 +82,41 @@ const CardAnalyticsPage = () => {
 
   // Swipe handlers
   const handleStart = (e) => {
+    e.preventDefault();
     setIsDragging(true);
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     startX.current = clientX;
     currentX.current = clientX;
+    console.log('Swipe start:', clientX);
   };
 
   const handleMove = (e) => {
     if (!isDragging) return;
+    e.preventDefault();
     
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     currentX.current = clientX;
     const deltaX = currentX.current - startX.current;
     
     setSwipeOffset(deltaX);
+    console.log('Swipe move:', deltaX);
   };
 
   const handleEnd = (e) => {
     if (!isDragging) return;
+    e.preventDefault();
     
     const deltaX = currentX.current - startX.current;
+    console.log('Swipe end:', deltaX, 'currentIndex:', currentCardIndex);
     
-    // Если свайп больше 100px влево - переключаем на предыдущую карту
-    if (deltaX < -100 && currentCardIndex > 0) {
+    // Если свайп больше 50px влево - переключаем на предыдущую карту
+    if (deltaX < -50 && currentCardIndex > 0) {
+      console.log('Swiping to previous card');
       setCurrentCardIndex(currentCardIndex - 1);
     }
-    // Если свайп больше 100px вправо - переключаем на следующую карту
-    else if (deltaX > 100 && currentCardIndex < cards.length - 1) {
+    // Если свайп больше 50px вправо - переключаем на следующую карту
+    else if (deltaX > 50 && currentCardIndex < cards.length - 1) {
+      console.log('Swiping to next card');
       setCurrentCardIndex(currentCardIndex + 1);
     }
     
@@ -142,7 +150,7 @@ const CardAnalyticsPage = () => {
 
       {/* Card Stack with Swipe */}
       <div 
-        className="px-6 py-4 relative"
+        className="px-6 py-4 relative cursor-pointer select-none"
         onTouchStart={handleStart}
         onTouchMove={handleMove}
         onTouchEnd={handleEnd}
@@ -150,6 +158,7 @@ const CardAnalyticsPage = () => {
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
+        style={{ touchAction: 'pan-y' }}
       >
         {/* Background cards */}
         {cards.map((card, index) => {
@@ -254,7 +263,7 @@ const CardAnalyticsPage = () => {
         </div>
         
         {/* Swipe indicator */}
-        {isDragging && Math.abs(swipeOffset) > 20 && (
+        {isDragging && Math.abs(swipeOffset) > 10 && (
           <div className="absolute top-[220px] left-1/2 transform -translate-x-1/2 text-center">
             <div className="text-gray-500 text-sm font-ibm">
               {swipeOffset < 0 ? 'Свайпните влево для предыдущей карты' : 'Свайпните вправо для следующей карты'}
