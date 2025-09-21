@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Edit } from 'lucide-react';
 
 const MyCardsPage = () => {
   const navigate = useNavigate();
@@ -77,15 +78,6 @@ const MyCardsPage = () => {
 
   const handleCardClick = (card) => {
     setSelectedCard(card);
-    
-    // Перемещаем выбранную карту наверх
-    const cardElement = document.querySelector(`[data-card-id="${card.id}"]`);
-    if (cardElement) {
-      cardElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-      });
-    }
   };
 
   const closeAnalytics = () => {
@@ -115,6 +107,51 @@ const MyCardsPage = () => {
           <div className="w-10"></div> {/* Spacer for centering */}
         </div>
       </div>
+
+      {/* Selected Card Display */}
+      {selectedCard && (
+        <div className="px-6 py-4">
+          <div 
+            className="w-full h-[189px] rounded-[27px] p-6 flex flex-col justify-between"
+            style={{ backgroundColor: selectedCard.color }}
+          >
+            {/* Card Content */}
+            <div className="p-6 h-full flex flex-col justify-between">
+              {/* Top Row */}
+              <div className="flex items-center justify-between">
+                {selectedCard.id === 'vtb' && (
+                  <div className="w-12 h-4 bg-white rounded"></div>
+                )}
+                {selectedCard.id === 'tbank' && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
+                      <span className="text-gray-800 font-bold text-sm">{selectedCard.logo}</span>
+                    </div>
+                    <div className="text-white text-xl font-bold font-ibm">БАНК</div>
+                  </div>
+                )}
+                {selectedCard.id === 'alfabank' && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
+                      <span className="text-red-500 font-bold text-lg">{selectedCard.logo}</span>
+                    </div>
+                    <div className="text-white text-xl font-bold font-ibm">БАНК</div>
+                  </div>
+                )}
+                <div className="w-5 h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                  <Edit size={12} className="text-white" />
+                </div>
+              </div>
+              
+              {/* Balance */}
+              <div className="text-white text-2xl font-normal font-ibm text-right">{selectedCard.balance}</div>
+              
+              {/* Card Number */}
+              <div className="text-white text-base font-normal font-ibm text-right">{selectedCard.cardNumber}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cards List */}
       <div className="relative z-10 px-6 py-4 space-y-4">
@@ -188,8 +225,8 @@ const MyCardsPage = () => {
 
       {/* Analytics Modal */}
       {selectedCard && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-          <div className="bg-white w-full h-[70vh] rounded-t-3xl p-6 animate-slide-up-modal">
+        <div className="px-6 py-4">
+          <div className="bg-white w-full rounded-3xl p-6 shadow-lg">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
