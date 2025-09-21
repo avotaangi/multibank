@@ -10,6 +10,7 @@ import LoadingSpinner from './components/LoadingSpinner'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import MyCardsPage from './pages/MyCardsPage'
+import CardAnalyticsPage from './pages/CardAnalyticsPage'
 import AccountsPage from './pages/AccountsPage'
 import TransactionsPage from './pages/TransactionsPage'
 import TransferPage from './pages/TransferPage'
@@ -48,6 +49,7 @@ function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="my-cards" element={<MyCardsPage />} />
+              <Route path="card-analytics" element={<CardAnalyticsPage />} />
               <Route path="accounts" element={<AccountsPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="transfer" element={<TransferPage />} />
