@@ -176,12 +176,12 @@ const CardAnalyticsPage = () => {
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Все предыдущие карты - слева от главной
+            // Все предыдущие карты - слева от главной, более заметные
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -25 - (position - 1) * 20; // Все карты слева, с интервалом 20px
-            translateY = (position - 1) * 5; // Небольшое смещение вниз для каждой карты
-            scale = 0.9 - (position - 1) * 0.03;
-            opacity = 0.8 - (position - 1) * 0.1;
+            translateX = -15 - (position - 1) * 12; // Ближе к главной карте, меньший интервал
+            translateY = (position - 1) * 3; // Меньшее смещение вниз
+            scale = 0.95 - (position - 1) * 0.02; // Больший масштаб
+            opacity = 0.9 - (position - 1) * 0.05; // Высокая прозрачность
           } else {
             // Следующие карты - справа, под главной картой
             const position = index - currentCardIndex; // 1, 2, 3...
@@ -191,9 +191,9 @@ const CardAnalyticsPage = () => {
             opacity = 0.7 - (position - 1) * 0.1;
           }
           
-          // Ограничиваем значения
-          scale = Math.max(scale, 0.8);
-          opacity = Math.max(opacity, 0.5);
+          // Ограничиваем значения для лучшей видимости
+          scale = Math.max(scale, 0.85);
+          opacity = Math.max(opacity, 0.7);
           
           console.log(`Card ${card.name}: translateX=${translateX}, translateY=${translateY}, scale=${scale}, opacity=${opacity}`);
           
@@ -292,6 +292,26 @@ const CardAnalyticsPage = () => {
               {swipeOffset < 0 ? 'Свайпните влево для следующей карты' : 'Свайпните вправо для предыдущей карты'}
             </div>
             <div className="w-8 h-1 bg-gray-300 rounded mx-auto mt-2"></div>
+          </div>
+        )}
+        
+        {/* Left swipe hint - показываем когда есть предыдущие карты */}
+        {currentCardIndex > 0 && !isDragging && (
+          <div className="absolute top-[100px] left-2 text-center">
+            <div className="text-gray-400 text-xs font-ibm">
+              ← Свайп вправо
+            </div>
+            <div className="w-4 h-1 bg-gray-300 rounded mx-auto mt-1"></div>
+          </div>
+        )}
+        
+        {/* Right swipe hint - показываем когда есть следующие карты */}
+        {currentCardIndex < cards.length - 1 && !isDragging && (
+          <div className="absolute top-[100px] right-2 text-center">
+            <div className="text-gray-400 text-xs font-ibm">
+              Свайп влево →
+            </div>
+            <div className="w-4 h-1 bg-gray-300 rounded mx-auto mt-1"></div>
           </div>
         )}
       </div>
