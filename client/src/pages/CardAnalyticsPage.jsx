@@ -188,22 +188,22 @@ const CardAnalyticsPage = () => {
           if (isPrevious) {
             // Предыдущие карты - слева от основной карты
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -25 - (position - 1) * 18; // Слева от основной карты
-            translateY = (position - 1) * 4; // Смещение вниз для эффекта стопки
-            scale = 0.88 - (position - 1) * 0.03; // Масштаб для заднего плана
-            opacity = 0.85 - (position - 1) * 0.08; // Прозрачность для заднего плана
+            translateX = -35 - (position - 1) * 20; // Слева от основной карты
+            translateY = (position - 1) * 2; // Минимальное смещение вниз
+            scale = 0.9 - (position - 1) * 0.02; // Масштаб для заднего плана
+            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность для заднего плана
           } else {
             // Следующие карты - справа от основной карты
             const position = index - currentCardIndex; // 1, 2, 3...
-            translateX = 25 + (position - 1) * 18; // Справа от основной карты
-            translateY = (position - 1) * 4; // Смещение вниз для эффекта стопки
-            scale = 0.88 - (position - 1) * 0.03; // Масштаб для заднего плана
-            opacity = 0.85 - (position - 1) * 0.08; // Прозрачность для заднего плана
+            translateX = 35 + (position - 1) * 20; // Справа от основной карты
+            translateY = (position - 1) * 2; // Минимальное смещение вниз
+            scale = 0.9 - (position - 1) * 0.02; // Масштаб для заднего плана
+            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность для заднего плана
           }
           
           // Ограничиваем значения для максимальной видимости
-          scale = Math.max(scale, 0.8);
-          opacity = Math.max(opacity, 0.7);
+          scale = Math.max(scale, 0.85);
+          opacity = Math.max(opacity, 0.6);
           
           console.log(`Card ${card.name}: translateX=${translateX}, translateY=${translateY}, scale=${scale}, opacity=${opacity}`);
           
