@@ -80,7 +80,11 @@ const CardAnalyticsPage = () => {
 
   const currentCard = cards[currentCardIndex];
   
+  console.log(`=== CARD ANALYTICS PAGE ===`);
   console.log(`Current card: ${currentCard.name} at index ${currentCardIndex}`);
+  console.log(`Total cards: ${cards.length}`);
+  console.log(`Previous cards: ${cards.filter((_, index) => index < currentCardIndex).map(c => c.name).join(', ')}`);
+  console.log(`Next cards: ${cards.filter((_, index) => index > currentCardIndex).map(c => c.name).join(', ')}`);
 
   // Swipe handlers
   const handleStart = (e) => {
@@ -113,12 +117,14 @@ const CardAnalyticsPage = () => {
     
     // Если свайп больше 50px влево - переключаем на следующую карту
     if (deltaX < -50 && currentCardIndex < cards.length - 1) {
-      console.log('Swiping to next card');
+      const nextCard = cards[currentCardIndex + 1];
+      console.log(`Swiping to next card: ${nextCard.name} (index ${currentCardIndex + 1})`);
       setCurrentCardIndex(currentCardIndex + 1);
     }
     // Если свайп больше 50px вправо - переключаем на предыдущую карту
     else if (deltaX > 50 && currentCardIndex > 0) {
-      console.log('Swiping to previous card');
+      const prevCard = cards[currentCardIndex - 1];
+      console.log(`Swiping to previous card: ${prevCard.name} (index ${currentCardIndex - 1})`);
       setCurrentCardIndex(currentCardIndex - 1);
     }
     
