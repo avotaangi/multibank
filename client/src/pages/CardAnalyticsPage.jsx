@@ -179,19 +179,19 @@ const CardAnalyticsPage = () => {
           console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}, isPrevious: ${isPrevious}, isNext: ${isNext}, distance: ${distance}`);
           
           if (isPrevious) {
-            console.log(`PREVIOUS CARD: ${card.name} will be positioned at translateX: ${-30 - (currentCardIndex - index - 1) * 20}`);
+            console.log(`PREVIOUS CARD: ${card.name} will be positioned at translateX: ${-25 - (currentCardIndex - index - 1) * 15}, scale: ${0.95 - (currentCardIndex - index - 1) * 0.02}, opacity: ${0.9 - (currentCardIndex - index - 1) * 0.05}`);
           }
           
           // Простая и понятная логика позиционирования
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева от основной карты
+            // Предыдущие карты - слева от основной карты, очень хорошо видны
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -35 - (position - 1) * 20; // Слева от основной карты
-            translateY = (position - 1) * 2; // Минимальное смещение вниз
-            scale = 0.9 - (position - 1) * 0.02; // Масштаб для заднего плана
-            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность для заднего плана
+            translateX = -25 - (position - 1) * 15; // Ближе к основной карте
+            translateY = (position - 1) * 3; // Смещение вниз
+            scale = 0.95 - (position - 1) * 0.02; // Больший масштаб
+            opacity = 0.9 - (position - 1) * 0.05; // Высокая прозрачность
           } else {
             // Следующие карты - справа от основной карты
             const position = index - currentCardIndex; // 1, 2, 3...
@@ -202,8 +202,8 @@ const CardAnalyticsPage = () => {
           }
           
           // Ограничиваем значения для максимальной видимости
-          scale = Math.max(scale, 0.85);
-          opacity = Math.max(opacity, 0.6);
+          scale = Math.max(scale, 0.9);
+          opacity = Math.max(opacity, 0.8);
           
           console.log(`Card ${card.name}: translateX=${translateX}, translateY=${translateY}, scale=${scale}, opacity=${opacity}`);
           
