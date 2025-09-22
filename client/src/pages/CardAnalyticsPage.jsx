@@ -180,12 +180,12 @@ const CardAnalyticsPage = () => {
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева от главной, очень хорошо видны
+            // Предыдущие карты - слева на заднем плане, хорошо видны
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -30 - (position - 1) * 20; // Ближе к главной карте
-            translateY = (position - 1) * 3; // Минимальное смещение вниз
-            scale = 0.9 - (position - 1) * 0.02; // Больший масштаб
-            opacity = 0.9 - (position - 1) * 0.05; // Высокая прозрачность
+            translateX = -25 - (position - 1) * 18; // Ближе к главной карте
+            translateY = (position - 1) * 4; // Смещение вниз для эффекта стопки
+            scale = 0.88 - (position - 1) * 0.03; // Масштаб для заднего плана
+            opacity = 0.85 - (position - 1) * 0.08; // Хорошая прозрачность
           } else {
             // Следующие карты - справа от главной, видны с отступом
             const position = index - currentCardIndex; // 1, 2, 3...
@@ -209,7 +209,7 @@ const CardAnalyticsPage = () => {
                 backgroundColor: card.color,
                 transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
                 opacity: opacity,
-                zIndex: 15 - distance,
+                zIndex: isPrevious ? 5 - distance : 15 - distance,
               }}
             >
               <div className="p-6 h-full flex flex-col justify-between">
