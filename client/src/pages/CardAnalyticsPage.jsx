@@ -172,16 +172,20 @@ const CardAnalyticsPage = () => {
           
           console.log(`Rendering background card: ${card.name} at index ${index}, current: ${currentCardIndex}, isPrevious: ${isPrevious}, isNext: ${isNext}, distance: ${distance}`);
           
+          if (isPrevious) {
+            console.log(`PREVIOUS CARD: ${card.name} will be positioned at translateX: ${-30 - (currentCardIndex - index - 1) * 20}`);
+          }
+          
           // Простая и понятная логика позиционирования
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева от главной, видны с отступом
+            // Предыдущие карты - слева от главной, очень хорошо видны
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -35 - (position - 1) * 25; // Дальше от главной карты для видимости
-            translateY = (position - 1) * 5; // Смещение вниз
-            scale = 0.85 - (position - 1) * 0.03; // Масштаб
-            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность
+            translateX = -30 - (position - 1) * 20; // Ближе к главной карте
+            translateY = (position - 1) * 3; // Минимальное смещение вниз
+            scale = 0.9 - (position - 1) * 0.02; // Больший масштаб
+            opacity = 0.9 - (position - 1) * 0.05; // Высокая прозрачность
           } else {
             // Следующие карты - справа от главной, видны с отступом
             const position = index - currentCardIndex; // 1, 2, 3...
@@ -192,8 +196,8 @@ const CardAnalyticsPage = () => {
           }
           
           // Ограничиваем значения для максимальной видимости
-          scale = Math.max(scale, 0.85);
-          opacity = Math.max(opacity, 0.75);
+          scale = Math.max(scale, 0.8);
+          opacity = Math.max(opacity, 0.7);
           
           console.log(`Card ${card.name}: translateX=${translateX}, translateY=${translateY}, scale=${scale}, opacity=${opacity}`);
           
