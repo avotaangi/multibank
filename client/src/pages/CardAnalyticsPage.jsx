@@ -180,19 +180,19 @@ const CardAnalyticsPage = () => {
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева на заднем плане, хорошо видны
+            // Предыдущие карты - слева на заднем плане
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -25 - (position - 1) * 18; // Ближе к главной карте
-            translateY = (position - 1) * 4; // Смещение вниз для эффекта стопки
-            scale = 0.88 - (position - 1) * 0.03; // Масштаб для заднего плана
-            opacity = 0.85 - (position - 1) * 0.08; // Хорошая прозрачность
+            translateX = -30 - (position - 1) * 20; // Слева от основной карты
+            translateY = (position - 1) * 5; // Смещение вниз для эффекта стопки
+            scale = 0.85 - (position - 1) * 0.03; // Масштаб для заднего плана
+            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность для заднего плана
           } else {
-            // Следующие карты - справа от главной, видны с отступом
+            // Следующие карты - справа на заднем плане
             const position = index - currentCardIndex; // 1, 2, 3...
-            translateX = 35 + (position - 1) * 25; // Дальше от главной карты для видимости
-            translateY = (position - 1) * 5; // Смещение вниз
-            scale = 0.85 - (position - 1) * 0.03; // Масштаб
-            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность
+            translateX = 30 + (position - 1) * 20; // Справа от основной карты
+            translateY = (position - 1) * 5; // Смещение вниз для эффекта стопки
+            scale = 0.85 - (position - 1) * 0.03; // Масштаб для заднего плана
+            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность для заднего плана
           }
           
           // Ограничиваем значения для максимальной видимости
@@ -209,7 +209,7 @@ const CardAnalyticsPage = () => {
                 backgroundColor: card.color,
                 transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
                 opacity: opacity,
-                zIndex: isPrevious ? 5 - distance : 15 - distance,
+                zIndex: 10 - distance, // Все карты на заднем плане относительно основной
               }}
             >
               <div className="p-6 h-full flex flex-col justify-between">
