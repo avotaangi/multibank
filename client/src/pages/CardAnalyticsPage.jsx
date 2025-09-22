@@ -186,19 +186,19 @@ const CardAnalyticsPage = () => {
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева на заднем плане
+            // Предыдущие карты - слева от основной карты
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -30 - (position - 1) * 20; // Слева от основной карты
-            translateY = (position - 1) * 5; // Смещение вниз для эффекта стопки
-            scale = 0.85 - (position - 1) * 0.03; // Масштаб для заднего плана
-            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность для заднего плана
+            translateX = -25 - (position - 1) * 18; // Слева от основной карты
+            translateY = (position - 1) * 4; // Смещение вниз для эффекта стопки
+            scale = 0.88 - (position - 1) * 0.03; // Масштаб для заднего плана
+            opacity = 0.85 - (position - 1) * 0.08; // Прозрачность для заднего плана
           } else {
-            // Следующие карты - справа на заднем плане
+            // Следующие карты - справа от основной карты
             const position = index - currentCardIndex; // 1, 2, 3...
-            translateX = 30 + (position - 1) * 20; // Справа от основной карты
-            translateY = (position - 1) * 5; // Смещение вниз для эффекта стопки
-            scale = 0.85 - (position - 1) * 0.03; // Масштаб для заднего плана
-            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность для заднего плана
+            translateX = 25 + (position - 1) * 18; // Справа от основной карты
+            translateY = (position - 1) * 4; // Смещение вниз для эффекта стопки
+            scale = 0.88 - (position - 1) * 0.03; // Масштаб для заднего плана
+            opacity = 0.85 - (position - 1) * 0.08; // Прозрачность для заднего плана
           }
           
           // Ограничиваем значения для максимальной видимости
@@ -210,7 +210,7 @@ const CardAnalyticsPage = () => {
           return (
             <div
               key={`bg-${card.id}`}
-              className="absolute top-4 left-12 w-[calc(100%-6rem)] h-[189px] rounded-[27px] transition-all duration-600 ease-out shadow-lg"
+              className="absolute top-4 left-1/2 transform -translate-x-1/2 w-[calc(100%-6rem)] h-[189px] rounded-[27px] transition-all duration-600 ease-out shadow-lg"
               style={{
                 backgroundColor: card.color,
                 transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
