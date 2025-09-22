@@ -152,7 +152,7 @@ const CardAnalyticsPage = () => {
 
       {/* Card Stack with Swipe */}
       <div 
-        className="px-6 py-4 relative cursor-pointer select-none"
+        className="px-12 py-4 relative cursor-pointer select-none"
         onTouchStart={handleStart}
         onTouchMove={handleMove}
         onTouchEnd={handleEnd}
@@ -176,19 +176,19 @@ const CardAnalyticsPage = () => {
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Предыдущие карты - слева от главной, очень хорошо видны
+            // Предыдущие карты - слева от главной, видны с отступом
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -25 - (position - 1) * 20; // Ближе к главной карте
-            translateY = (position - 1) * 3; // Минимальное смещение вниз
-            scale = 0.9 - (position - 1) * 0.02; // Больший масштаб
-            opacity = 0.9 - (position - 1) * 0.05; // Высокая прозрачность
+            translateX = -35 - (position - 1) * 25; // Дальше от главной карты для видимости
+            translateY = (position - 1) * 5; // Смещение вниз
+            scale = 0.85 - (position - 1) * 0.03; // Масштаб
+            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность
           } else {
-            // Следующие карты - справа от главной, очень хорошо видны
+            // Следующие карты - справа от главной, видны с отступом
             const position = index - currentCardIndex; // 1, 2, 3...
-            translateX = 25 + (position - 1) * 20; // Ближе к главной карте
-            translateY = (position - 1) * 3; // Минимальное смещение вниз
-            scale = 0.9 - (position - 1) * 0.02; // Больший масштаб
-            opacity = 0.9 - (position - 1) * 0.05; // Высокая прозрачность
+            translateX = 35 + (position - 1) * 25; // Дальше от главной карты для видимости
+            translateY = (position - 1) * 5; // Смещение вниз
+            scale = 0.85 - (position - 1) * 0.03; // Масштаб
+            opacity = 0.8 - (position - 1) * 0.1; // Прозрачность
           }
           
           // Ограничиваем значения для максимальной видимости
@@ -200,7 +200,7 @@ const CardAnalyticsPage = () => {
           return (
             <div
               key={`bg-${card.id}`}
-              className="absolute top-4 left-6 w-full h-[189px] rounded-[27px] transition-all duration-600 ease-out shadow-lg"
+              className="absolute top-4 left-12 w-[calc(100%-6rem)] h-[189px] rounded-[27px] transition-all duration-600 ease-out shadow-lg"
               style={{
                 backgroundColor: card.color,
                 transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
@@ -245,7 +245,7 @@ const CardAnalyticsPage = () => {
         
         {/* Current selected card */}
         <div 
-          className="relative w-full h-[189px] rounded-[27px] p-6 flex flex-col justify-between z-20 transition-all duration-600 ease-out shadow-2xl"
+          className="relative w-[calc(100%-6rem)] h-[189px] rounded-[27px] p-6 flex flex-col justify-between z-20 transition-all duration-600 ease-out shadow-2xl"
           style={{ 
             backgroundColor: currentCard.color,
             transform: `translateX(${swipeOffset * 0.1}px)`,
