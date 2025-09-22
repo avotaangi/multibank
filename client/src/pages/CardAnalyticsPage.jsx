@@ -176,24 +176,24 @@ const CardAnalyticsPage = () => {
           let translateX, translateY, scale, opacity;
           
           if (isPrevious) {
-            // Все предыдущие карты - по левую сторону от главной карты
+            // Предыдущие карты - слева от главной, хорошо видны
             const position = currentCardIndex - index; // 1, 2, 3...
-            translateX = -20 - (position - 1) * 15; // По левую сторону с интервалом 15px
-            translateY = 0; // На том же уровне, что и главная карта
-            scale = 0.9 - (position - 1) * 0.03; // Уменьшаем масштаб для каждой карты
-            opacity = 0.8 - (position - 1) * 0.1; // Уменьшаем прозрачность для каждой карты
+            translateX = -30 - (position - 1) * 25; // Дальше от главной карты
+            translateY = (position - 1) * 5; // Небольшое смещение вниз
+            scale = 0.85 - (position - 1) * 0.03; // Уменьшаем масштаб
+            opacity = 0.8 - (position - 1) * 0.1; // Хорошая прозрачность
           } else {
-            // Следующие карты - справа, под главной картой
+            // Следующие карты - справа от главной, хорошо видны
             const position = index - currentCardIndex; // 1, 2, 3...
-            translateX = 30 + (position - 1) * 18;
-            translateY = 15 + position * 8; // Смещаем вниз под главную карту
-            scale = 0.85 - (position - 1) * 0.03;
-            opacity = 0.7 - (position - 1) * 0.1;
+            translateX = 30 + (position - 1) * 25; // Дальше от главной карты
+            translateY = (position - 1) * 5; // Небольшое смещение вниз
+            scale = 0.85 - (position - 1) * 0.03; // Уменьшаем масштаб
+            opacity = 0.8 - (position - 1) * 0.1; // Хорошая прозрачность
           }
           
           // Ограничиваем значения для лучшей видимости
-          scale = Math.max(scale, 0.85);
-          opacity = Math.max(opacity, 0.7);
+          scale = Math.max(scale, 0.8);
+          opacity = Math.max(opacity, 0.6);
           
           console.log(`Card ${card.name}: translateX=${translateX}, translateY=${translateY}, scale=${scale}, opacity=${opacity}`);
           
