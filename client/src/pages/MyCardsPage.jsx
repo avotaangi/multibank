@@ -91,7 +91,7 @@ const MyCardsPage = () => {
   return (
     <div className="min-h-screen bg-white animate-slide-up">
       {/* Header */}
-      <div className="relative z-10 px-6 pt-6 pb-4">
+      <div className="relative z-10 px-3 sm:px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <button 
             onClick={handleBackToDashboard}
@@ -110,11 +110,11 @@ const MyCardsPage = () => {
 
 
       {/* Cards List - Always visible */}
-      <div className="relative z-10 px-6 py-4 space-y-4">
+      <div className="relative z-10 px-3 sm:px-6 py-4 space-y-4">
           {cards.map((card, index) => (
             <div
               key={card.id}
-              className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
+              className={`relative w-full h-[160px] sm:h-[180px] md:h-[189px] rounded-[20px] sm:rounded-[24px] md:rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
                 cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20'
               }`}
               style={{ 
@@ -124,45 +124,45 @@ const MyCardsPage = () => {
               onClick={() => handleCardClick(card)}
             >
               {/* Card Content */}
-              <div className="p-6 h-full flex flex-col justify-between">
+              <div className="p-4 sm:p-5 md:p-6 h-full flex flex-col justify-between">
                 {/* Top Row */}
                 <div className="flex items-center justify-between">
                   {card.id === 'vtb' && (
-                    <div className="w-12 h-4 bg-white rounded"></div>
+                    <div className="w-8 sm:w-10 md:w-12 h-3 sm:h-4 bg-white rounded"></div>
                   )}
                   {card.id === 'tbank' && (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
-                        <span className="text-gray-800 font-bold text-sm">{card.logo}</span>
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-yellow-400 rounded flex items-center justify-center">
+                        <span className="text-gray-800 font-bold text-xs sm:text-sm">{card.logo}</span>
                       </div>
-                      <div className="text-white text-lg font-bold font-ibm">БАНК</div>
+                      <div className="text-white text-sm sm:text-base md:text-lg font-bold font-ibm">БАНК</div>
                     </div>
                   )}
                   {card.id === 'alfa' && (
-                    <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-                      <span className="text-red-500 font-bold text-lg">{card.logo}</span>
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-white rounded flex items-center justify-center">
+                      <span className="text-red-500 font-bold text-sm sm:text-base md:text-lg">{card.logo}</span>
                     </div>
                   )}
                   
                   {/* Edit Icon */}
-                  <div className="w-5 h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
-                    <Edit size={12} className="text-white" />
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                    <Edit size={10} className="text-white sm:w-3 sm:h-3" />
                   </div>
                 </div>
 
                 {/* Balance */}
-                <div className="text-white text-2xl font-normal font-ibm text-right">
+                <div className="text-white text-lg sm:text-xl md:text-2xl font-normal font-ibm text-right">
                   {card.balance}
                 </div>
 
                 {/* Card Number */}
-                <div className="text-white text-base font-normal font-ibm">
+                <div className="text-white text-sm sm:text-base font-normal font-ibm">
                   {card.cardNumber}
                 </div>
               </div>
 
               {/* Bottom Right Circle */}
-              <div className="absolute bottom-4 right-4 w-7 h-7 bg-white/20 border border-white rounded-full"></div>
+              <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white/20 border border-white rounded-full"></div>
             </div>
           ))}
         </div>

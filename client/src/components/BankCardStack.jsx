@@ -10,6 +10,25 @@ const BankCardStack = () => {
 
   const cards = [
     {
+      id: 'alfa',
+      name: 'Альфа-Банк',
+      balance: '10 544,40 ₽',
+      color: '#EF3124',
+      logo: 'A',
+      cardNumber: '5294 **** **** 2498',
+      analytics: {
+        income: '125 600 ₽',
+        expenses: '89 200 ₽',
+        transactions: 67,
+        categories: [
+          { name: 'Бизнес', amount: '25 000 ₽', percentage: 28 },
+          { name: 'Инвестиции', amount: '18 500 ₽', percentage: 21 },
+          { name: 'Личные', amount: '22 300 ₽', percentage: 25 },
+          { name: 'Остальное', amount: '23 400 ₽', percentage: 26 }
+        ]
+      }
+    },
+    {
       id: 'vtb',
       name: 'ВТБ',
       balance: '2 876,87 ₽',
@@ -46,29 +65,11 @@ const BankCardStack = () => {
           { name: 'Остальное', amount: '9 840 ₽', percentage: 35 }
         ]
       }
-    },
-    {
-      id: 'alfa',
-      name: 'Альфа-Банк',
-      balance: '10 544,40 ₽',
-      color: '#EF3124',
-      logo: 'A',
-      cardNumber: '5294 **** **** 2498',
-      analytics: {
-        income: '125 600 ₽',
-        expenses: '89 200 ₽',
-        transactions: 67,
-        categories: [
-          { name: 'Бизнес', amount: '25 000 ₽', percentage: 28 },
-          { name: 'Инвестиции', amount: '18 500 ₽', percentage: 21 },
-          { name: 'Личные', amount: '22 300 ₽', percentage: 25 },
-          { name: 'Остальное', amount: '23 400 ₽', percentage: 26 }
-        ]
-      }
     }
   ];
 
   const handleStart = (e) => {
+    e.preventDefault();
     setIsDragging(true);
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     startX.current = clientX;
@@ -78,37 +79,58 @@ const BankCardStack = () => {
   const handleMove = (e) => {
     if (!isDragging) return;
     
+    e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     currentX.current = clientX;
     const deltaX = currentX.current - startX.current;
     
     // Ограничиваем свайп только влево (отрицательные значения)
     if (deltaX < 0) {
-      setSwipeOffset(Math.abs(deltaX));
+      const offset = Math.abs(deltaX);
+      // Увеличиваем максимальный свайп для лучшего раскрытия карт
+      setSwipeOffset(Math.min(offset, 300));
     }
   };
 
   const handleEnd = (e) => {
     if (!isDragging) return;
     
+    e.preventDefault();
     const deltaX = currentX.current - startX.current;
     
-    // Если свайп больше 100px влево - переходим на страницу "Мои карты"
-    if (deltaX < -100) {
-      // Сразу переходим на страницу без анимации возврата
+    // Если свайп больше 150px влево - переходим на страницу "Мои карты"
+    // Увеличиваем порог для лучшего раскрытия карт
+    if (deltaX < -150) {
+      // Плавный переход без паузы
       navigate('/my-cards');
+    } else {
+      // Если свайп недостаточный, возвращаем карты в исходное положение
+      setIsDragging(false);
+      setSwipeOffset(0);
     }
-    
-    setIsDragging(false);
-    setSwipeOffset(0);
   };
 
 
   return (
-    <div className="relative w-full flex justify-center pb-8">
+    <div className="relative w-full flex justify-center pb-4 px-4 sm:px-6 md:px-8 overflow-hidden">
+      {/* Triple Arrow Right */}
+      <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-40">
+        <div className="flex items-center space-x-1">
+          <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+          </svg>
+          <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+          </svg>
+          <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+          </svg>
+        </div>
+      </div>
+
       {/* Bank Cards Stack - Horizontal */}
       <div 
-        className="relative h-[220px] w-[450px] cursor-pointer select-none overflow-hidden"
+        className="relative h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] w-full max-w-[320px] sm:max-w-[380px] md:max-w-[460px] lg:max-w-[520px] cursor-pointer select-none overflow-visible touch-pan-y"
         onTouchStart={handleStart}
         onTouchMove={handleMove}
         onTouchEnd={handleEnd}
@@ -116,76 +138,86 @@ const BankCardStack = () => {
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
-        style={{ transform: `translateX(-${swipeOffset * 0.1}px)` }}
+        style={{ 
+          transform: `translateX(-${swipeOffset * 0.15}px)`,
+          touchAction: 'pan-y',
+          transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        }}
       >
-        {/* VTB Card */}
+        {/* Alpha Bank Card */}
         <div 
           data-card="0"
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[320px] h-[220px] rounded-[27px] z-30 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[280px] sm:w-[300px] md:w-[340px] lg:w-[380px] h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] rounded-[20px] sm:rounded-[24px] md:rounded-[28px] lg:rounded-[32px] z-30 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[0].color,
-            transform: `translateX(calc(-50% - ${swipeOffset > 50 ? swipeOffset * 0.3 : 0}px))`
+            transform: `translateX(calc(-50% - ${swipeOffset > 30 ? swipeOffset * 0.35 : 0}px))`,
+            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}
         >
-          <div className="p-6 h-full flex items-center justify-between">
-            <div className="text-white text-xl font-bold font-ibm">{cards[0].logo}</div>
-            <div className="text-white text-2xl font-normal font-ibm">{cards[0].balance}</div>
+          <div className="p-4 sm:p-5 md:p-6 lg:p-7 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <div className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold font-ibm">{cards[0].logo}</div>
+                <div className="w-8 h-0.5 bg-white mt-1"></div>
+              </div>
+              <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-white text-base sm:text-lg font-normal font-ibm">{cards[0].cardNumber}</div>
+              <div className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl font-normal font-ibm">{cards[0].balance}</div>
+            </div>
+          </div>
+        </div>
+        
+        {/* VTB Card */}
+        <div 
+          data-card="1"
+          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[280px] sm:w-[300px] md:w-[340px] lg:w-[380px] h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] rounded-[20px] sm:rounded-[24px] md:rounded-[28px] lg:rounded-[32px] z-20 transition-transform duration-200 hover:scale-105"
+          style={{ 
+            backgroundColor: cards[1].color,
+            transform: `translateX(calc(-50% + 20px - ${swipeOffset > 60 ? swipeOffset * 0.25 : 0}px))`,
+            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          }}
+        >
+          <div className="p-4 sm:p-5 md:p-6 lg:p-7 h-full flex items-center justify-between">
+            <div className="text-white text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-ibm">{cards[1].logo}</div>
+            <div className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl font-normal font-ibm">{cards[1].balance}</div>
           </div>
         </div>
         
         {/* T-Bank Card */}
         <div 
-          data-card="1"
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[320px] h-[220px] rounded-[27px] z-20 transition-transform duration-200 hover:scale-105"
-          style={{ 
-            backgroundColor: cards[1].color,
-            transform: `translateX(calc(-50% + 25px - ${swipeOffset > 100 ? swipeOffset * 0.2 : 0}px))`
-          }}
-        >
-          <div className="p-6 h-full flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
-                <span className="text-gray-800 font-bold text-sm">{cards[1].logo}</span>
-              </div>
-              <div className="text-white text-xl font-bold font-ibm">БАНК</div>
-            </div>
-            <div className="text-white text-2xl font-normal font-ibm">{cards[1].balance}</div>
-          </div>
-        </div>
-        
-        {/* Alpha Bank Card */}
-        <div 
           data-card="2"
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[320px] h-[220px] rounded-[27px] z-10 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[280px] sm:w-[300px] md:w-[340px] lg:w-[380px] h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] rounded-[20px] sm:rounded-[24px] md:rounded-[28px] lg:rounded-[32px] z-10 transition-transform duration-200 hover:scale-105"
           style={{ 
             backgroundColor: cards[2].color,
-            transform: `translateX(calc(-50% + 50px - ${swipeOffset > 150 ? swipeOffset * 0.1 : 0}px))`
+            transform: `translateX(calc(-50% + 40px - ${swipeOffset > 90 ? swipeOffset * 0.15 : 0}px))`,
+            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
           }}
         >
-          <div className="p-6 h-full flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-                <span className="text-red-500 font-bold text-lg">{cards[2].logo}</span>
+          <div className="p-4 sm:p-5 md:p-6 lg:p-7 h-full flex items-center justify-between">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 bg-yellow-400 rounded flex items-center justify-center">
+                <span className="text-gray-800 font-bold text-xs sm:text-sm md:text-base">{cards[2].logo}</span>
               </div>
-              <div className="w-5 h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-                </svg>
-              </div>
+              <div className="text-white text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-ibm">БАНК</div>
             </div>
-            <div className="text-white text-2xl font-normal font-ibm text-right">{cards[2].balance}</div>
-            <div className="text-white text-base font-normal font-ibm">{cards[2].cardNumber}</div>
+            <div className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl font-normal font-ibm">{cards[2].balance}</div>
           </div>
         </div>
       </div>
 
       {/* Swipe Indicator */}
       {isDragging && swipeOffset > 20 && (
-        <div className="absolute top-[240px] left-1/2 transform -translate-x-1/2 text-center">
-          <div className="text-gray-500 text-sm font-ibm">
+        <div className="absolute top-[200px] sm:top-[220px] md:top-[240px] left-1/2 transform -translate-x-1/2 text-center">
+          <div className="text-gray-500 text-xs sm:text-sm font-ibm">
             Свайпните влево для просмотра всех карт
           </div>
-          <div className="w-8 h-1 bg-gray-300 rounded mx-auto mt-2"></div>
+          <div className="w-6 sm:w-8 h-1 bg-gray-300 rounded mx-auto mt-2"></div>
         </div>
       )}
     </div>

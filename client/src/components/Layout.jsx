@@ -8,7 +8,7 @@ const Layout = () => {
   
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      {/* <Header /> */}
       
       <main className="pb-20">
         <PageTransition key={location.pathname}>
