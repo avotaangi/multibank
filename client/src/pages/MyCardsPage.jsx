@@ -8,8 +8,14 @@ const MyCardsPage = () => {
   const navigate = useNavigate();
   const { getFormattedBalance } = useBalanceStore();
   
-  // Подписываемся на изменения в сторе тестовых карт
-  const testCards = useTestCardsStore((state) => state.testCards);
+  // Получаем тестовые карты из стора
+  const { getAllCards } = useTestCardsStore();
+  const testCards = getAllCards() || [];
+  
+  // Проверяем, что store инициализирован
+  if (!getAllCards) {
+    return <div>Загрузка...</div>;
+  }
   
   const baseCards = [
     {
