@@ -7,7 +7,13 @@ import BankCardStack from '../components/BankCardStack';
 
 const DashboardPage = () => {
   const { user } = useAuthStore();
-  const { getFormattedBalance } = useBalanceStore();
+  const getFormattedBalance = useBalanceStore((state) => state.getFormattedBalance);
+  const bankBalances = useBalanceStore((state) => state.bankBalances);
+  
+  // Вычисляем общий бюджет реактивно
+  const totalBudget = Object.values(bankBalances).reduce((sum, balance) => sum + balance, 0);
+  const formattedTotalBudget = `${totalBudget.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
+  console.log('🔄 DashboardPage - bankBalances:', bankBalances, 'total:', totalBudget, 'formatted:', formattedTotalBudget);
   const { addTestCard } = useTestCardsStore();
   const navigate = useNavigate();
 
@@ -98,13 +104,13 @@ const DashboardPage = () => {
       handleCloseModal();
     }
   };
-
+м6
 
 
 
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white relative overflow-hidden" style={{ paddingTop: '100px' }}>
 
       {/* Top Header with Profile */}
       <div className="relative z-10 bg-gray-200 px-5 pt-6 pb-4 rounded-b-[40px] animate-slide-in-down">
@@ -145,7 +151,7 @@ const DashboardPage = () => {
           Общий бюджет
         </div>
         <div className="text-black font-ibm text-3xl font-medium leading-[110%] tracking-[-0.02em]">
-          18 404,7 ₽
+          {formattedTotalBudget}
         </div>
       </div>
 

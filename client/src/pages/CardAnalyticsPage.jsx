@@ -73,7 +73,13 @@ const CardAnalyticsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { cardId } = useParams();
-  const { getFormattedBalance } = useBalanceStore();
+  const getFormattedBalance = useBalanceStore((state) => state.getFormattedBalance);
+  const bankBalances = useBalanceStore((state) => state.bankBalances);
+  
+  // Вычисляем общий бюджет реактивно
+  const totalBudget = Object.values(bankBalances).reduce((sum, balance) => sum + balance, 0);
+  const formattedTotalBudget = `${totalBudget.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
+  console.log('🔄 CardAnalyticsPage - bankBalances:', bankBalances, 'total:', totalBudget, 'formatted:', formattedTotalBudget);
   const [currentCardIndex, setCurrentCardIndex] = useState(() => {
     // Устанавливаем правильный индекс на основе cardId
     if (cardId === 'alfa') return 0; // Красная карта - первая
@@ -234,7 +240,7 @@ const CardAnalyticsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white" style={{ paddingTop: '100px' }}>
       {/* Header */}
       <div className="px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
@@ -254,10 +260,10 @@ const CardAnalyticsPage = () => {
       </div>
 
       {/* Card Stack with Swipe */}
-      <div className="relative w-full flex justify-center pb-8 px-4 min-[360px]:pb-10 min-[360px]:px-6 min-[375px]:pb-12 min-[375px]:px-8 sm:px-10 md:px-12 overflow-hidden">
+      <div className="relative w-full flex justify-center pb-8 px-4 overflow-hidden">
         
         <div 
-          className="relative h-[160px] w-[280px] min-[360px]:h-[170px] min-[360px]:w-[300px] min-[375px]:h-[190px] min-[375px]:w-[340px] sm:h-[200px] sm:w-[350px] md:h-[220px] md:w-[380px] cursor-pointer select-none overflow-visible flex justify-center"
+          className="relative h-[160px] w-[280px] cursor-pointer select-none overflow-visible flex justify-center"
           onTouchStart={handleStart}
           onTouchMove={handleMove}
           onTouchEnd={handleEnd}
@@ -270,7 +276,7 @@ const CardAnalyticsPage = () => {
           {/* Previous card (left) */}
           {currentCardIndex > 0 && (
             <div 
-              className="absolute top-0 w-[260px] h-[155px] min-[360px]:w-[280px] min-[360px]:h-[165px] min-[375px]:w-[320px] min-[375px]:h-[185px] sm:w-[330px] sm:h-[195px] md:w-[350px] md:h-[205px] rounded-[27px] z-10"
+              className="absolute top-0 w-[260px] h-[155px] rounded-[27px] z-10"
               style={{ 
                 backgroundColor: cards[currentCardIndex - 1].color,
                 left: 'calc(50% - 130px - 30px)',
@@ -319,7 +325,7 @@ const CardAnalyticsPage = () => {
           
           {/* Current card (center) */}
           <div 
-            className="w-[280px] h-[160px] min-[360px]:w-[300px] min-[360px]:h-[170px] min-[375px]:w-[340px] min-[375px]:h-[190px] sm:w-[350px] sm:h-[200px] md:w-[380px] md:h-[220px] rounded-[27px] z-30"
+            className="w-[280px] h-[160px] rounded-[27px] z-30"
             style={{ 
               backgroundColor: currentCard.color,
               transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -366,10 +372,10 @@ const CardAnalyticsPage = () => {
           {/* Next card (right) */}
           {cards[currentCardIndex + 1] && (
             <div 
-              className="absolute top-0 w-[230px] h-[140px] min-[360px]:w-[250px] min-[360px]:h-[150px] min-[375px]:w-[270px] min-[375px]:h-[160px] sm:w-[280px] sm:h-[175px] md:w-[300px] md:h-[185px] rounded-[27px] z-20"
+              className="absolute top-0 w-[260px] h-[155px] rounded-[27px] z-20"
               style={{ 
                 backgroundColor: cards[currentCardIndex + 1].color,
-                left: 'calc(50% - 115px + 40px)',
+                left: 'calc(50% - 130px + 40px)',
                 opacity: 0.7,
                 boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)',
                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -436,7 +442,7 @@ const CardAnalyticsPage = () => {
       <div className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5">
         <div className="text-center">
           <div className="text-black font-ibm text-sm min-[360px]:text-base sm:text-lg md:text-xl font-normal leading-[110%]">
-            Общий бюджет 18 404,7 ₽
+            Общий бюджет {formattedTotalBudget}
           </div>
         </div>
       </div>

@@ -1,11 +1,56 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useTestCardsStore from '../stores/testCardsStore';
+import useBalanceStore from '../stores/balanceStore';
+import useTransfersStore from '../stores/transfersStore';
 
 const AnalyticsPage = () => {
   const navigate = useNavigate();
   const { getAllCards } = useTestCardsStore();
+  const bankBalances = useBalanceStore((state) => state.bankBalances);
+  
+  // Вычисляем общий бюджет реактивно
+  const getFormattedTotalBudget = () => {
+    const total = Object.values(bankBalances).reduce((sum, balance) => sum + balance, 0);
+    const formatted = `${total.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
+    console.log('🔄 AnalyticsPage - bankBalances:', bankBalances, 'total:', total, 'formatted:', formatted);
+    return formatted;
+  };
+  const { getAllTransfers } = useTransfersStore();
   const [isMonthOpen, setIsMonthOpen] = useState(false);
+  
+  // Получаем недавние переводы
+  const recentTransfers = getAllTransfers();
+  
+  // Функция для форматирования перевода
+  const formatTransfer = (transfer) => {
+    const bankNames = {
+      'alfa': 'Альфа-Банк',
+      'vtb': 'ВТБ', 
+      'tbank': 'T-Банк'
+    };
+    
+    const fromBankName = bankNames[transfer.fromBank] || transfer.fromBank;
+    const toBankName = bankNames[transfer.toBank] || transfer.toBank;
+    
+    if (transfer.type === 'internal') {
+      return {
+        title: `Перевод между банками`,
+        subtitle: `${fromBankName} → ${toBankName}`,
+        amount: `- ${transfer.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`,
+        icon: '🔄',
+        iconBg: 'bg-blue-500'
+      };
+    } else {
+      return {
+        title: `Перевод ${transfer.recipient}`,
+        subtitle: `С ${fromBankName}`,
+        amount: `- ${transfer.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`,
+        icon: '👤',
+        iconBg: 'bg-green-500'
+      };
+    }
+  };
   const [isBankOpen, setIsBankOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('Месяц');
@@ -88,7 +133,7 @@ const AnalyticsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: '100px' }}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
@@ -302,6 +347,25 @@ const AnalyticsPage = () => {
         
         {/* Operations List */}
         <div className="space-y-2 min-[360px]:space-y-3">
+          {/* Недавние переводы */}
+          {recentTransfers.map((transfer, index) => {
+            const formatted = formatTransfer(transfer);
+            return (
+              <div key={transfer.id} className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+                <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
+                  <div className={`w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 ${formatted.iconBg} rounded-full flex items-center justify-center`}>
+                    <span className="text-white font-bold text-xs min-[360px]:text-sm">{formatted.icon}</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">{formatted.title}</div>
+                  <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">{formatted.subtitle}</div>
+                </div>
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">{formatted.amount}</div>
+              </div>
+            );
+          })}
+          
           {/* Магнит */}
           <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">

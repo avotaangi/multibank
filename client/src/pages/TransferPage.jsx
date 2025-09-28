@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
+import useTransfersStore from '../stores/transfersStore';
 
 const TransferPage = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const TransferPage = () => {
     'Карина Громенко': [100, 250, 400]
   });
   const { bankBalances, transferMoney, getFormattedBalance } = useBalanceStore();
+  const { addTransfer } = useTransfersStore();
 
   const frequentRecipients = [
     { 
@@ -212,6 +214,12 @@ const TransferPage = () => {
     
     // Проверяем, не выбрана ли та же карта для отправителя
     if (bankId === selectedFromBank && bankId !== 'other' && selectedRecipient) {
+      // Для внешних получателей всегда разрешаем перевод (деньги не зачисляются)
+      if (bankId.startsWith('external_')) {
+        setSameCardSelected(false);
+        return;
+      }
+      
       const recipientHasSameBank = selectedRecipient.cards.some(card => card.id === bankId);
       if (recipientHasSameBank) {
         // Дополнительная проверка: это должна быть одна и та же карта (один владелец)
@@ -241,19 +249,30 @@ const TransferPage = () => {
     
     // Проверяем конфликт карт после выбора получателя
     if (selectedFromBank && selectedToBank && selectedFromBank === selectedToBank && selectedFromBank !== 'other') {
-      const recipientHasSameBank = recipient.cards.some(card => card.id === selectedFromBank);
-      if (recipientHasSameBank) {
-        // Дополнительная проверка: это должна быть одна и та же карта (один владелец)
-        const fromCard = userCards.find(card => card.id === selectedFromBank);
-        const toCard = recipient.cards.find(card => card.id === selectedToBank);
-        
-        if (fromCard && toCard && fromCard.user === toCard.user) {
-          setSameCardSelected(true);
+      // Для внешних получателей всегда разрешаем перевод (деньги не зачисляются)
+      if (selectedToBank.startsWith('external_')) {
+        setSameCardSelected(false);
+        return;
+      }
+      
+      // Для "Между банками" запрещаем перевод на ту же карту
+      if (recipient.name === 'Между банками') {
+        setSameCardSelected(true);
+      } else {
+        const recipientHasSameBank = recipient.cards.some(card => card.id === selectedFromBank);
+        if (recipientHasSameBank) {
+          // Дополнительная проверка: это должна быть одна и та же карта (один владелец)
+          const fromCard = userCards.find(card => card.id === selectedFromBank);
+          const toCard = recipient.cards.find(card => card.id === selectedToBank);
+          
+          if (fromCard && toCard && fromCard.user === toCard.user) {
+            setSameCardSelected(true);
+          } else {
+            setSameCardSelected(false);
+          }
         } else {
           setSameCardSelected(false);
         }
-      } else {
-        setSameCardSelected(false);
       }
     } else {
       setSameCardSelected(false);
@@ -281,17 +300,23 @@ const TransferPage = () => {
     
     // Проверяем, не выбраны ли одинаковые карты (один банк, один получатель, одна карта)
     if (selectedFromBank === selectedToBank && selectedFromBank !== 'other' && selectedRecipient) {
-      // Проверяем, есть ли у выбранного получателя карта того же банка
-      const recipientHasSameBank = selectedRecipient.cards.some(card => card.id === selectedFromBank);
-      if (recipientHasSameBank) {
-        // Дополнительная проверка: это должна быть одна и та же карта (один владелец)
-        const fromCard = userCards.find(card => card.id === selectedFromBank);
-        const toCard = selectedRecipient.cards.find(card => card.id === selectedToBank);
-        
-        // Если это одна и та же карта (один владелец), то запрещаем
-        if (fromCard && toCard && fromCard.user === toCard.user) {
-          setSameCardSelected(true);
-          return;
+      // Для "Между банками" запрещаем перевод на ту же карту
+      if (selectedRecipient.name === 'Между банками') {
+        setSameCardSelected(true);
+        return;
+      } else {
+        // Для других получателей проверяем конфликт
+        const recipientHasSameBank = selectedRecipient.cards.some(card => card.id === selectedFromBank);
+        if (recipientHasSameBank) {
+          // Дополнительная проверка: это должна быть одна и та же карта (один владелец)
+          const fromCard = userCards.find(card => card.id === selectedFromBank);
+          const toCard = selectedRecipient.cards.find(card => card.id === selectedToBank);
+          
+          // Если это одна и та же карта (один владелец), то запрещаем
+          if (fromCard && toCard && fromCard.user === toCard.user) {
+            setSameCardSelected(true);
+            return;
+          }
         }
       }
     }
@@ -310,7 +335,28 @@ const TransferPage = () => {
     }
     
     // Обновляем балансы через глобальный store
-    transferMoney(selectedFromBank, selectedToBank, transferAmount);
+    const actualToBank = selectedToBank.startsWith('external_') ? 'other' : selectedToBank;
+    
+    console.log('TransferPage - Calling transferMoney:', {
+      selectedFromBank,
+      selectedToBank,
+      actualToBank,
+      transferAmount,
+      currentBalances: bankBalances,
+      isExternalTransfer: selectedToBank.startsWith('external_')
+    });
+    
+    transferMoney(selectedFromBank, actualToBank, transferAmount);
+
+    // Сохраняем перевод в transfersStore
+    addTransfer({
+      fromBank: selectedFromBank,
+      toBank: selectedToBank,
+      amount: transferAmount,
+      recipient: selectedRecipient?.name || 'Неизвестно',
+      message: message || '',
+      type: selectedRecipient?.name === 'Между банками' ? 'internal' : 'external'
+    });
 
     // Обновляем последние переводы для выбранного получателя
     if (selectedRecipient) {
@@ -324,14 +370,22 @@ const TransferPage = () => {
       }));
     }
 
-    // Обновляем балансы в данных получателя
-    if (selectedRecipient && selectedToBank !== 'other') {
+    // Обновляем балансы в данных получателя только для "Между банками"
+    console.log('TransferPage - Checking recipient update:', {
+      selectedRecipient: selectedRecipient?.name,
+      selectedToBank,
+      isInternalTransfer: selectedRecipient?.name === 'Между банками'
+    });
+    
+    if (selectedRecipient && selectedRecipient.name === 'Между банками' && selectedToBank !== 'other') {
+      console.log('✅ Internal transfer - updating recipient balances for "Между банками"');
       const updatedRecipient = {
         ...selectedRecipient,
         cards: selectedRecipient.cards.map(card => {
           if (card.id === selectedToBank) {
             const currentBalance = parseFloat(card.balance.replace(/[^\d,]/g, '').replace(',', '.'));
             const newBalance = currentBalance + transferAmount;
+            console.log(`✅ Updated ${card.id} balance: ${currentBalance} → ${newBalance}`);
             return {
               ...card,
               balance: `${newBalance.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`
@@ -341,6 +395,9 @@ const TransferPage = () => {
         })
       };
       setSelectedRecipient(updatedRecipient);
+    } else {
+      console.log('❌ External transfer - NOT updating recipient balances for external recipient');
+      console.log(`❌ Recipient: ${selectedRecipient?.name}, isInternal: ${selectedRecipient?.name === 'Между банками'}`);
     }
     
     // Показываем модальное окно успеха
@@ -352,7 +409,7 @@ const TransferPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white w-full overflow-visible pb-8" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white w-full overflow-visible pb-8" style={{ paddingTop: '100px' }}>
       {/* Header */}
       <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 pt-6 pb-4 animate-slide-in-down">
         <div className="flex items-center justify-between">
@@ -391,15 +448,15 @@ const TransferPage = () => {
                 setSelectedTransferIndex(null);
                 
                 if (recipient.type === 'action') {
-                  // Для "Между банками" - показываем свои карты
+                  // Для "Между банками" - показываем свои карты с актуальными балансами
                   setSelectedRecipient({
                     id: 'self',
                     name: 'Между банками',
                     avatar: '',
                     cards: [
-                      { id: 'alfa', name: 'Альфа-Банк', balance: '10 544,40 ₽', color: '#EF3124', logo: 'A', cardNumber: '5294 **** **** 2498' },
-                      { id: 'vtb', name: 'ВТБ', balance: '45 230 ₽', color: '#0055BC', logo: 'ВТБ', cardNumber: '3568 **** **** 8362' },
-                      { id: 'tbank', name: 'T-Банк', balance: '67 890 ₽', color: '#2F2F2F', logo: 'T', cardNumber: '6352 **** **** 9837' }
+                      { id: 'alfa', name: 'Альфа-Банк', balance: getFormattedBalance('alfa'), color: '#EF3124', logo: 'A', cardNumber: '5294 **** **** 2498' },
+                      { id: 'vtb', name: 'ВТБ', balance: getFormattedBalance('vtb'), color: '#0055BC', logo: 'ВТБ', cardNumber: '3568 **** **** 8362' },
+                      { id: 'tbank', name: 'T-Банк', balance: getFormattedBalance('tbank'), color: '#2F2F2F', logo: 'T', cardNumber: '6352 **** **** 9837' }
                     ]
                   });
                 } else {
@@ -530,10 +587,11 @@ const TransferPage = () => {
             <div
               key={`to-${card.id}`}
               className={`w-[95px] h-[100px] sm:w-[115px] sm:h-[120px] md:w-[135px] md:h-[140px] lg:w-[155px] lg:h-[160px] xl:w-[175px] xl:h-[180px] 2xl:w-[195px] 2xl:h-[200px] rounded-[18px] cursor-pointer transition-all duration-300 flex flex-col items-center justify-center p-3 sm:p-4 md:p-5 lg:p-6 xl:p-7 2xl:p-8 ${
-                selectedToBank === card.id ? (card.id === 'alfa' ? 'ring-2 ring-black shadow-lg' : 'ring-2 ring-red-500 shadow-lg') : ''
+                (selectedToBank === card.id || selectedToBank === `external_${card.id}`) ? (card.id === 'alfa' ? 'ring-2 ring-black shadow-lg' : 'ring-2 ring-red-500 shadow-lg') : ''
               }`}
+              data-debug={`selectedToBank: ${selectedToBank}, card.id: ${card.id}, external: external_${card.id}`}
               style={{ backgroundColor: card.color }}
-              onClick={() => handleToBankSelect(card.id)}
+              onClick={() => handleToBankSelect(selectedRecipient.name === 'Между банками' ? card.id : `external_${card.id}`)}
             >
               <div className="text-white font-ibm text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl font-bold leading-[110%] mb-2">
                 {card.logo}

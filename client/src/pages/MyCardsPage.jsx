@@ -6,7 +6,7 @@ import useTestCardsStore from '../stores/testCardsStore';
 
 const MyCardsPage = () => {
   const navigate = useNavigate();
-  const { getFormattedBalance } = useBalanceStore();
+  const getFormattedBalance = useBalanceStore((state) => state.getFormattedBalance);
   
   // Получаем тестовые карты из стора
   const { getAllCards } = useTestCardsStore();
@@ -115,7 +115,7 @@ const MyCardsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white animate-slide-up" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white animate-slide-up" style={{ paddingTop: '100px' }}>
       {/* Header */}
       <div className="relative z-10 px-3 sm:px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
