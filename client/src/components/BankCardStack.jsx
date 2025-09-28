@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
 
 const BankCardStack = () => {
+  const navigate = useNavigate();
   const { getFormattedBalance } = useBalanceStore();
   const { getAllCards } = useTestCardsStore();
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -109,7 +111,7 @@ const BankCardStack = () => {
     // Увеличиваем порог для лучшего раскрытия карт
     if (deltaX < -150) {
       // Плавный переход без паузы
-      window.location.href = '/my-cards';
+      navigate('/my-cards');
     } else {
       // Если свайп недостаточный, возвращаем карты в исходное положение
       setIsDragging(false);
@@ -125,7 +127,7 @@ const BankCardStack = () => {
     e.stopPropagation();
     
     // Переходим на страницу "Мои карты"
-    window.location.href = '/my-cards';
+    navigate('/my-cards');
   };
 
 
