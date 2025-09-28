@@ -2,7 +2,7 @@ import React from 'react'
 
 const HistoryPage = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Main Content */}
       <div className="pt-[100px] px-4">
         <div className="bg-white rounded-2xl p-8 shadow-lg max-w-md w-full text-center">
