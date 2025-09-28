@@ -18,6 +18,7 @@ const useAuthStore = create((set, get) => ({
         
         // Get init data from Telegram
         const initData = tg.initData
+        console.log('Telegram WebApp initData:', initData)
         
         if (initData) {
           // Try to authenticate with Telegram data
@@ -61,7 +62,18 @@ const useAuthStore = create((set, get) => ({
         }
       }
       
-      set({ isLoading: false })
+      // Fallback for development - create a test user
+      console.log('No Telegram WebApp or initData, creating test user for development')
+      set({ 
+        user: { 
+          id: 'test-user', 
+          username: 'test_user', 
+          first_name: 'Test', 
+          last_name: 'User' 
+        }, 
+        isLoading: false,
+        error: null 
+      })
     } catch (error) {
       console.error('Auth initialization error:', error)
       set({ 
