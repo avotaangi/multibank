@@ -183,6 +183,10 @@ const CardAnalyticsPage = () => {
   
   console.log('CardAnalyticsPage - currentCardIndex:', currentCardIndex);
   console.log('CardAnalyticsPage - currentCard:', currentCard?.name);
+  console.log('CardAnalyticsPage - previous card exists:', currentCardIndex > 0);
+  console.log('CardAnalyticsPage - previous card data:', currentCardIndex > 0 ? cards[currentCardIndex - 1] : 'none');
+  console.log('CardAnalyticsPage - next card exists:', currentCardIndex < cards.length - 1);
+  console.log('CardAnalyticsPage - cards length:', cards.length);
 
   // Swipe handlers
   const handleStart = (e) => {
@@ -212,12 +216,12 @@ const CardAnalyticsPage = () => {
     const deltaX = currentX.current - startX.current;
     
     // Если свайп больше 100px влево - переключаем на следующую карту
-    if (deltaX < -100 && currentCardIndex < cards.length - 1) {
+    if (deltaX < -100 && currentCardIndex < cards.length - 1 && cards[currentCardIndex + 1]) {
       setCurrentCardIndex(currentCardIndex + 1);
       setAnimationKey(prev => prev + 1); // Перезапускаем анимацию
     }
     // Если свайп больше 100px вправо - переключаем на предыдущую карту
-    else if (deltaX > 100 && currentCardIndex > 0) {
+    else if (deltaX > 100 && currentCardIndex > 0 && cards[currentCardIndex - 1]) {
       setCurrentCardIndex(currentCardIndex - 1);
       setAnimationKey(prev => prev + 1); // Перезапускаем анимацию
     }
@@ -252,9 +256,8 @@ const CardAnalyticsPage = () => {
       {/* Card Stack with Swipe */}
       <div className="relative w-full flex justify-center pb-8 px-4 min-[360px]:pb-10 min-[360px]:px-6 min-[375px]:pb-12 min-[375px]:px-8 sm:px-10 md:px-12 overflow-hidden">
         
-        
         <div 
-          className="relative h-[160px] w-[280px] min-[360px]:h-[170px] min-[360px]:w-[300px] min-[375px]:h-[190px] min-[375px]:w-[340px] sm:h-[200px] sm:w-[350px] md:h-[220px] md:w-[380px] cursor-pointer select-none overflow-visible"
+          className="relative h-[160px] w-[280px] min-[360px]:h-[170px] min-[360px]:w-[300px] min-[375px]:h-[190px] min-[375px]:w-[340px] sm:h-[200px] sm:w-[350px] md:h-[220px] md:w-[380px] cursor-pointer select-none overflow-visible flex justify-center"
           onTouchStart={handleStart}
           onTouchMove={handleMove}
           onTouchEnd={handleEnd}
@@ -267,11 +270,11 @@ const CardAnalyticsPage = () => {
           {/* Previous card (left) */}
           {currentCardIndex > 0 && (
             <div 
-              className="absolute top-0 left-0 w-[250px] h-[150px] min-[360px]:w-[270px] min-[360px]:h-[160px] min-[375px]:w-[310px] min-[375px]:h-[180px] sm:w-[320px] sm:h-[190px] md:w-[340px] md:h-[200px] rounded-[27px] z-10"
+              className="absolute top-0 w-[260px] h-[155px] min-[360px]:w-[280px] min-[360px]:h-[165px] min-[375px]:w-[320px] min-[375px]:h-[185px] sm:w-[330px] sm:h-[195px] md:w-[350px] md:h-[205px] rounded-[27px] z-10"
               style={{ 
                 backgroundColor: cards[currentCardIndex - 1].color,
-                transform: `translateX(calc(50% - 250px/2 - 40px))`,
-                opacity: 0.8,
+                left: 'calc(50% - 130px - 30px)',
+                opacity: 0.9,
                 boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)',
                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
@@ -316,10 +319,9 @@ const CardAnalyticsPage = () => {
           
           {/* Current card (center) */}
           <div 
-            className="absolute top-0 left-0 w-[280px] h-[160px] min-[360px]:w-[300px] min-[360px]:h-[170px] min-[375px]:w-[340px] min-[375px]:h-[190px] sm:w-[350px] sm:h-[200px] md:w-[380px] md:h-[220px] rounded-[27px] z-30"
+            className="w-[280px] h-[160px] min-[360px]:w-[300px] min-[360px]:h-[170px] min-[375px]:w-[340px] min-[375px]:h-[190px] sm:w-[350px] sm:h-[200px] md:w-[380px] md:h-[220px] rounded-[27px] z-30"
             style={{ 
               backgroundColor: currentCard.color,
-              transform: `translateX(calc(50% - 280px/2))`,
               transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
               boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)'
             }}
@@ -362,12 +364,12 @@ const CardAnalyticsPage = () => {
           </div>
           
           {/* Next card (right) */}
-          {currentCardIndex < cards.length - 1 && (
+          {cards[currentCardIndex + 1] && (
             <div 
-              className="absolute top-0 left-0 w-[230px] h-[140px] min-[360px]:w-[250px] min-[360px]:h-[150px] min-[375px]:w-[270px] min-[375px]:h-[160px] sm:w-[280px] sm:h-[175px] md:w-[300px] md:h-[185px] rounded-[27px] z-20"
+              className="absolute top-0 w-[230px] h-[140px] min-[360px]:w-[250px] min-[360px]:h-[150px] min-[375px]:w-[270px] min-[375px]:h-[160px] sm:w-[280px] sm:h-[175px] md:w-[300px] md:h-[185px] rounded-[27px] z-20"
               style={{ 
                 backgroundColor: cards[currentCardIndex + 1].color,
-                transform: `translateX(calc(50% - 230px/2 + 40px))`,
+                left: 'calc(50% - 115px + 40px)',
                 opacity: 0.7,
                 boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)',
                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -431,7 +433,7 @@ const CardAnalyticsPage = () => {
       </div>
 
       {/* Total Budget Section */}
-      <div className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-4 min-[360px]:py-6 min-[375px]:py-8 sm:py-10 md:py-12">
+      <div className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5">
         <div className="text-center">
           <div className="text-black font-ibm text-sm min-[360px]:text-base sm:text-lg md:text-xl font-normal leading-[110%]">
             Общий бюджет 18 404,7 ₽
@@ -440,7 +442,7 @@ const CardAnalyticsPage = () => {
       </div>
 
       {/* Transfer Section */}
-      <div key={`transfer-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-4 min-[360px]:py-6 min-[375px]:py-8 sm:py-10 md:py-12 animate-sequential-1">
+      <div key={`transfer-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5 animate-sequential-1">
         <div className="text-black font-ibm text-lg sm:text-xl md:text-2xl font-medium leading-[110%] mb-4 sm:mb-5 md:mb-6">
           Перевод между своими банками
         </div>
@@ -481,7 +483,7 @@ const CardAnalyticsPage = () => {
       </div>
 
       {/* Operations Section */}
-      <div key={`operations-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-4 min-[360px]:py-6 min-[375px]:py-8 sm:py-10 md:py-12 animate-sequential-2">
+      <div key={`operations-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5 animate-sequential-2">
         <div className="flex items-center justify-between mb-3 min-[360px]:mb-4 min-[375px]:mb-4 sm:mb-5 md:mb-6">
           <div className="text-black font-ibm text-base min-[360px]:text-lg sm:text-xl md:text-2xl font-medium leading-[110%]">
             Операции
@@ -508,7 +510,7 @@ const CardAnalyticsPage = () => {
             </div>
           ) : (
             currentCard.operations.map((operation, index) => (
-            <div key={index} className="relative w-full max-w-[335px] h-[45px] min-[360px]:max-w-[350px] min-[360px]:h-[47px] min-[375px]:max-w-[365px] min-[375px]:h-[49px] sm:max-w-[350px] sm:h-[55px] md:max-w-[380px] md:h-[60px] bg-white/45 rounded-[32px] flex items-center px-4 min-[360px]:px-5 min-[375px]:px-5 mx-auto">
+            <div key={index} className="relative w-full max-w-[335px] h-[45px] min-[360px]:max-w-[350px] min-[360px]:h-[47px] min-[375px]:max-w-[365px] min-[375px]:h-[49px] sm:max-w-[350px] sm:h-[55px] md:max-w-[380px] md:h-[60px] bg-gray-100 rounded-[32px] flex items-center px-4 min-[360px]:px-5 min-[375px]:px-5 mx-auto">
               <div className={`w-[35px] h-[35px] min-[360px]:w-[38px] min-[360px]:h-[38px] min-[375px]:w-[42px] min-[375px]:h-[42px] sm:w-[60px] sm:h-[55px] md:w-[65px] md:h-[60px] ${operation.iconColor} rounded-[30px] flex items-center justify-center mr-3 min-[360px]:mr-4`}>
                 <div className={`${operation.textColor} font-bold text-xs min-[360px]:text-sm`}>
                   {operation.icon}

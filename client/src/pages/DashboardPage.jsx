@@ -176,7 +176,7 @@ const DashboardPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
             </div>
-            <div className="text-black font-ibm text-xs font-normal leading-[110%] text-center">
+            <div className="text-black font-ibm text-xs min-[375px]:text-sm font-normal leading-[110%] text-center">
               <div>Между</div>
               <div>банками</div>
             </div>
@@ -191,7 +191,7 @@ const DashboardPage = () => {
                 <path d="M12 3L19 12L12 12V3Z" fill="#EA4335"/>
               </svg>
             </div>
-            <div className="text-black font-ibm text-xs font-normal leading-[110%] text-center">
+            <div className="text-black font-ibm text-xs min-[375px]:text-sm font-normal leading-[110%] text-center">
               <div>Перевести</div>
               <div>по телефону</div>
             </div>
@@ -207,7 +207,7 @@ const DashboardPage = () => {
                 <path d="M10 16l-4-4 1.41-1.41L10 13.17l6.59-6.59L18 8l-8 8z"/>
               </svg>
             </div>
-            <div className="text-black font-ibm text-xs font-normal leading-[110%] text-center">
+            <div className="text-black font-ibm text-xs min-[375px]:text-sm font-normal leading-[110%] text-center">
               Планирование бюджета
             </div>
           </button>
@@ -223,7 +223,7 @@ const DashboardPage = () => {
               </div>
               <button 
                 onClick={() => navigate('/analytics')}
-                className="text-black font-ibm font-normal text-xs leading-[110%] cursor-pointer"
+                className="text-black font-ibm font-normal text-xs min-[375px]:text-sm leading-[110%] cursor-pointer"
               >
                 Подробнее
               </button>
@@ -298,7 +298,7 @@ const DashboardPage = () => {
                     }`}
                   >
                     <div className={`w-8 h-8 ${bank.color} rounded-lg mx-auto mb-2`}></div>
-                    <div className="text-xs font-ibm font-medium text-gray-900 text-center">
+                    <div className="text-xs min-[375px]:text-sm font-ibm font-medium text-gray-900 text-center">
                       {bank.name}
                     </div>
                   </button>

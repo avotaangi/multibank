@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 
 const BottomNavigation = () => {
+  const location = useLocation()
   const navItems = [
     { path: '/main', label: 'Главный' },
     { path: '/payments', label: 'Платежи' },
@@ -10,18 +11,26 @@ const BottomNavigation = () => {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white px-1 py-1 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white px-1 py-3 z-50">
       <div className="flex justify-between items-center w-full">
         {navItems.map(({ path, label }, index) => (
           <NavLink
             key={path}
             to={path}
-            className={({ isActive }) =>
-              `flex flex-col items-center py-1 px-0.5 rounded-lg transition-colors flex-1 ${
-                isActive || (label === 'Мультибанк' && window.location.pathname === '/dashboard')
-                  ? 'text-red-500'
-                  : 'text-gray-600'
-              }`}
+            className={({ isActive }) => {
+              // Мультибанк всегда красный, кроме случаев когда активна одна из четырех нижних вкладок
+              if (label === 'Мультибанк') {
+                const isOtherTabActive = location.pathname === '/main' || location.pathname === '/payments' || location.pathname === '/history' || location.pathname === '/chats'
+                return `flex flex-col items-center py-2 px-0.5 rounded-lg transition-colors flex-1 ${
+                  isOtherTabActive ? 'text-gray-600' : 'text-red-500'
+                }`
+              }
+              
+              // Для остальных вкладок - стандартная логика
+              return `flex flex-col items-center py-2 px-0.5 rounded-lg transition-colors flex-1 ${
+                isActive ? 'text-red-500' : 'text-gray-600'
+              }`
+            }}
           >
             {/* Иконки согласно дизайну */}
             {index === 0 && (

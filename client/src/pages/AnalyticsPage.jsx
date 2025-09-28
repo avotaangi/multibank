@@ -303,7 +303,7 @@ const AnalyticsPage = () => {
         {/* Operations List */}
         <div className="space-y-2 min-[360px]:space-y-3">
           {/* Магнит */}
-          <div className="bg-white/45 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs min-[360px]:text-sm">M</span>
@@ -317,7 +317,7 @@ const AnalyticsPage = () => {
           </div>
 
           {/* Яндекс.Такси */}
-          <div className="bg-white/45 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-yellow-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs">Я</span>
@@ -331,7 +331,7 @@ const AnalyticsPage = () => {
           </div>
 
           {/* Самокат */}
-          <div className="bg-white/45 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-pink-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs min-[360px]:text-sm">S</span>
@@ -356,7 +356,7 @@ const AnalyticsPage = () => {
         {/* Subscriptions List */}
         <div className="space-y-2 min-[360px]:space-y-3">
           {/* Яндекс.Плюс */}
-          <div className="bg-white/45 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-pink-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs">Я+</span>
@@ -370,7 +370,7 @@ const AnalyticsPage = () => {
           </div>
 
           {/* Кинотеатр okko */}
-          <div className="bg-white/45 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-purple-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs">ok</span>
