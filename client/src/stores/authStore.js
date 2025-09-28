@@ -21,24 +21,29 @@ const useAuthStore = create((set, get) => ({
         console.log('Telegram WebApp initData:', initData)
         
         if (initData) {
-          // Try to authenticate with Telegram data
-          const response = await api.post('/auth/telegram', {
-            initData
-          })
-          
-          const { token, user } = response.data
-          
-          // Set token for future requests
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-          
-          set({ 
-            user, 
-            token, 
-            isLoading: false,
-            error: null 
-          })
-          
-          return
+          try {
+            // Try to authenticate with Telegram data
+            const response = await api.post('/auth/telegram', {
+              initData
+            })
+            
+            const { token, user } = response.data
+            
+            // Set token for future requests
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+            
+            set({ 
+              user, 
+              token, 
+              isLoading: false,
+              error: null 
+            })
+            
+            return
+          } catch (error) {
+            console.log('Server authentication failed, using fallback:', error.message)
+            // Fall through to fallback
+          }
         }
       }
       
