@@ -1,18 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit } from 'lucide-react';
+import useBalanceStore from '../stores/balanceStore';
+import useTestCardsStore from '../stores/testCardsStore';
 
 const MyCardsPage = () => {
   const navigate = useNavigate();
+  const { getFormattedBalance } = useBalanceStore();
   
-  const cards = [
+  // Подписываемся на изменения в сторе тестовых карт
+  const testCards = useTestCardsStore((state) => state.testCards);
+  
+  const baseCards = [
+    {
+      id: 'alfa',
+      name: 'Альфа-Банк',
+      balance: getFormattedBalance('alfa'),
+      color: '#EF3124',
+      logo: 'A',
+      cardNumber: '5294 **** **** 2498',
+      cardholderName: 'Евгений Богатов',
+      analytics: {
+        income: '125 600 ₽',
+        expenses: '89 200 ₽',
+        transactions: 67,
+        categories: [
+          { name: 'Бизнес', amount: '25 000 ₽', percentage: 28 },
+          { name: 'Инвестиции', amount: '18 500 ₽', percentage: 21 },
+          { name: 'Личные', amount: '22 300 ₽', percentage: 25 },
+          { name: 'Остальное', amount: '23 400 ₽', percentage: 26 }
+        ]
+      }
+    },
     {
       id: 'vtb',
       name: 'ВТБ',
-      balance: '2 876,87 ₽',
+      balance: getFormattedBalance('vtb'),
       color: '#0055BC',
       logo: 'ВТБ',
       cardNumber: '3568 **** **** 8362',
+      cardholderName: 'Евгений Богатов',
       analytics: {
         income: '45 230 ₽',
         expenses: '12 450 ₽',
@@ -28,10 +55,11 @@ const MyCardsPage = () => {
     {
       id: 'tbank',
       name: 'T-Банк',
-      balance: '4 983,43 ₽',
+      balance: getFormattedBalance('tbank'),
       color: '#2F2F2F',
       logo: 'T',
       cardNumber: '6352 **** **** 9837',
+      cardholderName: 'Евгений Богатов',
       analytics: {
         income: '67 890 ₽',
         expenses: '28 340 ₽',
@@ -43,45 +71,37 @@ const MyCardsPage = () => {
           { name: 'Остальное', amount: '9 840 ₽', percentage: 35 }
         ]
       }
-    },
-    {
-      id: 'alfa',
-      name: 'Альфа-Банк',
-      balance: '10 544,40 ₽',
-      color: '#EF3124',
-      logo: 'A',
-      cardNumber: '5294 **** **** 2498',
-      analytics: {
-        income: '125 600 ₽',
-        expenses: '89 200 ₽',
-        transactions: 67,
-        categories: [
-          { name: 'Бизнес', amount: '25 000 ₽', percentage: 28 },
-          { name: 'Инвестиции', amount: '18 500 ₽', percentage: 21 },
-          { name: 'Личные', amount: '22 300 ₽', percentage: 25 },
-          { name: 'Остальное', amount: '23 400 ₽', percentage: 26 }
-        ]
-      }
     }
   ];
 
-  const [cardsVisible, setCardsVisible] = useState(false);
+  // Добавляем баланс к тестовым картам
+  const testCardsWithBalance = testCards.map(card => ({
+    ...card,
+    balance: getFormattedBalance(card.bankId) || '0 ₽',
+    color: card.bankId === 'sberbank' ? '#21A038' : 
+            card.bankId === 'vtb' ? '#0055BC' : 
+            card.bankId === 'alfa' ? '#EF3124' : '#2F2F2F',
+    logo: card.bankId === 'sberbank' ? 'С' : 
+          card.bankId === 'vtb' ? 'ВТБ' : 
+          card.bankId === 'alfa' ? 'А' : 'Т',
+    cardholderName: 'Евгений Богатов',
+    analytics: {
+      income: '0 ₽',
+      expenses: '0 ₽',
+      transactions: 0,
+      categories: []
+    }
+  }));
+  
+  const cards = [...baseCards, ...testCardsWithBalance];
 
-  useEffect(() => {
-    // Анимация входа карт сверху вниз с эффектом "улетания"
-    const timer = setTimeout(() => {
-      setCardsVisible(true);
-    }, 50);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  // Убираем старую анимацию, теперь используем CSS анимации
 
   const handleCardClick = (card) => {
-    const cardIndex = cards.findIndex(c => c.id === card.id);
-    // Переходим на страницу аналитики с передачей индекса карты
-    navigate('/card-analytics', { 
-      state: { cardIndex: cardIndex } 
-    });
+    console.log('MyCardsPage - clicking card:', card.id);
+    console.log('MyCardsPage - navigating to:', `/card-analytics/${card.id}`);
+    // Переходим на страницу аналитики с cardId в URL
+    navigate(`/card-analytics/${card.id}`);
   };
 
   const handleBackToDashboard = () => {
@@ -95,7 +115,7 @@ const MyCardsPage = () => {
         <div className="flex items-center justify-between">
           <button 
             onClick={handleBackToDashboard}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -114,55 +134,51 @@ const MyCardsPage = () => {
           {cards.map((card, index) => (
             <div
               key={card.id}
-              className={`relative w-full h-[160px] sm:h-[180px] md:h-[189px] rounded-[20px] sm:rounded-[24px] md:rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 ${
-                cardsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-20'
-              }`}
+              className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 animate-slide-in-down-slow`}
               style={{ 
                 backgroundColor: card.color,
-                transitionDelay: `${index * 100}ms`
+                boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)'
               }}
               onClick={() => handleCardClick(card)}
             >
               {/* Card Content */}
-              <div className="p-4 sm:p-5 md:p-6 h-full flex flex-col justify-between">
-                {/* Top Row */}
+              <div className="p-6 h-full flex flex-col justify-between">
+                {/* Top section */}
                 <div className="flex items-center justify-between">
+                  {card.id === 'alfa' && (
+                    <div className="flex flex-col">
+                      <div className="text-white text-2xl font-bold font-ibm">{card.logo}</div>
+                      <div className="w-8 h-0.5 bg-white mt-1"></div>
+                    </div>
+                  )}
                   {card.id === 'vtb' && (
-                    <div className="w-8 sm:w-10 md:w-12 h-3 sm:h-4 bg-white rounded"></div>
+                    <div className="text-white text-2xl font-bold font-ibm">{card.logo}</div>
                   )}
                   {card.id === 'tbank' && (
-                    <div className="flex items-center space-x-1 sm:space-x-2">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-yellow-400 rounded flex items-center justify-center">
-                        <span className="text-gray-800 font-bold text-xs sm:text-sm">{card.logo}</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
+                        <span className="text-gray-800 font-bold text-sm">{card.logo}</span>
                       </div>
-                      <div className="text-white text-sm sm:text-base md:text-lg font-bold font-ibm">БАНК</div>
+                      <div className="text-white text-2xl font-bold font-ibm">БАНК</div>
                     </div>
                   )}
-                  {card.id === 'alfa' && (
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-white rounded flex items-center justify-center">
-                      <span className="text-red-500 font-bold text-sm sm:text-base md:text-lg">{card.logo}</span>
-                    </div>
+                  {card.isTest && (
+                    <div className="text-white text-2xl font-bold font-ibm">{card.logo}</div>
                   )}
-                  
-                  {/* Edit Icon */}
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
-                    <Edit size={10} className="text-white sm:w-3 sm:h-3" />
+                  <div className="text-white text-lg font-normal font-ibm">{card.balance}</div>
+                </div>
+                
+                {/* Bottom section */}
+                <div className="flex items-end justify-between">
+                  <div className="flex flex-col">
+                    <div className="text-white text-sm font-normal font-ibm mb-1">{card.cardholderName}</div>
+                    <div className="text-white text-sm font-normal font-ibm">
+                      {card.isTest ? card.cardNumber : card.cardNumber}
+                    </div>
                   </div>
-                </div>
-
-                {/* Balance */}
-                <div className="text-white text-lg sm:text-xl md:text-2xl font-normal font-ibm text-right">
-                  {card.balance}
-                </div>
-
-                {/* Card Number */}
-                <div className="text-white text-sm sm:text-base font-normal font-ibm">
-                  {card.cardNumber}
+                  <div className="text-white text-lg font-bold">МИР</div>
                 </div>
               </div>
-
-              {/* Bottom Right Circle */}
-              <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white/20 border border-white rounded-full"></div>
             </div>
           ))}
         </div>

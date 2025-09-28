@@ -44,7 +44,7 @@ const TransactionsPage = () => {
       case 'withdrawal':
         return 'bg-red-100'
       default:
-        return 'bg-gray-100'
+        return 'bg-white'
     }
   }
 
@@ -57,7 +57,7 @@ const TransactionsPage = () => {
       case 'failed':
         return 'text-red-600 bg-red-100'
       default:
-        return 'text-gray-600 bg-gray-100'
+        return 'text-gray-600 bg-white'
     }
   }
 
@@ -87,7 +87,7 @@ const TransactionsPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">История транзакций</h1>
-        <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+        <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors">
           <Filter size={20} />
         </button>
       </div>
@@ -190,7 +190,7 @@ const TransactionsPage = () => {
         </div>
       ) : (
         <div className="text-center py-12">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
             <CreditCard className="h-8 w-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Нет транзакций</h3>

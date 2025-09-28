@@ -1,21 +1,24 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import useBalanceStore from '../stores/balanceStore';
+import useTestCardsStore from '../stores/testCardsStore';
 
 const BankCardStack = () => {
-  const navigate = useNavigate();
+  const { getFormattedBalance } = useBalanceStore();
+  const { getAllCards } = useTestCardsStore();
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startX = useRef(0);
   const currentX = useRef(0);
 
-  const cards = [
+  const baseCards = [
     {
       id: 'alfa',
       name: 'Альфа-Банк',
-      balance: '10 544,40 ₽',
+      balance: getFormattedBalance('alfa'),
       color: '#EF3124',
       logo: 'A',
       cardNumber: '5294 **** **** 2498',
+      cardholderName: 'София Львова',
       analytics: {
         income: '125 600 ₽',
         expenses: '89 200 ₽',
@@ -31,10 +34,10 @@ const BankCardStack = () => {
     {
       id: 'vtb',
       name: 'ВТБ',
-      balance: '2 876,87 ₽',
+      balance: getFormattedBalance('vtb'),
       color: '#0055BC',
       logo: 'ВТБ',
-      cardNumber: '**** 1234',
+      cardNumber: '3568 **** **** 8362',
       analytics: {
         income: '45 230 ₽',
         expenses: '12 450 ₽',
@@ -50,10 +53,10 @@ const BankCardStack = () => {
     {
       id: 'tbank',
       name: 'T-Банк',
-      balance: '4 983,43 ₽',
+      balance: getFormattedBalance('tbank'),
       color: '#2F2F2F',
       logo: 'T',
-      cardNumber: '**** 5678',
+      cardNumber: '6352 **** **** 9837',
       analytics: {
         income: '67 890 ₽',
         expenses: '28 340 ₽',
@@ -67,6 +70,10 @@ const BankCardStack = () => {
       }
     }
   ];
+
+  // Объединяем базовые карты с тестовыми
+  const testCards = getAllCards();
+  const cards = [...baseCards, ...testCards];
 
   const handleStart = (e) => {
     e.preventDefault();
@@ -102,7 +109,7 @@ const BankCardStack = () => {
     // Увеличиваем порог для лучшего раскрытия карт
     if (deltaX < -150) {
       // Плавный переход без паузы
-      navigate('/my-cards');
+      window.location.href = '/my-cards';
     } else {
       // Если свайп недостаточный, возвращаем карты в исходное положение
       setIsDragging(false);
@@ -110,27 +117,39 @@ const BankCardStack = () => {
     }
   };
 
+  const handleCardClick = (e) => {
+    // Если это был свайп, не обрабатываем клик
+    if (isDragging) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Переходим на страницу "Мои карты"
+    window.location.href = '/my-cards';
+  };
+
+
 
   return (
-    <div className="relative w-full flex justify-center pb-4 px-4 sm:px-6 md:px-8 overflow-hidden">
-      {/* Triple Arrow Right */}
-      <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-40">
+    <div className="relative w-full flex justify-center items-center pb-4 px-4 sm:px-6 md:px-8 overflow-hidden">
+      {/* Triple Arrow Left */}
+      <div className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 z-40">
         <div className="flex items-center space-x-1">
           <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
           </svg>
           <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
           </svg>
           <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
           </svg>
         </div>
       </div>
 
       {/* Bank Cards Stack - Horizontal */}
       <div 
-        className="relative h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] w-full max-w-[320px] sm:max-w-[380px] md:max-w-[460px] lg:max-w-[520px] cursor-pointer select-none overflow-visible touch-pan-y"
+        className="relative h-[120px] sm:h-[130px] md:h-[140px] w-[220px] sm:w-[240px] md:w-[260px] cursor-pointer select-none overflow-visible touch-pan-y"
         onTouchStart={handleStart}
         onTouchMove={handleMove}
         onTouchEnd={handleEnd}
@@ -138,6 +157,7 @@ const BankCardStack = () => {
         onMouseMove={handleMove}
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
+        onClick={handleCardClick}
         style={{ 
           transform: `translateX(-${swipeOffset * 0.15}px)`,
           touchAction: 'pan-y',
@@ -147,28 +167,29 @@ const BankCardStack = () => {
         {/* Alpha Bank Card */}
         <div 
           data-card="0"
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[280px] sm:w-[300px] md:w-[340px] lg:w-[380px] h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] rounded-[20px] sm:rounded-[24px] md:rounded-[28px] lg:rounded-[32px] z-30 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-0 w-[220px] sm:w-[240px] md:w-[260px] h-[120px] sm:h-[130px] md:h-[140px] rounded-[16px] sm:rounded-[18px] md:rounded-[20px] z-30 transition-transform duration-200"
           style={{ 
             backgroundColor: cards[0].color,
-            transform: `translateX(calc(-50% - ${swipeOffset > 30 ? swipeOffset * 0.35 : 0}px))`,
-            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            transform: `translateX(${swipeOffset > 30 ? -swipeOffset * 0.35 : -20}px)`,
+            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)'
           }}
         >
-          <div className="p-4 sm:p-5 md:p-6 lg:p-7 h-full flex flex-col justify-between">
-            <div className="flex items-center justify-between">
+          <div className="p-1.5 sm:p-2 md:p-3 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between h-8">
               <div className="flex flex-col">
-                <div className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold font-ibm">{cards[0].logo}</div>
+                <div className="text-white text-base sm:text-lg md:text-xl font-bold font-ibm">{cards[0].logo}</div>
                 <div className="w-8 h-0.5 bg-white mt-1"></div>
               </div>
-              <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
-                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="text-white text-sm sm:text-base md:text-lg font-normal font-ibm">{cards[0].balance}</div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-white text-xs sm:text-sm font-normal font-ibm">{cards[0].cardNumber}</div>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
               </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="text-white text-base sm:text-lg font-normal font-ibm">{cards[0].cardNumber}</div>
-              <div className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl font-normal font-ibm">{cards[0].balance}</div>
             </div>
           </div>
         </div>
@@ -176,48 +197,70 @@ const BankCardStack = () => {
         {/* VTB Card */}
         <div 
           data-card="1"
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[280px] sm:w-[300px] md:w-[340px] lg:w-[380px] h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] rounded-[20px] sm:rounded-[24px] md:rounded-[28px] lg:rounded-[32px] z-20 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-0 w-[220px] sm:w-[240px] md:w-[260px] h-[120px] sm:h-[130px] md:h-[140px] rounded-[16px] sm:rounded-[18px] md:rounded-[20px] z-20 transition-transform duration-200"
           style={{ 
             backgroundColor: cards[1].color,
-            transform: `translateX(calc(-50% + 20px - ${swipeOffset > 60 ? swipeOffset * 0.25 : 0}px))`,
-            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            transform: `translateX(${20 - (swipeOffset > 60 ? swipeOffset * 0.25 : 0) - 20}px)`,
+            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)'
           }}
         >
-          <div className="p-4 sm:p-5 md:p-6 lg:p-7 h-full flex items-center justify-between">
-            <div className="text-white text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-ibm">{cards[1].logo}</div>
-            <div className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl font-normal font-ibm">{cards[1].balance}</div>
+          <div className="p-1.5 sm:p-2 md:p-3 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between h-8">
+              <div className="text-white text-base sm:text-lg md:text-xl font-bold font-ibm">{cards[1].logo}</div>
+              <div className="text-white text-sm sm:text-base md:text-lg font-normal font-ibm">{cards[1].balance}</div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-white text-xs sm:text-sm font-normal font-ibm">{cards[1].cardNumber}</div>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
         
         {/* T-Bank Card */}
         <div 
           data-card="2"
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[280px] sm:w-[300px] md:w-[340px] lg:w-[380px] h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] rounded-[20px] sm:rounded-[24px] md:rounded-[28px] lg:rounded-[32px] z-10 transition-transform duration-200 hover:scale-105"
+          className="absolute top-0 left-0 w-[220px] sm:w-[240px] md:w-[260px] h-[120px] sm:h-[130px] md:h-[140px] rounded-[16px] sm:rounded-[18px] md:rounded-[20px] z-10 transition-transform duration-200"
           style={{ 
             backgroundColor: cards[2].color,
-            transform: `translateX(calc(-50% + 40px - ${swipeOffset > 90 ? swipeOffset * 0.15 : 0}px))`,
-            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            transform: `translateX(${40 - (swipeOffset > 90 ? swipeOffset * 0.15 : 0) - 20}px)`,
+            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)'
           }}
         >
-          <div className="p-4 sm:p-5 md:p-6 lg:p-7 h-full flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 bg-yellow-400 rounded flex items-center justify-center">
-                <span className="text-gray-800 font-bold text-xs sm:text-sm md:text-base">{cards[2].logo}</span>
+          <div className="p-1.5 sm:p-2 md:p-3 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between h-8">
+              <div className="flex items-center space-x-1">
+                <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-yellow-400 rounded flex items-center justify-center">
+                  <span className="text-gray-800 font-bold text-sm font-bold">{cards[2].logo}</span>
+                </div>
+                <div className="text-white text-base sm:text-lg md:text-xl font-bold font-ibm">БАНК</div>
               </div>
-              <div className="text-white text-base sm:text-lg md:text-xl lg:text-2xl font-bold font-ibm">БАНК</div>
+              <div className="text-white text-sm sm:text-base md:text-lg font-normal font-ibm">{cards[2].balance}</div>
             </div>
-            <div className="text-white text-lg sm:text-xl md:text-2xl lg:text-3xl font-normal font-ibm">{cards[2].balance}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-white text-xs sm:text-sm font-normal font-ibm">{cards[2].cardNumber}</div>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white/20 rounded-full border border-white/30 flex items-center justify-center">
+                <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Swipe Indicator */}
       {isDragging && swipeOffset > 20 && (
-        <div className="absolute top-[200px] sm:top-[220px] md:top-[240px] left-1/2 transform -translate-x-1/2 text-center">
+        <div className="absolute top-[220px] left-1/2 transform -translate-x-1/2 text-center">
           <div className="text-gray-500 text-xs sm:text-sm font-ibm">
             Свайпните влево для просмотра всех карт
           </div>
-          <div className="w-6 sm:w-8 h-1 bg-gray-300 rounded mx-auto mt-2"></div>
+          <div className="w-6 sm:w-8 h-1 bg-white rounded mx-auto mt-2"></div>
         </div>
       )}
     </div>

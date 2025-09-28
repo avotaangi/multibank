@@ -13,10 +13,12 @@
   body {
     @apply bg-white text-gray-900;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
   }
   
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 }
 
@@ -220,6 +222,161 @@
   }
 }
 
+/* Donut chart entrance animation */
+@keyframes donutEntrance {
+  0% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+.animate-donut-entrance {
+  animation: donutEntrance 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Analytics page animations */
+@keyframes slideInDown {
+  0% {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-down {
+  animation: slideInDown 1.2s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-slide-in-down:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.animate-slide-in-down:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.animate-slide-in-down:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.animate-slide-in-down:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.animate-slide-in-down:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.animate-slide-in-down:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+.animate-slide-in-down:nth-child(7) {
+  animation-delay: 0.35s;
+}
+
+.animate-slide-in-down:nth-child(8) {
+  animation-delay: 0.4s;
+}
+
+.animate-slide-in-down:nth-child(9) {
+  animation-delay: 0.45s;
+}
+
+.animate-slide-in-down:nth-child(10) {
+  animation-delay: 0.5s;
+}
+
+.animate-slide-in-down:nth-child(11) {
+  animation-delay: 0.55s;
+}
+
+.animate-slide-in-down:nth-child(12) {
+  animation-delay: 0.6s;
+}
+
+.animate-fade-in {
+  animation: slideInDown 1.2s ease-out forwards;
+  animation-delay: 0.1s;
+  opacity: 0;
+}
+
+.animate-scale-in {
+  animation: slideInDown 1.2s ease-out forwards;
+  animation-delay: 0.15s;
+  opacity: 0;
+}
+
+/* Slower animations for MyCardsPage */
+.animate-slide-in-down-slow {
+  animation: slideInDown 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-slide-in-down-slow:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.animate-slide-in-down-slow:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.animate-slide-in-down-slow:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.animate-slide-in-down-slow:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.animate-slide-in-down-slow:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+.animate-slide-in-down-slow:nth-child(6) {
+  animation-delay: 0.6s;
+}
+
+.animate-slide-in-down-slow:nth-child(7) {
+  animation-delay: 0.7s;
+}
+
+.animate-slide-in-down-slow:nth-child(8) {
+  animation-delay: 0.8s;
+}
+
 /* Loading spinner */
 .spinner {
   @apply animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600;
@@ -251,6 +408,18 @@
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
+}
+
+/* Prevent horizontal scroll */
+.no-horizontal-scroll {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Prevent horizontal scroll for all elements */
+* {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Beautiful scroll indicators */

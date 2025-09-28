@@ -7,10 +7,10 @@ const Layout = () => {
   const location = useLocation();
   
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white overflow-x-hidden">
       {/* <Header /> */}
       
-      <main className="pb-20">
+      <main className="pb-16 overflow-x-hidden">
         <PageTransition key={location.pathname}>
           <Outlet />
         </PageTransition>

@@ -1,37 +1,120 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../stores/authStore';
+import useBalanceStore from '../stores/balanceStore';
+import useTestCardsStore from '../stores/testCardsStore';
 import BankCardStack from '../components/BankCardStack';
 
 const DashboardPage = () => {
   const { user } = useAuthStore();
+  const { getFormattedBalance } = useBalanceStore();
+  const { addTestCard } = useTestCardsStore();
   const navigate = useNavigate();
 
+  const [showAddBankModal, setShowAddBankModal] = useState(false);
+  const [newBankData, setNewBankData] = useState({
+    bank: '',
+    cardNumber: '',
+    expiryDate: '',
+    cvv: ''
+  });
+
+  const availableBanks = [
+    { id: 'sberbank', name: 'Сбербанк', color: 'bg-green-500' },
+    { id: 'vtb', name: 'ВТБ', color: 'bg-blue-500' },
+    { id: 'alfa', name: 'Альфа-Банк', color: 'bg-red-500' },
+    { id: 'tbank', name: 'Т-Банк', color: 'bg-black' }
+  ];
+
+  const handleAddBank = () => {
+    setShowAddBankModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowAddBankModal(false);
+    setNewBankData({
+      bank: '',
+      cardNumber: '',
+      expiryDate: '',
+      cvv: ''
+    });
+  };
+
+  const handleBankSelect = (bankId) => {
+    setNewBankData(prev => ({ ...prev, bank: bankId }));
+  };
+
+  const handleInputChange = (field, value) => {
+    if (field === 'expiryDate') {
+      // Валидация для срока действия - только цифры, максимум 4 символа
+      const formatted = value.replace(/\D/g, '').slice(0, 4);
+      if (formatted.length <= 4) {
+        setNewBankData(prev => ({ ...prev, [field]: formatted }));
+      }
+    } else if (field === 'cvv') {
+      // Валидация для CVV - только цифры, максимум 3 символа
+      const formatted = value.replace(/\D/g, '').slice(0, 3);
+      if (formatted.length <= 3) {
+        setNewBankData(prev => ({ ...prev, [field]: formatted }));
+      }
+    } else {
+      setNewBankData(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const handleCardNumberChange = (value) => {
+    // Только цифры и пробелы каждые 4 цифры
+    const formatted = value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ');
+    if (formatted.length <= 19) { // 16 цифр + 3 пробела
+      setNewBankData(prev => ({ ...prev, cardNumber: formatted }));
+    }
+  };
+
+  const handleConfirmWithBank = () => {
+    if (newBankData.bank && newBankData.cardNumber && newBankData.expiryDate && newBankData.cvv) {
+      // Здесь будет логика подтверждения с банком
+      console.log('Подтверждение с банком:', newBankData);
+      handleCloseModal();
+    }
+  };
+
+  const handleConfirmWithoutBank = () => {
+    if (newBankData.bank && newBankData.cardNumber && newBankData.expiryDate && newBankData.cvv) {
+      // Создаем тестовую карту
+      const testCard = {
+        id: `test-card-${Date.now()}`,
+        name: availableBanks.find(bank => bank.id === newBankData.bank)?.name || 'Тестовая карта',
+        bankId: newBankData.bank,
+        cardNumber: newBankData.cardNumber,
+        balance: 10000, // Начальный баланс 10,000 ₽
+        isTest: true
+      };
+      
+      // Добавляем баланс в глобальный стор
+      const { updateBalance } = useBalanceStore.getState();
+      updateBalance(newBankData.bank, 10000, 'set');
+      
+      addTestCard(testCard);
+      handleCloseModal();
+    }
+  };
+
+
+
+
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Animated background blurs */}
-        <div className="absolute -right-32 -top-32 w-96 h-96 bg-gradient-to-br from-red-400/30 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -left-32 -top-32 w-96 h-96 bg-gradient-to-br from-rose-400/30 to-red-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute right-1/4 -bottom-32 w-80 h-80 bg-gradient-to-br from-red-400/20 to-rose-400/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
-        
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-[0.02]" style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(0,0,0,0.15) 1px, transparent 0)`,
-          backgroundSize: '20px 20px'
-        }}></div>
-      </div>
+    <div className="min-h-screen bg-white relative overflow-hidden">
 
       {/* Top Header with Profile */}
-      <div className="relative z-10 bg-gradient-to-r from-white/80 via-white/90 to-white/80 backdrop-blur-md px-5 pt-6 pb-4 rounded-b-[40px] shadow-lg border-b border-white/20">
+      <div className="relative z-10 bg-gray-200 px-5 pt-6 pb-4 rounded-b-[40px] animate-slide-in-down">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="relative">
-              <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-rose-600 rounded-full shadow-xl overflow-hidden ring-4 ring-white/50">
+              <div className="w-14 h-14 bg-red-500 rounded-full overflow-hidden">
                  <img 
-                   src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face" 
-                   alt="Софья Львова" 
+                   src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" 
+                   alt="Евгений Богатов" 
                    className="w-full h-full object-cover"
                  />
               </div>
@@ -42,12 +125,12 @@ const DashboardPage = () => {
                 Мультибанк
               </div>
               <div className="text-gray-900 font-ibm text-lg font-semibold leading-[110%]">
-                София Львова
+                Евгений Богатов
               </div>
             </div>
           </div>
           <div className="relative">
-            <button className="w-10 h-10 bg-white/80 hover:bg-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105">
+            <button className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
               <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -57,75 +140,74 @@ const DashboardPage = () => {
       </div>
 
       {/* Total Budget */}
-      <div className="relative z-10 text-center px-5 py-6">
-        <div className="bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
-          <div className="text-gray-600 font-ibm text-base font-medium leading-[110%] mb-3 tracking-wide">
-            Общий бюджет
-          </div>
-          <div className="text-gray-900 font-ibm text-4xl font-bold leading-[110%] tracking-[-0.02em] mb-2">
-            18 404,7 ₽
-          </div>
-          <div className="flex items-center justify-center space-x-2 text-sm text-red-600 font-medium">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-            <span>+12.5% за месяц</span>
-          </div>
+      <div className="relative z-10 text-center px-5 py-3 animate-slide-in-down">
+        <div className="text-black font-ibm text-base font-medium leading-[110%] mb-3">
+          Общий бюджет
+        </div>
+        <div className="text-black font-ibm text-3xl font-medium leading-[110%] tracking-[-0.02em]">
+          18 404,7 ₽
         </div>
       </div>
 
-            {/* Bank Cards Stack */}
-            <div className="relative z-10 py-2">
-              <BankCardStack />
-            </div>
+      {/* Bank Cards Stack */}
+      <div className="relative z-10 py-1 animate-scale-in">
+        <BankCardStack />
+      </div>
 
       {/* Add Bank Button */}
-      <div className="relative z-10 text-center py-3">
-        <button className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-ibm text-base font-medium leading-[110%] px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 inline-flex items-center space-x-2">
-          <span className="font-manrope text-lg">+</span>
-          <span>Добавить банк</span>
+      <div className="relative z-10 text-center py-2 animate-slide-in-down">
+        <button 
+          onClick={handleAddBank}
+          className="w-full h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 font-ibm text-sm font-medium hover:bg-gray-50 transition-colors"
+        >
+          + Добавить карту
         </button>
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="relative z-10 px-5 py-4">
-        <div className="grid grid-cols-3 gap-4">
+      <div className="relative z-10 px-5 py-2 animate-slide-in-down">
+        <div className="grid grid-cols-3 gap-2">
           <button 
             onClick={() => navigate('/transfer')}
-            className="h-28 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm border border-white/20 rounded-2xl flex flex-col items-center justify-center hover:from-white hover:to-white/90 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
+            className="h-28 bg-gray-200 rounded-2xl flex flex-col items-center justify-center p-1"
           >
-            <div className="w-10 h-10 mb-3 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mb-1">
+              <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
             </div>
-            <div className="text-gray-800 font-ibm text-xs font-medium leading-[110%] text-center">
-              Между банками
+            <div className="text-black font-ibm text-xs font-normal leading-[110%] text-center">
+              <div>Между</div>
+              <div>банками</div>
             </div>
           </button>
           
-          <button className="h-28 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm border border-white/20 rounded-2xl flex flex-col items-center justify-center hover:from-white hover:to-white/90 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl">
-            <div className="w-10 h-10 mb-3 bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+          <button className="h-28 bg-gray-200 rounded-2xl flex flex-col items-center justify-center">
+            <div className="mb-1">
+              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
                 <path d="M5 3L19 12L5 21V3Z" fill="#4285F4"/>
                 <path d="M5 3L12 12L5 21V3Z" fill="#34A853"/>
                 <path d="M12 12L19 12L12 21V12Z" fill="#FBBC05"/>
                 <path d="M12 3L19 12L12 12V3Z" fill="#EA4335"/>
               </svg>
             </div>
-            <div className="text-gray-800 font-ibm text-xs font-medium leading-[110%] text-center">
-              Перевести по телефону
+            <div className="text-black font-ibm text-xs font-normal leading-[110%] text-center">
+              <div>Перевести</div>
+              <div>по телефону</div>
             </div>
           </button>
           
-          <button className="h-28 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm border border-white/20 rounded-2xl flex flex-col items-center justify-center hover:from-white hover:to-white/90 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl">
-            <div className="w-10 h-10 mb-3 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+          <button 
+            onClick={() => navigate('/budget-planning')}
+            className="h-28 bg-gray-200 rounded-2xl flex flex-col items-center justify-center"
+          >
+            <div className="mb-1">
+              <svg className="w-8 h-8 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/>
                 <path d="M10 16l-4-4 1.41-1.41L10 13.17l6.59-6.59L18 8l-8 8z"/>
               </svg>
             </div>
-            <div className="text-gray-800 font-ibm text-xs font-medium leading-[110%] text-center">
+            <div className="text-black font-ibm text-xs font-normal leading-[110%] text-center">
               Планирование бюджета
             </div>
           </button>
@@ -133,122 +215,153 @@ const DashboardPage = () => {
       </div>
 
       {/* Analytics Section */}
-      <div className="relative z-10 px-5 py-4">
-        <div className="bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm border border-white/20 rounded-3xl p-6 shadow-xl">
+      <div className="relative z-10 px-5 py-2 animate-slide-in-down">
+        <div className="bg-gray-200 rounded-3xl p-6">
           <div className="flex items-center justify-between mb-6">
-            <div className="text-gray-900 font-ibm font-semibold text-lg leading-[110%]">
-              Аналитика | Октябрь
-            </div>
-            <button className="text-red-600 font-ibm font-medium text-sm leading-[110%] cursor-pointer hover:underline transition-colors">
-              Подробнее
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            {/* Income */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <div className="h-4 bg-gradient-to-r from-red-400 to-red-500 rounded-full shadow-inner overflow-hidden">
-                  <div className="h-full w-3/4 bg-gradient-to-r from-red-300 to-red-400 rounded-full shadow-lg"></div>
-                </div>
+              <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+                Аналитика | Октябрь
               </div>
-              <div className="text-gray-900 font-ibm font-semibold text-sm leading-[110%] flex items-center space-x-1">
-                <span>120 473 ₽</span>
-                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
+              <button 
+                onClick={() => navigate('/analytics')}
+                className="text-black font-ibm font-normal text-xs leading-[110%] cursor-pointer"
+              >
+                Подробнее
+              </button>
             </div>
             
-            {/* Expenses */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <div className="h-4 bg-gradient-to-r from-rose-400 to-rose-500 rounded-full shadow-inner overflow-hidden">
-                  <div className="h-full w-1/2 bg-gradient-to-r from-rose-300 to-rose-400 rounded-full shadow-lg"></div>
+            <div className="space-y-4">
+              {/* Income */}
+              <div className="flex items-center justify-between">
+                <div className="flex-1 mr-4">
+                  <div className="h-4 bg-green-400 rounded-full" style={{width: '80%'}}></div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M7 14l5-5 5 5z"/>
+                  </svg>
+                  <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+                    120 473 ₽
+                  </div>
                 </div>
               </div>
-              <div className="text-gray-900 font-ibm font-semibold text-sm leading-[110%] flex items-center space-x-1">
-                <span>54 986 ₽</span>
-                <svg className="w-4 h-4 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
+              
+              {/* Expenses */}
+              <div className="flex items-center justify-between">
+                <div className="flex-1 mr-4">
+                  <div className="h-4 bg-red-500 rounded-full" style={{width: '50%'}}></div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M7 10l5 5 5-5z"/>
+                  </svg>
+                  <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+                    54 986 ₽
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
 
-      {/* Operations Section */}
-      <div className="relative z-10 px-5 py-4">
-        <div className="bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm border border-white/20 rounded-3xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-gray-900 font-ibm font-semibold text-lg leading-[110%]">
-              Операции | Октябрь
-            </div>
-            <button className="text-red-600 font-ibm font-medium text-sm leading-[110%] cursor-pointer hover:underline transition-colors">
-              Подробнее
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="text-gray-600 font-ibm font-medium text-sm leading-[110%] mb-4">
-              Сегодня
-            </div>
-            
-            <div className="flex items-center space-x-4 p-4 bg-gradient-to-r from-white/50 to-white/30 rounded-2xl border border-white/20">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-              </div>
-              <div className="flex-1">
-                <div className="text-gray-900 font-ibm font-semibold text-base leading-[110%]">
-                  Surf Coffee
-                </div>
-                <div className="text-gray-600 font-ibm font-medium text-sm leading-[110%]">
-                  Кофейни
-                </div>
-              </div>
-              <div className="text-red-600 font-ibm font-semibold text-base leading-[110%]">
-                -660 ₽
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* All Transactions Button */}
-      <div className="relative z-10 px-5 py-4">
-        <div className="bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm border border-white/20 rounded-3xl p-6 shadow-xl">
-          <div className="text-gray-600 font-ibm font-medium text-sm leading-[110%] mb-4">
-            Все транзакции
-          </div>
-          
-          <button className="w-full bg-gradient-to-r from-white/80 to-white/60 backdrop-blur-sm border border-white/30 rounded-3xl p-4 flex items-center space-x-4 hover:from-white hover:to-white/80 transition-all duration-200 hover:scale-[1.02] shadow-lg hover:shadow-xl">
-            <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-            </div>
-            <div className="flex-1 text-left">
-              <div className="text-gray-900 font-ibm font-semibold text-base leading-[110%]">
-                Surf Coffee
-              </div>
-              <div className="text-gray-600 font-ibm font-medium text-sm leading-[110%]">
-                Кофейни
-              </div>
-            </div>
-            <div className="text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </button>
-        </div>
-      </div>
 
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
+
+      {/* Add Bank Modal */}
+      {showAddBankModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-ibm font-semibold text-gray-900">Добавить карту</h2>
+              <button 
+                onClick={handleCloseModal}
+                className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"
+              >
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Bank Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-ibm font-medium text-gray-700 mb-3">Выберите банк</label>
+              <div className="grid grid-cols-2 gap-3">
+                {availableBanks.map((bank) => (
+                  <button
+                    key={bank.id}
+                    onClick={() => handleBankSelect(bank.id)}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      newBankData.bank === bank.id
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 ${bank.color} rounded-lg mx-auto mb-2`}></div>
+                    <div className="text-xs font-ibm font-medium text-gray-900 text-center">
+                      {bank.name}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Card Number */}
+            <div className="mb-4">
+              <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">Номер карты</label>
+              <input
+                type="text"
+                value={newBankData.cardNumber}
+                onChange={(e) => handleCardNumberChange(e.target.value)}
+                placeholder="1234 5678 9012 3456"
+                className="w-full h-12 bg-gray-200 rounded-xl px-4 text-gray-900 font-ibm text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+
+            {/* Expiry Date and CVV */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">Срок действия</label>
+                <input
+                  type="text"
+                  value={newBankData.expiryDate}
+                  onChange={(e) => handleInputChange('expiryDate', e.target.value)}
+                  placeholder="MMYY"
+                  maxLength="4"
+                  className="w-full h-12 bg-gray-200 rounded-xl px-4 text-gray-900 font-ibm text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">CVV</label>
+                <input
+                  type="text"
+                  value={newBankData.cvv}
+                  onChange={(e) => handleInputChange('cvv', e.target.value)}
+                  placeholder="123"
+                  className="w-full h-12 bg-gray-200 rounded-xl px-4 text-gray-900 font-ibm text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={handleConfirmWithBank}
+                className="w-full h-12 bg-red-500 text-white rounded-xl font-ibm text-sm font-medium hover:bg-red-600 transition-colors"
+              >
+                Подтвердить в банке
+              </button>
+              <button
+                onClick={handleConfirmWithoutBank}
+                className="w-full h-12 bg-gray-200 text-gray-700 rounded-xl font-ibm text-sm font-medium hover:bg-gray-300 transition-colors"
+              >
+                Без подтверждения
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

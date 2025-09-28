@@ -16,6 +16,12 @@ import TransactionsPage from './pages/TransactionsPage'
 import TransferPage from './pages/TransferPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
+import PaymentsPage from './pages/PaymentsPage'
+import HistoryPage from './pages/HistoryPage'
+import ChatsPage from './pages/ChatsPage'
+import MainPage from './pages/MainPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+import BudgetPlanningPage from './pages/BudgetPlanningPage'
 
 function App() {
   const { user, isLoading, initializeAuth } = useAuthStore()
@@ -49,12 +55,18 @@ function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="my-cards" element={<MyCardsPage />} />
-              <Route path="card-analytics" element={<CardAnalyticsPage />} />
+              <Route path="card-analytics/:cardId" element={<CardAnalyticsPage />} />
               <Route path="accounts" element={<AccountsPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="transfer" element={<TransferPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="payments" element={<PaymentsPage />} />
+              <Route path="history" element={<HistoryPage />} />
+              <Route path="chats" element={<ChatsPage />} />
+              <Route path="main" element={<MainPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="budget-planning" element={<BudgetPlanningPage />} />
             </Route>
         
         {/* Catch all route */}
