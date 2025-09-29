@@ -36,6 +36,9 @@ const initTelegramWebApp = () => {
     // Enable closing confirmation
     tg.enableClosingConfirmation();
     
+    // Disable vertical swipes to prevent closing
+    tg.disableVerticalSwipes();
+    
     // Set header color
     tg.setHeaderColor('#0088cc');
     
