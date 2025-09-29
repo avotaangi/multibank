@@ -2,9 +2,9 @@ import { create } from 'zustand';
 
 const useBalanceStore = create((set, get) => ({
   bankBalances: {
-    vtb: 2876.87,
-    tbank: 4983.43,
-    alfa: 10544.40
+    vtb: 10000,
+    tbank: 20000,
+    alfa: 30000
   },
 
   // Обновить баланс карты
@@ -68,9 +68,9 @@ const useBalanceStore = create((set, get) => ({
   resetBalances: () => {
     set({
       bankBalances: {
-        vtb: 2876.87,
-        tbank: 4983.43,
-        alfa: 10544.40
+        vtb: 10000,
+        tbank: 20000,
+        alfa: 30000
       }
     });
   }

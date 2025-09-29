@@ -18,6 +18,8 @@ const DashboardPage = () => {
   }, [bankBalances]);
 
   const [showAddBankModal, setShowAddBankModal] = useState(false);
+  const [showRequestedBanks, setShowRequestedBanks] = useState(false);
+  const [requestedBanks, setRequestedBanks] = useState([]);
   const [newBankData, setNewBankData] = useState({
     bank: '',
     cardNumber: '',
@@ -25,11 +27,19 @@ const DashboardPage = () => {
     cvv: ''
   });
 
-  const availableBanks = [
-    { id: 'sberbank', name: 'Сбербанк', color: 'bg-green-500' },
+  // Банки, которые уже используются в приложении
+  const usedBanks = [
     { id: 'vtb', name: 'ВТБ', color: 'bg-blue-500' },
     { id: 'alfa', name: 'Альфа-Банк', color: 'bg-red-500' },
     { id: 'tbank', name: 'Т-Банк', color: 'bg-black' }
+  ];
+
+  // Банки, которые можно добавить
+  const availableBanks = [
+    { id: 'sberbank', name: 'Сбербанк', color: 'bg-green-500' },
+    { id: 'gazprombank', name: 'Газпромбанк', color: 'bg-orange-500' },
+    { id: 'raiffeisen', name: 'Райффайзенбанк', color: 'bg-purple-500' },
+    { id: 'rosbank', name: 'Росбанк', color: 'bg-indigo-500' }
   ];
 
   const handleAddBank = () => {
@@ -44,6 +54,13 @@ const DashboardPage = () => {
       expiryDate: '',
       cvv: ''
     });
+  };
+
+  const handleCancelRequest = (bankId) => {
+    setRequestedBanks(prev => prev.filter(bank => bank.id !== bankId));
+    if (requestedBanks.length === 1) {
+      setShowRequestedBanks(false);
+    }
   };
 
   const handleBankSelect = (bankId) => {
@@ -77,9 +94,12 @@ const DashboardPage = () => {
   };
 
   const handleConfirmWithBank = () => {
-    if (newBankData.bank && newBankData.cardNumber && newBankData.expiryDate && newBankData.cvv) {
-      // Здесь будет логика подтверждения с банком
-      console.log('Подтверждение с банком:', newBankData);
+    if (newBankData.bank) {
+      const selectedBank = availableBanks.find(bank => bank.id === newBankData.bank);
+      if (selectedBank) {
+        setRequestedBanks(prev => [...prev, selectedBank]);
+        setShowRequestedBanks(true);
+      }
       handleCloseModal();
     }
   };
@@ -113,13 +133,13 @@ const DashboardPage = () => {
     <div className="min-h-screen bg-white relative overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }}>
 
       {/* Top Header with Profile */}
-      <div className="relative z-10 bg-gray-200 px-5 pt-6 pb-4 rounded-[40px] animate-slide-in-down">
+      <div className="relative z-10 bg-gray-100 px-5 pt-6 pb-4 rounded-[40px] animate-slide-in-down">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="relative rounded-full">
               <div className="w-14 h-14 bg-red-500 rounded-full overflow-hidden">
                  <img 
-                   src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" 
+                   src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face" 
                    alt="Евгений Богатов" 
                    className="w-full h-full object-cover"
                  />
@@ -166,16 +186,45 @@ const DashboardPage = () => {
           onClick={handleAddBank}
           className="w-full h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 font-ibm text-sm font-medium hover:bg-gray-50 transition-colors"
         >
-          + Добавить карту
+          + Добавить банк
         </button>
       </div>
+
+      {/* Requested Banks Section */}
+      {showRequestedBanks && requestedBanks.length > 0 && (
+        <div className="relative z-10 px-5 py-2 animate-slide-in-down">
+          <div className="bg-white rounded-2xl p-4">
+            <h3 className="text-black font-ibm font-medium text-sm leading-[110%] mb-3">
+              Запросы на подключение
+            </h3>
+            <div className="space-y-2">
+              {requestedBanks.map((bank) => (
+                <div key={bank.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-6 h-6 ${bank.color} rounded-lg`}></div>
+                    <div className="text-black font-ibm text-sm font-medium">
+                      Карты запрошены у {bank.name}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleCancelRequest(bank.id)}
+                    className="text-red-500 font-ibm text-sm font-medium hover:text-red-600 transition-colors"
+                  >
+                    Отменить
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Action Buttons */}
       <div className="relative z-10 px-5 py-2 animate-slide-in-down">
         <div className="grid grid-cols-3 gap-2">
           <button 
             onClick={() => navigate('/transfer')}
-            className="h-28 bg-gray-200 rounded-2xl flex flex-col items-center justify-center p-1"
+            className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center p-1"
           >
             <div className="mb-1">
               <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,7 +237,10 @@ const DashboardPage = () => {
             </div>
           </button>
           
-          <button className="h-28 bg-gray-200 rounded-2xl flex flex-col items-center justify-center">
+          <button 
+            onClick={() => navigate('/transfer')}
+            className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center"
+          >
             <div className="mb-1">
               <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
                 <path d="M5 3L19 12L5 21V3Z" fill="#4285F4"/>
@@ -205,7 +257,7 @@ const DashboardPage = () => {
           
           <button 
             onClick={() => navigate('/budget-planning')}
-            className="h-28 bg-gray-200 rounded-2xl flex flex-col items-center justify-center"
+            className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center"
           >
             <div className="mb-1">
               <svg className="w-8 h-8 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
@@ -222,66 +274,70 @@ const DashboardPage = () => {
 
       {/* Analytics Section */}
       <div className="relative z-10 px-5 py-2 animate-slide-in-down">
-        <div className="bg-gray-200 rounded-3xl p-6">
+        <button 
+          onClick={() => navigate('/analytics')}
+          className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+        >
           <div className="flex items-center justify-between mb-6">
-              <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-                Аналитика | Октябрь
+            <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+              Аналитика | Октябрь
+            </div>
+            <div className="text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Income */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1 mr-4">
+                <div className="h-4 bg-green-400 rounded-full" style={{width: '80%'}}></div>
               </div>
-              <button 
-                onClick={() => navigate('/analytics')}
-                className="text-black font-ibm font-normal text-xs min-[375px]:text-sm leading-[110%] cursor-pointer"
-              >
-                Подробнее
-              </button>
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M7 14l5-5 5 5z"/>
+                </svg>
+                <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+                  120 473 ₽
+                </div>
+              </div>
             </div>
             
-            <div className="space-y-4">
-              {/* Income */}
-              <div className="flex items-center justify-between">
-                <div className="flex-1 mr-4">
-                  <div className="h-4 bg-green-400 rounded-full" style={{width: '80%'}}></div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M7 14l5-5 5 5z"/>
-                  </svg>
-                  <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-                    120 473 ₽
-                  </div>
-                </div>
+            {/* Expenses */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1 mr-4">
+                <div className="h-4 bg-red-500 rounded-full" style={{width: '50%'}}></div>
               </div>
-              
-              {/* Expenses */}
-              <div className="flex items-center justify-between">
-                <div className="flex-1 mr-4">
-                  <div className="h-4 bg-red-500 rounded-full" style={{width: '50%'}}></div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M7 10l5 5 5-5z"/>
-                  </svg>
-                  <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-                    54 986 ₽
-                  </div>
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M7 10l5 5 5-5z"/>
+                </svg>
+                <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+                  54 986 ₽
                 </div>
               </div>
             </div>
-        </div>
+          </div>
+        </button>
       </div>
 
       {/* Deposits Section */}
       <div className="relative z-10 px-5 py-2 animate-slide-in-down">
-        <div className="bg-gray-200 rounded-3xl p-6">
+        <button 
+          onClick={() => navigate('/deposits')}
+          className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+        >
           <div className="flex items-center justify-between mb-6">
             <div className="text-black font-ibm font-medium text-sm leading-[110%]">
               Вклады
             </div>
-            <button 
-              onClick={() => navigate('/deposits')}
-              className="text-black font-ibm font-normal text-xs min-[375px]:text-sm leading-[110%] cursor-pointer"
-            >
-              Подробнее
-            </button>
+            <div className="text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
           </div>
           
           <div className="space-y-4">
@@ -315,26 +371,28 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Credits Section */}
       <div className="relative z-10 px-5 py-2 animate-slide-in-down">
-        <div className="bg-gray-200 rounded-3xl p-6">
+        <button 
+          onClick={() => navigate('/credits')}
+          className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+        >
           <div className="flex items-center justify-between mb-6">
             <div className="text-black font-ibm font-medium text-sm leading-[110%]">
               Кредиты
             </div>
-            <button 
-              onClick={() => navigate('/credits')}
-              className="text-black font-ibm font-normal text-xs min-[375px]:text-sm leading-[110%] cursor-pointer"
-            >
-              Подробнее
-            </button>
+            <div className="text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
           </div>
           
           <div className="mb-4">
-            <div className="text-black font-ibm font-normal text-sm leading-[110%] mb-3">
+            <div className="text-black font-ibm font-normal text-sm leading-[110%] mb-3 text-left">
               Осталось до погашения кредита
             </div>
             <div className="flex items-center justify-between">
@@ -346,18 +404,25 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Digital Ruble Section */}
       <div className="relative z-10 px-5 py-2 animate-slide-in-down">
-        <div className="bg-gray-200 rounded-3xl p-6">
+        <div className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
-            <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-              Цифровой рубль
+            <div className="flex-1 text-left">
+              <div className="text-black font-ibm font-medium text-sm leading-[110%] mb-1">
+                Цифровой рубль
+              </div>
+              <div className="text-gray-500 font-ibm font-normal text-xs leading-[110%]">
+                В разработке
+              </div>
             </div>
-            <div className="text-black font-ibm font-normal text-sm leading-[110%]">
-              В разработке
+            <div className="text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
           </div>
         </div>
@@ -369,10 +434,10 @@ const DashboardPage = () => {
 
       {/* Add Bank Modal */}
       {showAddBankModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-ibm font-semibold text-gray-900">Добавить карту</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-ibm font-semibold text-gray-900">Добавить банк</h2>
               <button 
                 onClick={handleCloseModal}
                 className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"
@@ -383,22 +448,43 @@ const DashboardPage = () => {
               </button>
             </div>
 
-            {/* Bank Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-ibm font-medium text-gray-700 mb-3">Выберите банк</label>
-              <div className="grid grid-cols-2 gap-3">
+            {/* Used Banks Section */}
+            <div className="mb-4">
+              <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">Уже подключенные банки</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {usedBanks.map((bank) => (
+                  <div
+                    key={bank.id}
+                    className="p-1.5 rounded-lg border border-gray-200 bg-gray-50 opacity-60"
+                  >
+                    <div className={`w-4 h-4 ${bank.color} rounded-lg mx-auto mb-1`}></div>
+                    <div className="text-xs font-ibm font-medium text-gray-500 text-center leading-tight">
+                      {bank.name}
+                    </div>
+                    <div className="text-xs text-gray-400 text-center leading-tight">
+                      Подключен
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Available Banks Section */}
+            <div className="mb-4">
+              <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">Доступные для подключения</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {availableBanks.map((bank) => (
                   <button
                     key={bank.id}
                     onClick={() => handleBankSelect(bank.id)}
-                    className={`p-3 rounded-xl border-2 transition-all ${
+                    className={`p-1.5 rounded-lg border transition-all ${
                       newBankData.bank === bank.id
                         ? 'border-red-500 bg-red-50'
                         : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
                     }`}
                   >
-                    <div className={`w-8 h-8 ${bank.color} rounded-lg mx-auto mb-2`}></div>
-                    <div className="text-xs min-[375px]:text-sm font-ibm font-medium text-gray-900 text-center">
+                    <div className={`w-4 h-4 ${bank.color} rounded-lg mx-auto mb-1`}></div>
+                    <div className="text-xs font-ibm font-medium text-gray-900 text-center leading-tight">
                       {bank.name}
                     </div>
                   </button>
@@ -406,56 +492,14 @@ const DashboardPage = () => {
               </div>
             </div>
 
-            {/* Card Number */}
-            <div className="mb-4">
-              <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">Номер карты</label>
-              <input
-                type="text"
-                value={newBankData.cardNumber}
-                onChange={(e) => handleCardNumberChange(e.target.value)}
-                placeholder="1234 5678 9012 3456"
-                className="w-full h-12 bg-gray-200 rounded-xl px-4 text-gray-900 font-ibm text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
 
-            {/* Expiry Date and CVV */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">Срок действия</label>
-                <input
-                  type="text"
-                  value={newBankData.expiryDate}
-                  onChange={(e) => handleInputChange('expiryDate', e.target.value)}
-                  placeholder="MMYY"
-                  maxLength="4"
-                  className="w-full h-12 bg-gray-200 rounded-xl px-4 text-gray-900 font-ibm text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">CVV</label>
-                <input
-                  type="text"
-                  value={newBankData.cvv}
-                  onChange={(e) => handleInputChange('cvv', e.target.value)}
-                  placeholder="123"
-                  className="w-full h-12 bg-gray-200 rounded-xl px-4 text-gray-900 font-ibm text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
+            {/* Action Button */}
+            <div className="mt-4">
               <button
                 onClick={handleConfirmWithBank}
                 className="w-full h-12 bg-red-500 text-white rounded-xl font-ibm text-sm font-medium hover:bg-red-600 transition-colors"
               >
-                Подтвердить в банке
-              </button>
-              <button
-                onClick={handleConfirmWithoutBank}
-                className="w-full h-12 bg-gray-200 text-gray-700 rounded-xl font-ibm text-sm font-medium hover:bg-gray-300 transition-colors"
-              >
-                Без подтверждения
+                Запросить доступ к картам
               </button>
             </div>
           </div>

@@ -50,15 +50,15 @@ const styles = `
   }
   
   .animate-sequential-1 {
-    animation: sequentialFadeIn 0.6s ease-out 0.1s both;
+    animation: sequentialFadeIn 0.8s ease-out 0.1s both;
   }
   
   .animate-sequential-2 {
-    animation: sequentialFadeIn 0.6s ease-out 0.3s both;
+    animation: sequentialFadeIn 0.8s ease-out 0.3s both;
   }
   
   .animate-sequential-3 {
-    animation: sequentialFadeIn 0.6s ease-out 0.5s both;
+    animation: sequentialFadeIn 0.8s ease-out 0.5s both;
   }
 `;
 

@@ -32,7 +32,7 @@
   .page-enter-active {
     opacity: 1;
     transform: translateX(0);
-    transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+    transition: opacity 500ms ease-in-out, transform 500ms ease-in-out;
   }
   
   .page-exit {
@@ -43,27 +43,27 @@
   .page-exit-active {
     opacity: 0;
     transform: translateX(-100%);
-    transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+    transition: opacity 500ms ease-in-out, transform 500ms ease-in-out;
   }
   
   /* Card stack transition */
   .card-stack-transition {
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   /* Smooth navigation */
   .smooth-transition {
-    transition: all 0.3s ease-in-out;
+    transition: all 0.5s ease-in-out;
   }
   
   /* Card stack to list transition */
   .card-stack-to-list {
-    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   /* Card entrance animation */
   .card-entrance {
-    animation: cardEntrance 0.5s ease-out forwards;
+    animation: cardEntrance 0.7s ease-out forwards;
   }
   
   @keyframes cardEntrance {
@@ -79,7 +79,7 @@
   
   /* Card collection animation - собирание карт из разлетевшихся позиций */
   .card-collection {
-    animation: cardCollection 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: cardCollection 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
   
   @keyframes cardCollection {
@@ -195,11 +195,11 @@
 
 /* Animation classes */
 .animate-fade-in {
-  animation: fadeIn 0.5s ease-in-out;
+  animation: fadeIn 0.7s ease-in-out;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp 0.5s ease-out;
 }
 
 @keyframes fadeIn {
@@ -239,7 +239,7 @@
 }
 
 .animate-donut-entrance {
-  animation: donutEntrance 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: donutEntrance 3.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* Analytics page animations */
@@ -275,7 +275,7 @@
 }
 
 .animate-slide-in-down {
-  animation: slideInDown 1.2s ease-out forwards;
+  animation: slideInDown 1.6s ease-out forwards;
   opacity: 0;
 }
 
@@ -328,20 +328,38 @@
 }
 
 .animate-fade-in {
-  animation: slideInDown 1.2s ease-out forwards;
+  animation: slideInDown 1.6s ease-out forwards;
   animation-delay: 0.1s;
   opacity: 0;
 }
 
 .animate-scale-in {
-  animation: slideInDown 1.2s ease-out forwards;
+  animation: slideInDown 1.6s ease-out forwards;
   animation-delay: 0.15s;
   opacity: 0;
 }
 
 /* Slower animations for MyCardsPage */
 .animate-slide-in-down-slow {
-  animation: slideInDown 0.8s ease-out forwards;
+  animation: slideInDown 1.2s ease-out forwards;
+  opacity: 0;
+}
+
+/* Very slow animations for DepositsPage */
+.animate-slide-in-down-very-slow {
+  animation: slideInDown 2.0s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-very-slow {
+  animation: fadeIn 1.5s ease-out forwards;
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+.animate-slide-in-up-very-slow {
+  animation: slideUp 1.8s ease-out forwards;
+  animation-delay: 0.3s;
   opacity: 0;
 }
 

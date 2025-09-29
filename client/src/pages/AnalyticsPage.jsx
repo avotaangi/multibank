@@ -9,7 +9,7 @@ const AnalyticsPage = () => {
   const { getAllTransfers } = useTransfersStore();
   
   // Получаем все последние переводы
-  const recentTransfers = getAllTransfers();
+  const allTransfers = getAllTransfers();
   
   // Функция для форматирования перевода
   const formatTransfer = (transfer) => {
@@ -22,13 +22,22 @@ const AnalyticsPage = () => {
     const fromBankName = bankNames[transfer.fromBank] || transfer.fromBank;
     const toBankName = bankNames[transfer.toBank] || transfer.toBank;
     
+    // Находим карту для отображения
+    const fromCard = allCards.find(card => card.id === transfer.fromBank);
+    
     if (transfer.type === 'internal') {
       return {
         title: `Перевод между банками`,
         subtitle: `${fromBankName} → ${toBankName}`,
         amount: `- ${transfer.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`,
         icon: '🔄',
-        iconBg: 'bg-blue-500'
+        iconBg: 'bg-blue-500',
+        cardInfo: fromCard ? {
+          name: fromCard.name,
+          color: fromCard.color,
+          logo: fromCard.logo,
+          cardNumber: fromCard.cardNumber
+        } : null
       };
     } else {
       return {
@@ -36,7 +45,13 @@ const AnalyticsPage = () => {
         subtitle: `С ${fromBankName}`,
         amount: `- ${transfer.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`,
         icon: '👤',
-        iconBg: 'bg-green-500'
+        iconBg: 'bg-green-500',
+        cardInfo: fromCard ? {
+          name: fromCard.name,
+          color: fromCard.color,
+          logo: fromCard.logo,
+          cardNumber: fromCard.cardNumber
+        } : null
       };
     }
   };
@@ -113,6 +128,71 @@ const AnalyticsPage = () => {
   // Объединяем базовые карты с тестовыми
   const testCards = getAllCards();
   const allCards = [...baseCards, ...testCards];
+
+  // Фильтруем переводы в зависимости от выбранной карты
+  const recentTransfers = selectedCard 
+    ? allTransfers.filter(transfer => transfer.fromBank === selectedCard.id)
+    : allTransfers;
+
+  // Функция для определения карты операции
+  const getOperationCard = (operationType) => {
+    const cardMapping = {
+      'magnit': 'alfa',      // Магнит - Альфа-Банк
+      'yandex_taxi': 'vtb',  // Яндекс.Такси - ВТБ
+      'samokat': 'tbank',    // Самокат - T-Банк
+      'yandex_plus': 'alfa', // Яндекс.Плюс - Альфа-Банк
+      'okko': 'vtb'          // Кинотеатр okko - ВТБ
+    };
+    return cardMapping[operationType];
+  };
+
+  // Фильтруем статические операции в зависимости от выбранной карты
+  const shouldShowOperation = (operationType) => {
+    if (!selectedCard) return true; // Показываем все операции если выбран Мультибанк
+    return getOperationCard(operationType) === selectedCard.id;
+  };
+
+  // Функция для расчета затрат по выбранной карте
+  const calculateSpendingByCard = () => {
+    let totalSpending = 0;
+    
+    // Суммируем затраты из переводов только если выбрано "Переводы"
+    if (selectedTransfer === 'Переводы') {
+      recentTransfers.forEach(transfer => {
+        totalSpending += transfer.amount;
+      });
+    }
+    
+    // Суммируем затраты из статических операций
+    const staticOperations = [
+      { type: 'magnit', amount: 78 },
+      { type: 'yandex_taxi', amount: 578 },
+      { type: 'samokat', amount: 1150 },
+      { type: 'yandex_plus', amount: 399 },
+      { type: 'okko', amount: 199 }
+    ];
+    
+    staticOperations.forEach(operation => {
+      if (shouldShowOperation(operation.type)) {
+        totalSpending += operation.amount;
+      }
+    });
+    
+    return totalSpending;
+  };
+
+  const totalSpending = calculateSpendingByCard();
+
+  // Функция для генерации градиента кольца
+  const getDonutGradient = () => {
+    if (selectedTransfer === 'Без перевода') {
+      // Только 4 цвета без синего (переводы): Продукты, Транспорт, Развлечения, Остальное
+      return 'conic-gradient(from 0deg, #F59E0C 0deg 90deg, #EF4444 90deg 180deg, #844FD9 180deg 270deg, #12B981 270deg 360deg)';
+    } else {
+      // Полный градиент с синим цветом (5 цветов)
+      return 'conic-gradient(from 0deg, #3C82F6 0deg 72deg, #F59E0C 72deg 144deg, #EF4444 144deg 216deg, #844FD9 216deg 288deg, #12B981 288deg 360deg)';
+    }
+  };
 
   const handleBackToDashboard = () => {
     navigate('/dashboard');
@@ -266,12 +346,12 @@ const AnalyticsPage = () => {
             <div 
               className="absolute inset-0 rounded-full animate-donut-entrance" 
               style={{ 
-                background: 'conic-gradient(from 0deg, #3C82F6 0deg 72deg, #F59E0C 72deg 144deg, #EF4444 144deg 216deg, #844FD9 216deg 288deg, #12B981 288deg 360deg)'
+                background: getDonutGradient()
               }}
             ></div>
             <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center">
               <div className="text-center">
-                <div className="text-black font-ibm text-lg min-[360px]:text-xl min-[375px]:text-2xl font-medium leading-[90%]">52 500 ₽</div>
+                <div className="text-black font-ibm text-lg min-[360px]:text-xl min-[375px]:text-2xl font-medium leading-[90%]">{totalSpending.toLocaleString('ru-RU')} ₽</div>
               </div>
             </div>
           </div>
@@ -284,7 +364,7 @@ const AnalyticsPage = () => {
             <div className="text-gray-600 font-ibm text-xs min-[360px]:text-sm font-medium leading-[110%]">Доходы</div>
           </div>
           <div className="text-center">
-            <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">52 500 ₽</div>
+            <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">{totalSpending.toLocaleString('ru-RU')} ₽</div>
             <div className="text-gray-600 font-ibm text-xs min-[360px]:text-sm font-medium leading-[110%]">Расходы</div>
           </div>
           <div className="text-center">
@@ -298,10 +378,12 @@ const AnalyticsPage = () => {
       <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 mt-2 min-[360px]:mt-3 animate-slide-in-down">
         <div className="text-black font-ibm text-base min-[360px]:text-lg font-medium leading-[110%] mb-3 min-[360px]:mb-4">Расходы по категориям</div>
         <div className="grid grid-cols-2 gap-3 min-[360px]:gap-4">
+          {selectedTransfer === 'Переводы' && (
           <div className="flex items-center space-x-2 min-[360px]:space-x-3">
             <div className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 bg-blue-500 rounded-full"></div>
             <span className="text-black font-ibm text-sm min-[360px]:text-base font-medium">Переводы</span>
           </div>
+          )}
           <div className="flex items-center space-x-2 min-[360px]:space-x-3">
             <div className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 bg-orange-500 rounded-full"></div>
             <span className="text-black font-ibm text-sm min-[360px]:text-base font-medium">Продукты</span>
@@ -332,7 +414,7 @@ const AnalyticsPage = () => {
         {/* Operations List */}
         <div className="space-y-2 min-[360px]:space-y-3">
           {/* Последние переводы */}
-          {recentTransfers.map((transfer, index) => {
+          {selectedTransfer === 'Переводы' && recentTransfers.map((transfer, index) => {
             const formatted = formatTransfer(transfer);
             return (
               <div key={transfer.id} className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
@@ -342,7 +424,28 @@ const AnalyticsPage = () => {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">{formatted.title}</div>
+                  <div className="flex items-center">
+                    <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">{formatted.title}</div>
+                    {formatted.cardInfo && (
+                      <div className="ml-2">
+                        <div 
+                          className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"
+                          style={{ 
+                            background: `linear-gradient(135deg, ${formatted.cardInfo.color} 0%, ${formatted.cardInfo.color}CC 100%)`
+                          }}
+                        >
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                              <span className="text-white font-bold text-xs">{formatted.cardInfo.logo}</span>
+                            </div>
+                          </div>
+                          <div className="text-white text-xs font-medium">
+                            {formatted.cardInfo.cardNumber.split(' ')[0]}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">{formatted.subtitle}</div>
                 </div>
                 <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">{formatted.amount}</div>
@@ -351,6 +454,7 @@ const AnalyticsPage = () => {
           })}
           
           {/* Магнит */}
+          {shouldShowOperation('magnit') && (
           <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-red-500 rounded-full flex items-center justify-center">
@@ -358,13 +462,32 @@ const AnalyticsPage = () => {
               </div>
             </div>
             <div className="flex-1">
-              <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Магнит</div>
+              <div className="flex items-center">
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Магнит</div>
+                <div className="ml-2">
+                  <div 
+                    className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #EF3124 0%, #EF3124CC 100%)'
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">А</span>
+                      </div>
+                    </div>
+                    <div className="text-white text-xs font-medium">5294</div>
+                  </div>
+                </div>
+              </div>
               <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">Продукты</div>
             </div>
             <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 78 ₽</div>
           </div>
+          )}
 
           {/* Яндекс.Такси */}
+          {shouldShowOperation('yandex_taxi') && (
           <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-yellow-500 rounded-full flex items-center justify-center">
@@ -372,13 +495,32 @@ const AnalyticsPage = () => {
               </div>
             </div>
             <div className="flex-1">
-              <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Яндекс.Такси</div>
+              <div className="flex items-center">
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Яндекс.Такси</div>
+                <div className="ml-2">
+                  <div 
+                    className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #0055BC 0%, #0055BCCC 100%)'
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">В</span>
+                      </div>
+                    </div>
+                    <div className="text-white text-xs font-medium">3568</div>
+                  </div>
+                </div>
+              </div>
               <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">Такси</div>
             </div>
             <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 578 ₽</div>
           </div>
+          )}
 
           {/* Самокат */}
+          {shouldShowOperation('samokat') && (
           <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-pink-500 rounded-full flex items-center justify-center">
@@ -386,11 +528,29 @@ const AnalyticsPage = () => {
               </div>
             </div>
             <div className="flex-1">
-              <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Самокат</div>
+              <div className="flex items-center">
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Самокат</div>
+                <div className="ml-2">
+                  <div 
+                    className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #2F2F2F 0%, #2F2F2FCC 100%)'
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">T</span>
+                      </div>
+                    </div>
+                    <div className="text-white text-xs font-medium">6352</div>
+                  </div>
+                </div>
+              </div>
               <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">Продукты</div>
             </div>
             <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 1 150 ₽</div>
           </div>
+          )}
         </div>
       </div>
 
@@ -404,6 +564,7 @@ const AnalyticsPage = () => {
         {/* Subscriptions List */}
         <div className="space-y-2 min-[360px]:space-y-3">
           {/* Яндекс.Плюс */}
+          {shouldShowOperation('yandex_plus') && (
           <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-pink-500 rounded-full flex items-center justify-center">
@@ -411,13 +572,32 @@ const AnalyticsPage = () => {
               </div>
             </div>
             <div className="flex-1">
-              <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Яндекс.Плюс</div>
+              <div className="flex items-center">
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Яндекс.Плюс</div>
+                <div className="ml-2">
+                  <div 
+                    className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #EF3124 0%, #EF3124CC 100%)'
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">А</span>
+                      </div>
+                    </div>
+                    <div className="text-white text-xs font-medium">5294</div>
+                  </div>
+                </div>
+              </div>
               <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">Подписки</div>
             </div>
             <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 399 ₽</div>
           </div>
+          )}
 
           {/* Кинотеатр okko */}
+          {shouldShowOperation('okko') && (
           <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-purple-600 rounded-full flex items-center justify-center">
@@ -425,11 +605,29 @@ const AnalyticsPage = () => {
               </div>
             </div>
             <div className="flex-1">
-              <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Кинотеатр okko</div>
+              <div className="flex items-center">
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Кинотеатр okko</div>
+                <div className="ml-2">
+                  <div 
+                    className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #0055BC 0%, #0055BCCC 100%)'
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">В</span>
+                      </div>
+                    </div>
+                    <div className="text-white text-xs font-medium">3568</div>
+                  </div>
+                </div>
+              </div>
               <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">Подписки</div>
             </div>
             <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 199 ₽</div>
           </div>
+          )}
         </div>
       </div>
 

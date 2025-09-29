@@ -3,11 +3,11 @@ import { NavLink, useLocation } from 'react-router-dom'
 const BottomNavigation = () => {
   const location = useLocation()
   const navItems = [
-    { path: '/main', label: 'Главный' },
-    { path: '/payments', label: 'Платежи' },
-    { path: '/dashboard', label: 'Мультибанк' },
-    { path: '/history', label: 'История' },
-    { path: '/chats', label: 'Чаты' },
+    { path: '/dashboard', label: 'Главный' },
+    { path: '/transfer', label: 'Платежи' },
+    { path: '/my-cards', label: 'Мультибанк' },
+    { path: '/analytics', label: 'Аналитика' },
+    { path: '/budget-planning', label: 'Цели' },
   ]
 
   return (
@@ -18,15 +18,7 @@ const BottomNavigation = () => {
             key={path}
             to={path}
             className={({ isActive }) => {
-              // Мультибанк всегда красный, кроме случаев когда активна одна из четырех нижних вкладок
-              if (label === 'Мультибанк') {
-                const isOtherTabActive = location.pathname === '/main' || location.pathname === '/payments' || location.pathname === '/history' || location.pathname === '/chats'
-                return `flex flex-col items-center py-2 px-0.5 rounded-lg transition-colors flex-1 ${
-                  isOtherTabActive ? 'text-gray-600' : 'text-red-500'
-                }`
-              }
-              
-              // Для остальных вкладок - стандартная логика
+              // Стандартная логика для всех вкладок
               return `flex flex-col items-center py-2 px-0.5 rounded-lg transition-colors flex-1 ${
                 isActive ? 'text-red-500' : 'text-gray-600'
               }`

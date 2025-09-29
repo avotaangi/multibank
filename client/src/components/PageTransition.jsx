@@ -13,7 +13,7 @@ const PageTransition = ({ children }) => {
       const timer = setTimeout(() => {
         setDisplayChildren(children);
         setIsTransitioning(false);
-      }, 150);
+      }, 250);
 
       return () => clearTimeout(timer);
     }
