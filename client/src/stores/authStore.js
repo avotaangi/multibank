@@ -79,6 +79,10 @@ const useAuthStore = create((set, get) => ({
         isLoading: false,
         error: null 
       })
+      
+      // For Telegram WebApp development, we can also create a test user
+      // This allows the app to work even without proper Telegram WebApp setup
+      console.log('✅ Test user created for development - app should work now')
     } catch (error) {
       console.error('Auth initialization error:', error)
       set({ 

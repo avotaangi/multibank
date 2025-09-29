@@ -11,7 +11,9 @@ export default defineConfig({
       '127.0.0.1',
       'nonacquiescing-ungovernmentally-paz.ngrok-free.app',
       '.ngrok-free.app',
-      '.ngrok.io'
+      '.ngrok.io',
+      'multibank-dev.loca.lt',
+      '.loca.lt'
     ]
   },
   build: {
