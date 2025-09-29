@@ -32,7 +32,7 @@ const createSelfSignedCert = () => {
 const proxy = httpProxy.createProxyServer({});
 
 const httpsPort = 8443; // Telegram требует порты 80, 88, 443 или 8443
-const vitePort = 5173; // Порт Vite dev сервера
+const vitePort = 5177; // Порт Vite dev сервера
 
 // Создаем SSL сертификат
 const { keyPath, certPath } = createSelfSignedCert();
