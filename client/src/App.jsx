@@ -22,6 +22,8 @@ import ChatsPage from './pages/ChatsPage'
 import MainPage from './pages/MainPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import BudgetPlanningPage from './pages/BudgetPlanningPage'
+import DepositsPage from './pages/DepositsPage'
+import CreditsPage from './pages/CreditsPage'
 
 function App() {
   const { user, isLoading, initializeAuth } = useAuthStore()
@@ -67,6 +69,8 @@ function App() {
               <Route path="main" element={<MainPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="budget-planning" element={<BudgetPlanningPage />} />
+              <Route path="deposits" element={<DepositsPage />} />
+              <Route path="credits" element={<CreditsPage />} />
             </Route>
         
         {/* Catch all route */}

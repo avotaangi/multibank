@@ -123,8 +123,15 @@ const AnalyticsPage = () => {
     setSelectedBank(card.name);
   };
 
+  // Закрытие всех выпадающих списков при клике вне их
+  const handleOutsideClick = () => {
+    setIsMonthOpen(false);
+    setIsBankOpen(false);
+    setIsTransferOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }}>
+    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }} onClick={handleOutsideClick}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
@@ -144,13 +151,13 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Filter Buttons */}
-      <div className="px-2 min-[360px]:px-3 min-[375px]:px-4 pb-3 min-[360px]:pb-4 animate-slide-in-down">
+      <div className="px-2 min-[360px]:px-3 min-[375px]:px-4 pb-3 min-[360px]:pb-4 animate-slide-in-down relative z-50">
         <div className="flex gap-1 min-[360px]:gap-2 min-[375px]:gap-3">
           {/* Month Dropdown */}
           <div className="relative flex-1">
             <button 
-              onClick={() => setIsMonthOpen(!isMonthOpen)}
-              className="bg-gray-200 rounded-[26px] px-2 min-[360px]:px-3 min-[375px]:px-4 py-1.5 min-[360px]:py-2 min-[375px]:py-2.5 flex items-center justify-center space-x-0.5 min-[360px]:space-x-1 w-full"
+              onClick={(e) => { e.stopPropagation(); setIsMonthOpen(!isMonthOpen); }}
+              className="bg-gray-200 rounded-[26px] px-2 min-[360px]:px-3 min-[375px]:px-4 py-1.5 min-[360px]:py-2 min-[375px]:py-2.5 flex items-center justify-center space-x-0.5 min-[360px]:space-x-1 w-full relative z-50"
             >
               <span className="text-black font-ibm text-xs min-[360px]:text-sm min-[375px]:text-base">{selectedMonth}</span>
               <svg className={`w-3 h-3 min-[360px]:w-4 min-[360px]:h-4 transition-transform ${isMonthOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,32 +165,26 @@ const AnalyticsPage = () => {
               </svg>
             </button>
             {isMonthOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-[999999] pointer-events-auto" style={{ position: 'absolute', zIndex: 999999 }} onClick={(e) => e.stopPropagation()}>
                 <div className="py-2">
-                  {selectedMonth !== 'Месяц' && (
-                    <button 
-                      onClick={() => { setSelectedMonth('Месяц'); setIsMonthOpen(false); }}
-                      className="w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200"
-                    >
-                      Месяц
-                    </button>
-                  )}
-                  {selectedMonth !== 'Квартал' && (
-                    <button 
-                      onClick={() => { setSelectedMonth('Квартал'); setIsMonthOpen(false); }}
-                      className="w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200"
-                    >
-                      Квартал
-                    </button>
-                  )}
-                  {selectedMonth !== 'Год' && (
-                    <button 
-                      onClick={() => { setSelectedMonth('Год'); setIsMonthOpen(false); }}
-                      className="w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200"
-                    >
-                      Год
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => { setSelectedMonth('Месяц'); setIsMonthOpen(false); }}
+                    className={`w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200 cursor-pointer transition-colors pointer-events-auto select-none active:bg-gray-300 active:bg-gray-300 ${selectedMonth === 'Месяц' ? 'bg-blue-100' : ''}`}
+                  >
+                    Месяц
+                  </button>
+                  <button 
+                    onClick={() => { setSelectedMonth('Квартал'); setIsMonthOpen(false); }}
+                    className={`w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200 cursor-pointer transition-colors pointer-events-auto select-none active:bg-gray-300 ${selectedMonth === 'Квартал' ? 'bg-blue-100' : ''}`}
+                  >
+                    Квартал
+                  </button>
+                  <button 
+                    onClick={() => { setSelectedMonth('Год'); setIsMonthOpen(false); }}
+                    className={`w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200 cursor-pointer transition-colors pointer-events-auto select-none active:bg-gray-300 ${selectedMonth === 'Год' ? 'bg-blue-100' : ''}`}
+                  >
+                    Год
+                  </button>
                 </div>
               </div>
             )}
@@ -192,8 +193,8 @@ const AnalyticsPage = () => {
           {/* Bank Dropdown */}
           <div className="relative flex-1">
             <button 
-              onClick={() => setIsBankOpen(!isBankOpen)}
-              className="bg-gray-200 rounded-[26px] px-2 min-[360px]:px-3 min-[375px]:px-4 py-1.5 min-[360px]:py-2 min-[375px]:py-2.5 flex items-center justify-center space-x-0.5 min-[360px]:space-x-1 w-full"
+              onClick={(e) => { e.stopPropagation(); setIsBankOpen(!isBankOpen); }}
+              className="bg-gray-200 rounded-[26px] px-2 min-[360px]:px-3 min-[375px]:px-4 py-1.5 min-[360px]:py-2 min-[375px]:py-2.5 flex items-center justify-center space-x-0.5 min-[360px]:space-x-1 w-full relative z-50"
             >
               <span className="text-black font-ibm text-xs min-[360px]:text-sm min-[375px]:text-base">{selectedBank}</span>
               <svg className={`w-3 h-3 min-[360px]:w-4 min-[360px]:h-4 transition-transform ${isBankOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,26 +202,22 @@ const AnalyticsPage = () => {
               </svg>
             </button>
             {isBankOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-[999999] pointer-events-auto" style={{ position: 'absolute', zIndex: 999999 }} onClick={(e) => e.stopPropagation()}>
                 <div className="py-2">
-                  {selectedBank !== 'Мультибанк' && (
-                    <button 
-                      onClick={() => { setSelectedBank('Мультибанк'); setSelectedCard(null); setIsBankOpen(false); }}
-                      className="w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200"
-                    >
-                      Мультибанк
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => { setSelectedBank('Мультибанк'); setSelectedCard(null); setIsBankOpen(false); }}
+                    className={`w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200 cursor-pointer transition-colors pointer-events-auto select-none active:bg-gray-300 ${selectedBank === 'Мультибанк' ? 'bg-blue-100' : ''}`}
+                  >
+                    Мультибанк
+                  </button>
                   {allCards.map((card) => (
-                    selectedBank !== card.name && (
-                      <button 
-                        key={card.id}
-                        onClick={() => { handleCardSelect(card); setIsBankOpen(false); }}
-                        className="w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200"
-                      >
-                        <span>{card.name}</span>
-                      </button>
-                    )
+                    <button 
+                      key={card.id}
+                      onClick={() => { handleCardSelect(card); setIsBankOpen(false); }}
+                      className={`w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200 cursor-pointer transition-colors pointer-events-auto select-none active:bg-gray-300 ${selectedBank === card.name ? 'bg-blue-100' : ''}`}
+                    >
+                      <span>{card.name}</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -230,8 +227,8 @@ const AnalyticsPage = () => {
           {/* Transfer Dropdown */}
           <div className="relative flex-1">
             <button 
-              onClick={() => setIsTransferOpen(!isTransferOpen)}
-              className="bg-gray-200 rounded-[26px] px-2 min-[360px]:px-3 min-[375px]:px-4 py-1.5 min-[360px]:py-2 min-[375px]:py-2.5 flex items-center justify-center space-x-0.5 min-[360px]:space-x-1 w-full"
+              onClick={(e) => { e.stopPropagation(); setIsTransferOpen(!isTransferOpen); }}
+              className="bg-gray-200 rounded-[26px] px-2 min-[360px]:px-3 min-[375px]:px-4 py-1.5 min-[360px]:py-2 min-[375px]:py-2.5 flex items-center justify-center space-x-0.5 min-[360px]:space-x-1 w-full relative z-50"
             >
               <span className="text-black font-ibm text-xs min-[360px]:text-sm min-[375px]:text-base">{selectedTransfer}</span>
               <svg className={`w-3 h-3 min-[360px]:w-4 min-[360px]:h-4 transition-transform ${isTransferOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,24 +236,20 @@ const AnalyticsPage = () => {
               </svg>
             </button>
             {isTransferOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-[999999] pointer-events-auto" style={{ position: 'absolute', zIndex: 999999 }} onClick={(e) => e.stopPropagation()}>
                 <div className="py-2">
-                  {selectedTransfer !== 'Переводы' && (
-                    <button 
-                      onClick={() => { setSelectedTransfer('Переводы'); setIsTransferOpen(false); }}
-                      className="w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200"
-                    >
-                      Переводы
-                    </button>
-                  )}
-                  {selectedTransfer !== 'Без перевода' && (
-                    <button 
-                      onClick={() => { setSelectedTransfer('Без перевода'); setIsTransferOpen(false); }}
-                      className="w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200"
-                    >
-                      Без перевода
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => { setSelectedTransfer('Переводы'); setIsTransferOpen(false); }}
+                    className={`w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200 cursor-pointer transition-colors pointer-events-auto select-none active:bg-gray-300 ${selectedTransfer === 'Переводы' ? 'bg-blue-100' : ''}`}
+                  >
+                    Переводы
+                  </button>
+                  <button 
+                    onClick={() => { setSelectedTransfer('Без перевода'); setIsTransferOpen(false); }}
+                    className={`w-full text-left px-3 min-[360px]:px-4 py-2 text-black font-ibm text-sm min-[360px]:text-base hover:bg-gray-200 cursor-pointer transition-colors pointer-events-auto select-none active:bg-gray-300 ${selectedTransfer === 'Без перевода' ? 'bg-blue-100' : ''}`}
+                  >
+                    Без перевода
+                  </button>
                 </div>
               </div>
             )}
@@ -265,7 +258,7 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Donut Chart and Summary */}
-      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 animate-fade-in">
+      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 animate-fade-in relative z-10">
         <div className="relative flex justify-center">
           {/* Donut Chart */}
           <div className="relative w-[150px] h-[150px] min-[360px]:w-[170px] min-[360px]:h-[170px] min-[375px]:w-[187px] min-[375px]:h-[187px] flex items-center justify-center">

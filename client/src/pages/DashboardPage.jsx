@@ -269,6 +269,100 @@ const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Deposits Section */}
+      <div className="relative z-10 px-5 py-2 animate-slide-in-down">
+        <div className="bg-gray-200 rounded-3xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+              Вклады
+            </div>
+            <button 
+              onClick={() => navigate('/deposits')}
+              className="text-black font-ibm font-normal text-xs min-[375px]:text-sm leading-[110%] cursor-pointer"
+            >
+              Подробнее
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Deposit 1 */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1 mr-4">
+                <div className="h-4 bg-green-400 rounded-full" style={{width: '75%'}}></div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M7 14l5-5 5 5z"/>
+                </svg>
+                <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+                  100 000,00 ₽
+                </div>
+              </div>
+            </div>
+            
+            {/* Deposit 2 */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1 mr-4">
+                <div className="h-4 bg-red-500 rounded-full" style={{width: '45%'}}></div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M7 10l5 5 5-5z"/>
+                </svg>
+                <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+                  55 000,00 ₽
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Credits Section */}
+      <div className="relative z-10 px-5 py-2 animate-slide-in-down">
+        <div className="bg-gray-200 rounded-3xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+              Кредиты
+            </div>
+            <button 
+              onClick={() => navigate('/credits')}
+              className="text-black font-ibm font-normal text-xs min-[375px]:text-sm leading-[110%] cursor-pointer"
+            >
+              Подробнее
+            </button>
+          </div>
+          
+          <div className="mb-4">
+            <div className="text-black font-ibm font-normal text-sm leading-[110%] mb-3">
+              Осталось до погашения кредита
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 mr-4">
+                <div className="h-4 bg-yellow-500 rounded-full" style={{width: '65%'}}></div>
+              </div>
+              <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+                80 000,00 ₽
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Digital Ruble Section */}
+      <div className="relative z-10 px-5 py-2 animate-slide-in-down">
+        <div className="bg-gray-200 rounded-3xl p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-black font-ibm font-medium text-sm leading-[110%]">
+              Цифровой рубль
+            </div>
+            <div className="text-black font-ibm font-normal text-sm leading-[110%]">
+              В разработке
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
