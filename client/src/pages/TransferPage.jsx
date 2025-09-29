@@ -370,7 +370,7 @@ const TransferPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white w-full overflow-visible pb-8" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white w-full overflow-visible pb-8" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }}>
       {/* Header */}
       <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 pt-6 pb-4 animate-slide-in-down">
         <div className="flex items-center justify-between">
