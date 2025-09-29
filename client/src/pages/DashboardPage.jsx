@@ -113,10 +113,10 @@ const DashboardPage = () => {
     <div className="min-h-screen bg-white relative overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }}>
 
       {/* Top Header with Profile */}
-      <div className="relative z-10 bg-gray-200 px-5 pt-6 pb-4 rounded-b-[40px] animate-slide-in-down">
+      <div className="relative z-10 bg-gray-200 px-5 pt-6 pb-4 rounded-[40px] animate-slide-in-down">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="relative">
+            <div className="relative rounded-full">
               <div className="w-14 h-14 bg-red-500 rounded-full overflow-hidden">
                  <img 
                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" 
