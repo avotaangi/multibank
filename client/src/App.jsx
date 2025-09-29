@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './stores/authStore'
 import { useEffect } from 'react'
 
@@ -25,6 +25,17 @@ import BudgetPlanningPage from './pages/BudgetPlanningPage'
 import DepositsPage from './pages/DepositsPage'
 import CreditsPage from './pages/CreditsPage'
 
+// Component to scroll to top on route change
+function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
+
 function App() {
   const { user, isLoading, initializeAuth } = useAuthStore()
 
@@ -42,6 +53,7 @@ function App() {
 
   return (
     <div className="tg-viewport">
+      <ScrollToTop />
       <Routes>
         {/* Public routes */}
         <Route 
