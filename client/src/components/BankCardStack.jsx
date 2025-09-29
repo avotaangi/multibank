@@ -5,7 +5,7 @@ import useTestCardsStore from '../stores/testCardsStore';
 
 const BankCardStack = () => {
   const navigate = useNavigate();
-  const { getFormattedBalance } = useBalanceStore();
+  const getFormattedBalance = useBalanceStore((state) => state.getFormattedBalance);
   const { getAllCards } = useTestCardsStore();
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -16,7 +16,11 @@ const BankCardStack = () => {
     {
       id: 'alfa',
       name: 'Альфа-Банк',
-      balance: getFormattedBalance('alfa'),
+      balance: (() => {
+        const balance = getFormattedBalance('alfa');
+        console.log('🔄 BankCardStack - Альфа-Банк баланс:', balance);
+        return balance;
+      })(),
       color: '#EF3124',
       logo: 'A',
       cardNumber: '5294 **** **** 2498',
@@ -36,7 +40,11 @@ const BankCardStack = () => {
     {
       id: 'vtb',
       name: 'ВТБ',
-      balance: getFormattedBalance('vtb'),
+      balance: (() => {
+        const balance = getFormattedBalance('vtb');
+        console.log('🔄 BankCardStack - ВТБ баланс:', balance);
+        return balance;
+      })(),
       color: '#0055BC',
       logo: 'ВТБ',
       cardNumber: '3568 **** **** 8362',
@@ -55,7 +63,11 @@ const BankCardStack = () => {
     {
       id: 'tbank',
       name: 'T-Банк',
-      balance: getFormattedBalance('tbank'),
+      balance: (() => {
+        const balance = getFormattedBalance('tbank');
+        console.log('🔄 BankCardStack - T-Банк баланс:', balance);
+        return balance;
+      })(),
       color: '#2F2F2F',
       logo: 'T',
       cardNumber: '6352 **** **** 9837',
