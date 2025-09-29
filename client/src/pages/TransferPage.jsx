@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
+import useTransfersStore from '../stores/transfersStore';
 
 const TransferPage = () => {
   const navigate = useNavigate();
+  const { addTransfer } = useTransfersStore();
   const [selectedFromBank, setSelectedFromBank] = useState(null);
   const [selectedToBank, setSelectedToBank] = useState(null);
   const [amount, setAmount] = useState('');
@@ -310,7 +312,23 @@ const TransferPage = () => {
     }
     
     // Обновляем балансы через глобальный store
-    transferMoney(selectedFromBank, selectedToBank, transferAmount);
+    // Зачисляем деньги только если получатель - это вы сами (Евгений Богатов) или "Между банками"
+    const isInternalTransfer = selectedRecipient && (
+      selectedRecipient.name === 'Между банками' || 
+      selectedRecipient.name === 'Евгений Богатов'
+    );
+    const actualToBank = isInternalTransfer ? selectedToBank : 'other';
+    transferMoney(selectedFromBank, actualToBank, transferAmount);
+
+    // Сохраняем перевод в transfersStore
+    addTransfer({
+      fromBank: selectedFromBank,
+      toBank: actualToBank,
+      amount: transferAmount,
+      recipient: selectedRecipient?.name || 'Неизвестно',
+      message: message || '',
+      type: isInternalTransfer ? 'internal' : 'external'
+    });
 
     // Обновляем последние переводы для выбранного получателя
     if (selectedRecipient) {
@@ -324,8 +342,8 @@ const TransferPage = () => {
       }));
     }
 
-    // Обновляем балансы в данных получателя
-    if (selectedRecipient && selectedToBank !== 'other') {
+    // Обновляем балансы в данных получателя только для внутренних переводов
+    if (selectedRecipient && isInternalTransfer && selectedToBank !== 'other') {
       const updatedRecipient = {
         ...selectedRecipient,
         cards: selectedRecipient.cards.map(card => {

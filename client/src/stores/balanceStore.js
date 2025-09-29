@@ -24,15 +24,30 @@ const useBalanceStore = create((set, get) => ({
     set((state) => {
       const newBalances = { ...state.bankBalances };
       
+      console.log('🔄 Transfer Money:', {
+        fromBankId,
+        toBankId,
+        amount,
+        beforeBalances: { ...state.bankBalances }
+      });
+      
       // Списываем с карты отправителя
       if (fromBankId !== 'other') {
         newBalances[fromBankId] -= amount;
+        console.log(`✅ Списали с ${fromBankId}: ${amount}, новый баланс: ${newBalances[fromBankId]}`);
       }
       
-      // Зачисляем на карту получателя
-      if (toBankId !== 'other') {
+      // Зачисляем на карту получателя только если это карта пользователя
+      if (toBankId !== 'other' && newBalances.hasOwnProperty(toBankId)) {
         newBalances[toBankId] += amount;
+        console.log(`✅ Зачислили на ${toBankId}: ${amount}, новый баланс: ${newBalances[toBankId]}`);
+      } else if (toBankId !== 'other') {
+        console.log(`❌ Карта ${toBankId} не найдена в балансах пользователя`);
+      } else {
+        console.log(`❌ Внешний перевод - деньги не зачисляются`);
       }
+      
+      console.log('After transfer balances:', newBalances);
       
       return { bankBalances: newBalances };
     });

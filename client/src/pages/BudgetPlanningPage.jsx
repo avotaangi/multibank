@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useBalanceStore from '../stores/balanceStore';
 
 const BudgetPlanningPage = () => {
   const navigate = useNavigate();
+  const { bankBalances } = useBalanceStore();
+  
+  // Вычисляем общий бюджет динамически с реактивным обновлением
+  const totalBudget = useMemo(() => {
+    const total = Object.values(bankBalances).reduce((sum, balance) => sum + balance, 0);
+    return `${total.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
+  }, [bankBalances]);
+  
   const [expandedCategories, setExpandedCategories] = useState({
     lifestyle: false,
     savings: false
@@ -20,7 +29,7 @@ const BudgetPlanningPage = () => {
   };
 
   const budgetData = {
-    total: '102 933 РУБ',
+    total: totalBudget,
     remaining: '29 000 осталось вне бюджета',
     categories: [
       { name: 'Housing', percentage: 47, amount: '71 500 RUB', color: '#14B8A6', spent: 0, budget: 71500 },

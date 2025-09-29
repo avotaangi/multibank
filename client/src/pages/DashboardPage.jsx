@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../stores/authStore';
 import useBalanceStore from '../stores/balanceStore';
@@ -7,9 +7,15 @@ import BankCardStack from '../components/BankCardStack';
 
 const DashboardPage = () => {
   const { user } = useAuthStore();
-  const { getFormattedBalance } = useBalanceStore();
+  const { getFormattedBalance, bankBalances } = useBalanceStore();
   const { addTestCard } = useTestCardsStore();
   const navigate = useNavigate();
+
+  // Вычисляем общий бюджет динамически с реактивным обновлением
+  const totalBudget = useMemo(() => {
+    const total = Object.values(bankBalances).reduce((sum, balance) => sum + balance, 0);
+    return `${total.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
+  }, [bankBalances]);
 
   const [showAddBankModal, setShowAddBankModal] = useState(false);
   const [newBankData, setNewBankData] = useState({
@@ -145,7 +151,7 @@ const DashboardPage = () => {
           Общий бюджет
         </div>
         <div className="text-black font-ibm text-3xl font-medium leading-[110%] tracking-[-0.02em]">
-          18 404,7 ₽
+          {totalBudget}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Edit } from 'lucide-react';
 import useBalanceStore from '../stores/balanceStore';
@@ -73,7 +73,14 @@ const CardAnalyticsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { cardId } = useParams();
-  const { getFormattedBalance } = useBalanceStore();
+  const { getFormattedBalance, bankBalances } = useBalanceStore();
+  
+  // Вычисляем общий бюджет динамически с реактивным обновлением
+  const totalBudget = useMemo(() => {
+    const total = Object.values(bankBalances).reduce((sum, balance) => sum + balance, 0);
+    return `${total.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
+  }, [bankBalances]);
+  
   const [currentCardIndex, setCurrentCardIndex] = useState(() => {
     // Устанавливаем правильный индекс на основе cardId
     if (cardId === 'alfa') return 0; // Красная карта - первая
@@ -257,7 +264,7 @@ const CardAnalyticsPage = () => {
       <div className="relative w-full flex justify-center pb-8 px-4 min-[360px]:pb-10 min-[360px]:px-6 min-[375px]:pb-12 min-[375px]:px-8 sm:px-10 md:px-12 overflow-hidden">
         
         <div 
-          className="relative h-[160px] w-[280px] min-[360px]:h-[170px] min-[360px]:w-[300px] min-[375px]:h-[190px] min-[375px]:w-[340px] sm:h-[200px] sm:w-[350px] md:h-[220px] md:w-[380px] cursor-pointer select-none overflow-visible flex justify-center"
+          className="relative h-[160px] w-[280px] min-[370px]:h-[170px] min-[370px]:w-[300px] min-[375px]:h-[180px] min-[375px]:w-[320px] min-[380px]:h-[190px] min-[380px]:w-[340px] sm:h-[210px] sm:w-[380px] md:h-[230px] md:w-[420px] lg:h-[250px] lg:w-[460px] xl:h-[270px] xl:w-[500px] 2xl:h-[290px] 2xl:w-[540px] cursor-pointer select-none overflow-visible flex justify-center"
           onTouchStart={handleStart}
           onTouchMove={handleMove}
           onTouchEnd={handleEnd}
@@ -267,59 +274,10 @@ const CardAnalyticsPage = () => {
           onMouseLeave={handleEnd}
           style={{}}
         >
-          {/* Previous card (left) */}
-          {currentCardIndex > 0 && (
-            <div 
-              className="absolute top-0 w-[260px] h-[155px] min-[360px]:w-[280px] min-[360px]:h-[165px] min-[375px]:w-[320px] min-[375px]:h-[185px] sm:w-[330px] sm:h-[195px] md:w-[350px] md:h-[205px] rounded-[27px] z-10"
-              style={{ 
-                backgroundColor: cards[currentCardIndex - 1].color,
-                left: 'calc(50% - 130px - 30px)',
-                opacity: 0.9,
-                boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)',
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
-              <div className="p-6 h-full flex flex-col justify-between">
-                {/* Top section */}
-                <div className="flex items-center justify-between">
-                  {cards[currentCardIndex - 1].id === 'alfa' && (
-                    <div className="flex flex-col">
-                      <div className="text-white text-2xl font-bold font-ibm">{cards[currentCardIndex - 1].logo}</div>
-                      <div className="w-8 h-0.5 bg-white mt-1"></div>
-                    </div>
-                  )}
-                  {cards[currentCardIndex - 1].id === 'vtb' && (
-                    <div className="text-white text-2xl font-bold font-ibm">{cards[currentCardIndex - 1].logo}</div>
-                  )}
-                  {cards[currentCardIndex - 1].id === 'tbank' && (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
-                        <span className="text-gray-800 font-bold text-sm">{cards[currentCardIndex - 1].logo}</span>
-                      </div>
-                      <div className="text-white text-2xl font-bold font-ibm">БАНК</div>
-                    </div>
-                  )}
-                  {cards[currentCardIndex - 1].id === 'unconfirmed' && (
-                    <div className="text-white text-2xl font-bold font-ibm">{cards[currentCardIndex - 1].logo}</div>
-                  )}
-                  <div className="text-white text-lg font-normal font-ibm">{cards[currentCardIndex - 1].balance}</div>
-                </div>
-                
-                {/* Bottom section */}
-                <div className="flex items-end justify-between">
-                  <div className="flex flex-col">
-                    <div className="text-white text-sm font-normal font-ibm mb-1">Евгений Богатов</div>
-                    <div className="text-white text-sm font-normal font-ibm">{cards[currentCardIndex - 1].cardNumber}</div>
-                  </div>
-                  <div className="text-white text-lg font-bold">МИР</div>
-                </div>
-              </div>
-            </div>
-          )}
           
           {/* Current card (center) */}
           <div 
-            className="w-[280px] h-[160px] min-[360px]:w-[300px] min-[360px]:h-[170px] min-[375px]:w-[340px] min-[375px]:h-[190px] sm:w-[350px] sm:h-[200px] md:w-[380px] md:h-[220px] rounded-[27px] z-30"
+            className="w-[280px] h-[160px] min-[370px]:w-[300px] min-[370px]:h-[170px] min-[375px]:w-[320px] min-[375px]:h-[180px] min-[380px]:w-[340px] min-[380px]:h-[190px] sm:w-[380px] sm:h-[210px] md:w-[420px] md:h-[230px] lg:w-[460px] lg:h-[250px] xl:w-[500px] xl:h-[270px] 2xl:w-[540px] 2xl:h-[290px] rounded-[27px] z-30"
             style={{ 
               backgroundColor: currentCard.color,
               transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -362,56 +320,6 @@ const CardAnalyticsPage = () => {
               </div>
             </div>
           </div>
-          
-          {/* Next card (right) */}
-          {cards[currentCardIndex + 1] && (
-            <div 
-              className="absolute top-0 w-[230px] h-[140px] min-[360px]:w-[250px] min-[360px]:h-[150px] min-[375px]:w-[270px] min-[375px]:h-[160px] sm:w-[280px] sm:h-[175px] md:w-[300px] md:h-[185px] rounded-[27px] z-20"
-              style={{ 
-                backgroundColor: cards[currentCardIndex + 1].color,
-                left: 'calc(50% - 115px + 40px)',
-                opacity: 0.7,
-                boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)',
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
-              <div className="p-6 h-full flex flex-col justify-between">
-                {/* Top section */}
-                <div className="flex items-center justify-between">
-                  {cards[currentCardIndex + 1].id === 'alfa' && (
-                    <div className="flex flex-col">
-                      <div className="text-white text-2xl font-bold font-ibm">{cards[currentCardIndex + 1].logo}</div>
-                      <div className="w-8 h-0.5 bg-white mt-1"></div>
-                    </div>
-                  )}
-                  {cards[currentCardIndex + 1].id === 'vtb' && (
-                    <div className="text-white text-2xl font-bold font-ibm">{cards[currentCardIndex + 1].logo}</div>
-                  )}
-                  {cards[currentCardIndex + 1].id === 'tbank' && (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
-                        <span className="text-gray-800 font-bold text-sm">{cards[currentCardIndex + 1].logo}</span>
-                      </div>
-                      <div className="text-white text-2xl font-bold font-ibm">БАНК</div>
-                    </div>
-                  )}
-                  {cards[currentCardIndex + 1].id === 'unconfirmed' && (
-                    <div className="text-white text-2xl font-bold font-ibm">{cards[currentCardIndex + 1].logo}</div>
-                  )}
-                  <div className="text-white text-lg font-normal font-ibm">{cards[currentCardIndex + 1].balance}</div>
-                </div>
-                
-                {/* Bottom section */}
-                <div className="flex items-end justify-between">
-                  <div className="flex flex-col">
-                    <div className="text-white text-sm font-normal font-ibm mb-1">Евгений Богатов</div>
-                    <div className="text-white text-sm font-normal font-ibm">{cards[currentCardIndex + 1].cardNumber}</div>
-                  </div>
-                  <div className="text-white text-lg font-bold">МИР</div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
         
         {/* Card Indicators */}
@@ -436,7 +344,7 @@ const CardAnalyticsPage = () => {
       <div className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5">
         <div className="text-center">
           <div className="text-black font-ibm text-sm min-[360px]:text-base sm:text-lg md:text-xl font-normal leading-[110%]">
-            Общий бюджет 18 404,7 ₽
+            Общий бюджет {totalBudget}
           </div>
         </div>
       </div>
@@ -452,7 +360,7 @@ const CardAnalyticsPage = () => {
             if (card.id === currentCard.id) return null; // Пропускаем текущую карту
             
             return (
-              <div key={card.id} className="flex-shrink-0 w-[80px] h-[90px] min-[360px]:w-[85px] min-[360px]:h-[95px] min-[375px]:w-[100px] min-[375px]:h-[110px] sm:w-[100px] sm:h-[110px] md:w-[110px] md:h-[120px] rounded-[22px] flex flex-col items-center justify-center p-2" style={{ backgroundColor: card.color }}>
+              <div key={card.id} className="flex-shrink-0 w-[70px] h-[80px] min-[360px]:w-[75px] min-[360px]:h-[85px] min-[370px]:w-[80px] min-[370px]:h-[90px] min-[375px]:w-[85px] min-[375px]:h-[95px] min-[380px]:w-[90px] min-[380px]:h-[100px] sm:w-[100px] sm:h-[110px] md:w-[110px] md:h-[120px] rounded-[22px] flex flex-col items-center justify-center p-1" style={{ backgroundColor: card.color }}>
                 {card.id === 'vtb' && (
                   <div className="text-white text-sm font-bold font-ibm mb-1">ВТБ</div>
                 )}
@@ -474,7 +382,7 @@ const CardAnalyticsPage = () => {
           
           {/* Other Bank Card */}
           <div 
-            className="flex-shrink-0 w-[80px] h-[90px] min-[360px]:w-[85px] min-[360px]:h-[95px] min-[375px]:w-[100px] min-[375px]:h-[110px] sm:w-[100px] sm:h-[110px] md:w-[110px] md:h-[120px] bg-gray-200 rounded-[22px] flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-gray-200 transition-colors"
+            className="flex-shrink-0 w-[70px] h-[80px] min-[360px]:w-[75px] min-[360px]:h-[85px] min-[370px]:w-[80px] min-[370px]:h-[90px] min-[375px]:w-[85px] min-[375px]:h-[95px] min-[380px]:w-[90px] min-[380px]:h-[100px] sm:w-[100px] sm:h-[110px] md:w-[110px] md:h-[120px] bg-gray-200 rounded-[22px] flex flex-col items-center justify-center p-1 cursor-pointer hover:bg-gray-200 transition-colors"
             onClick={() => setShowOtherBankModal(true)}
           >
             <div className="text-gray-600 text-sm font-normal font-ibm text-center">Другой банк</div>
