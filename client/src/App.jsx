@@ -41,24 +41,39 @@ function App() {
   const { user, isLoading, initializeAuth, setUser } = useAuthStore()
 
   useEffect(() => {
-    // Initialize Telegram WebApp first
-    const webApp = getTelegramWebApp()
-    if (webApp) {
-      console.log('Telegram WebApp found, initializing...')
-      // Configure Telegram WebApp
-      webApp.ready()
-      
-      // Enable closing confirmation
-      webApp.enableClosingConfirmation()
-      
-      // Auto-expand to fullscreen when opened from Telegram
-      try {
-        expandToFullscreen()
-      } catch (error) {
-        console.log('Telegram WebApp expand error:', error)
+    // Initialize Telegram WebApp with multiple attempts
+    const initTelegramWebApp = () => {
+      const webApp = getTelegramWebApp()
+      if (webApp) {
+        console.log('Telegram WebApp found, initializing...')
+        // Configure Telegram WebApp
+        webApp.ready()
+        
+        // Enable closing confirmation
+        webApp.enableClosingConfirmation()
+        
+        // Force expand immediately
+        webApp.expand()
+        
+        // Multiple expansion attempts
+        setTimeout(() => webApp.expand(), 100)
+        setTimeout(() => webApp.expand(), 300)
+        setTimeout(() => webApp.expand(), 500)
+        setTimeout(() => webApp.expand(), 1000)
+        
+        return true
       }
-    } else {
-      console.log('Telegram WebApp not found, running in browser mode')
+      return false
+    }
+    
+    // Try immediately
+    if (!initTelegramWebApp()) {
+      // Try again after a short delay
+      setTimeout(() => {
+        if (!initTelegramWebApp()) {
+          console.log('Telegram WebApp not found, running in browser mode')
+        }
+      }, 100)
     }
     
     // Initialize auth with timeout

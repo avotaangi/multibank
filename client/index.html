@@ -3,9 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>MultiBank - Telegram Web App</title>
     <meta name="description" content="MultiBank - Secure banking in Telegram" />
+    
+    <!-- Telegram WebApp specific meta tags -->
+    <meta name="telegram-web-app" content="true" />
+    <meta name="format-detection" content="telephone=no" />
     
     <!-- Telegram Web App Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -13,17 +17,37 @@
     <!-- Telegram WebApp Auto-expand Script -->
     <script>
       // Auto-expand Telegram WebApp on load
-      document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded, checking for Telegram WebApp...');
+      function initTelegramWebApp() {
         if (window.Telegram && window.Telegram.WebApp) {
           console.log('Telegram WebApp found, initializing...');
           const webApp = window.Telegram.WebApp;
           webApp.ready();
+          
+          // Force expand immediately
           webApp.expand();
-        } else {
-          console.log('Telegram WebApp not found, running in browser mode');
+          
+          // Multiple expansion attempts
+          setTimeout(() => webApp.expand(), 50);
+          setTimeout(() => webApp.expand(), 100);
+          setTimeout(() => webApp.expand(), 200);
+          setTimeout(() => webApp.expand(), 500);
+          setTimeout(() => webApp.expand(), 1000);
+          
+          return true;
         }
-      });
+        return false;
+      }
+      
+      // Try immediately when script loads
+      if (!initTelegramWebApp()) {
+        // Try on DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+          console.log('DOM loaded, checking for Telegram WebApp...');
+          if (!initTelegramWebApp()) {
+            console.log('Telegram WebApp not found, running in browser mode');
+          }
+        });
+      }
     </script>
     
     <!-- Inter Font -->
