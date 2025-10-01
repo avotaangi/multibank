@@ -78,10 +78,11 @@ export const hideBackButton = () => {
 };
 
 // Main button
-export const setupMainButton = (text, onClick) => {
+export const setupMainButton = (text, onClick, color = '#2481cc') => {
   const webApp = getTelegramWebApp();
   if (webApp) {
     webApp.MainButton.setText(text);
+    webApp.MainButton.setParams({ color: color });
     webApp.MainButton.onClick(onClick);
     webApp.MainButton.show();
     return () => {
@@ -92,10 +93,87 @@ export const setupMainButton = (text, onClick) => {
   return () => {};
 };
 
+export const showMainButton = () => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.MainButton.show();
+  }
+};
+
 export const hideMainButton = () => {
   const webApp = getTelegramWebApp();
   if (webApp) {
     webApp.MainButton.hide();
+  }
+};
+
+export const setMainButtonText = (text) => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.MainButton.setText(text);
+  }
+};
+
+export const setMainButtonColor = (color) => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.MainButton.setParams({ color: color });
+  }
+};
+
+export const setMainButtonProgress = (show) => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    if (show) {
+      webApp.MainButton.showProgress();
+    } else {
+      webApp.MainButton.hideProgress();
+    }
+  }
+};
+
+// Settings button
+export const showSettingsButton = () => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.SettingsButton.show();
+  }
+};
+
+export const hideSettingsButton = () => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.SettingsButton.hide();
+  }
+};
+
+// Header and background colors
+export const setHeaderColor = (color) => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.setHeaderColor(color);
+  }
+};
+
+export const setBackgroundColor = (color) => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.setBackgroundColor(color);
+  }
+};
+
+// Closing confirmation
+export const enableClosingConfirmation = () => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.enableClosingConfirmation();
+  }
+};
+
+export const disableClosingConfirmation = () => {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.disableClosingConfirmation();
   }
 };
 

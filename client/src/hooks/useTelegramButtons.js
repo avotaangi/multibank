@@ -98,6 +98,20 @@ export const useTelegramButtons = () => {
             console.log('Добавление карты');
           }, '#8b5cf6');
           break;
+        case '/deposits':
+          // На странице вкладов - кнопка "Открыть вклад"
+          setupMainButton('Открыть вклад', () => {
+            hapticFeedback('success');
+            console.log('Открытие вклада');
+          }, '#059669');
+          break;
+        case '/credits':
+          // На странице кредитов - кнопка "Подать заявку"
+          setupMainButton('Подать заявку', () => {
+            hapticFeedback('success');
+            console.log('Подача заявки на кредит');
+          }, '#dc2626');
+          break;
         default:
           // На остальных страницах - скрываем главную кнопку
           hideMainButton();
@@ -110,6 +124,16 @@ export const useTelegramButtons = () => {
     return () => {
       hideMainButton();
     };
+  }, [location.pathname]);
+
+  // Настройка кнопки Settings
+  useEffect(() => {
+    // Показываем кнопку Settings на страницах настроек
+    if (location.pathname === '/settings' || location.pathname === '/profile') {
+      showSettingsButton();
+    } else {
+      hideSettingsButton();
+    }
   }, [location.pathname]);
 
   // Настройка цветов и других параметров

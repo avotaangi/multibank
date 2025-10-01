@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './stores/authStore'
 import { useEffect } from 'react'
 import { getTelegramWebApp } from './utils/telegram'
+import { useTelegramButtons } from './hooks/useTelegramButtons'
 
 // Components
 import Layout from './components/Layout'
@@ -39,6 +40,9 @@ function ScrollToTop() {
 
 function App() {
   const { user, isLoading, initializeAuth, setUser } = useAuthStore()
+  
+  // Инициализируем Telegram кнопки
+  useTelegramButtons()
 
   useEffect(() => {
     // Simple Telegram WebApp initialization
