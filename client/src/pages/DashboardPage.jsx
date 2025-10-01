@@ -141,7 +141,7 @@ const DashboardPage = () => {
             <div className="relative rounded-full">
               <div className="w-14 h-14 bg-red-500 rounded-full overflow-hidden">
                  <img 
-                   src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face" 
+                   src={telegramUser.photoUrl} 
                    alt={telegramUser.displayName} 
                    className="w-full h-full object-cover"
                  />

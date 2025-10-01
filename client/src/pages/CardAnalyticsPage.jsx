@@ -377,7 +377,7 @@ const CardAnalyticsPage = () => {
                 {card.id === 'alfa' && (
                   <div className="text-white text-sm font-bold font-ibm mb-1">A</div>
                 )}
-                <div className="text-white text-sm font-normal font-ibm">Евгений Б.</div>
+                <div className="text-white text-sm font-normal font-ibm">{telegramUser.shortName}</div>
               </div>
             );
           })}

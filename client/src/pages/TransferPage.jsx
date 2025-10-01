@@ -54,11 +54,11 @@ const TransferPage = () => {
       id: 0, 
       name: telegramUser.displayName, 
       phone: '+7 (999) 000-00-00',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+      avatar: telegramUser.photoUrl,
       cards: [
-        { id: 'vtb', name: 'ВТБ', logo: 'ВТБ', color: '#0055BC', user: 'Евгений Б.', balance: '2 876,87 ₽' },
-        { id: 'tbank', name: 'T-Банк', logo: 'T', color: '#2F2F2F', user: 'Евгений Б.', balance: '4 983,43 ₽' },
-        { id: 'alfa', name: 'Альфа-Банк', logo: 'A', color: '#EF3124', user: 'Евгений Б.', balance: '10 544,40 ₽' }
+        { id: 'vtb', name: 'ВТБ', logo: 'ВТБ', color: '#0055BC', user: telegramUser.shortName, balance: '2 876,87 ₽' },
+        { id: 'tbank', name: 'T-Банк', logo: 'T', color: '#2F2F2F', user: telegramUser.shortName, balance: '4 983,43 ₽' },
+        { id: 'alfa', name: 'Альфа-Банк', logo: 'A', color: '#EF3124', user: telegramUser.shortName, balance: '10 544,40 ₽' }
       ]
     },
     { 
@@ -130,7 +130,7 @@ const TransferPage = () => {
       name: 'ВТБ', 
       logo: 'ВТБ', 
       color: '#0055BC', 
-      user: 'Евгений Б.', 
+      user: telegramUser.shortName, 
       balance: `${bankBalances.vtb.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
     },
     { 
@@ -138,7 +138,7 @@ const TransferPage = () => {
       name: 'T-Банк', 
       logo: 'T', 
       color: '#2F2F2F', 
-      user: 'Евгений Б.', 
+      user: telegramUser.shortName, 
       balance: `${bankBalances.tbank.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
     },
     { 
@@ -146,7 +146,7 @@ const TransferPage = () => {
       name: 'Альфа-Банк', 
       logo: 'A', 
       color: '#EF3124', 
-      user: 'Евгений Б.', 
+      user: telegramUser.shortName, 
       balance: `${bankBalances.alfa.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
     }
   ];
