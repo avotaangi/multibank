@@ -11,6 +11,7 @@
   min-height: 100dvh; /* Dynamic viewport height for mobile */
   overflow-x: hidden;
   width: 100%;
+  overflow-y: auto;
 }
 
 
@@ -34,6 +35,34 @@
 .tg-viewport {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Ensure proper scrolling */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for Telegram WebApp scrolling */
+body {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* Force fullscreen for Telegram WebApp */
+@supports (height: 100dvh) {
+  html, body, #root {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+}
+
+/* Telegram WebApp specific fullscreen */
+.telegram-webapp {
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
 }
 
 @layer base {

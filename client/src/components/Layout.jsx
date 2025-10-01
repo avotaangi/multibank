@@ -8,7 +8,7 @@ const Layout = () => {
   
   return (
     <div className="min-h-screen bg-white">
-      <main className="pb-16">
+      <main className="pb-16 min-h-screen">
         <PageTransition key={location.pathname}>
           <Outlet />
         </PageTransition>

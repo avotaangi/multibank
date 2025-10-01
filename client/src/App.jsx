@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './stores/authStore'
 import { useEffect } from 'react'
-import { getTelegramWebApp, expandToFullscreen } from './utils/telegram'
+import { getTelegramWebApp } from './utils/telegram'
 
 // Components
 import Layout from './components/Layout'
@@ -41,12 +41,44 @@ function App() {
   const { user, isLoading, initializeAuth, setUser } = useAuthStore()
 
   useEffect(() => {
-    // Simple Telegram WebApp initialization
-    const webApp = getTelegramWebApp()
-    if (webApp) {
-      webApp.ready()
-      webApp.enableClosingConfirmation()
-      webApp.expand()
+    // Aggressive Telegram WebApp initialization
+    const initTelegramWebApp = () => {
+      const webApp = getTelegramWebApp()
+      if (webApp) {
+        console.log('React: Telegram WebApp found, initializing...')
+        webApp.ready()
+        webApp.enableClosingConfirmation()
+        webApp.expand()
+        
+        // Multiple expansion attempts
+        setTimeout(() => {
+          console.log('React: Force expanding...')
+          webApp.expand()
+        }, 100)
+        
+        setTimeout(() => {
+          console.log('React: Force expanding again...')
+          webApp.expand()
+        }, 500)
+        
+        setTimeout(() => {
+          console.log('React: Final expansion attempt...')
+          webApp.expand()
+        }, 1000)
+        
+        return true
+      }
+      return false
+    }
+    
+    // Try immediately
+    if (!initTelegramWebApp()) {
+      // Try again after delay
+      setTimeout(() => {
+        if (!initTelegramWebApp()) {
+          console.log('React: Telegram WebApp not found')
+        }
+      }, 100)
     }
     
     // Initialize auth with timeout
