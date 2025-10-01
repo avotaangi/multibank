@@ -70,70 +70,14 @@ export const useTelegramButtons = () => {
     };
   }, [location.pathname, navigate]);
 
-  // Настройка главной кнопки в зависимости от страницы
+  // Главная кнопка отключена - всегда скрываем
   useEffect(() => {
-    const setupMainButtonForPage = () => {
-      switch (location.pathname) {
-        case '/transfer':
-          // На странице переводов - кнопка "Отправить"
-          setupMainButton('Отправить', () => {
-            hapticFeedback('success');
-            // Здесь будет логика отправки перевода
-            console.log('Отправка перевода');
-          }, '#2481cc');
-          break;
-        case '/budget-planning':
-          // На странице планирования - кнопка "Добавить цель"
-          setupMainButton('Добавить цель', () => {
-            hapticFeedback('success');
-            // Здесь будет логика добавления цели
-            console.log('Добавление цели');
-          }, '#10b981');
-          break;
-        case '/my-cards':
-          // На странице карт - кнопка "Добавить карту"
-          setupMainButton('Добавить карту', () => {
-            hapticFeedback('success');
-            // Здесь будет логика добавления карты
-            console.log('Добавление карты');
-          }, '#8b5cf6');
-          break;
-        case '/deposits':
-          // На странице вкладов - кнопка "Открыть вклад"
-          setupMainButton('Открыть вклад', () => {
-            hapticFeedback('success');
-            console.log('Открытие вклада');
-          }, '#059669');
-          break;
-        case '/credits':
-          // На странице кредитов - кнопка "Подать заявку"
-          setupMainButton('Подать заявку', () => {
-            hapticFeedback('success');
-            console.log('Подача заявки на кредит');
-          }, '#dc2626');
-          break;
-        default:
-          // На остальных страницах - скрываем главную кнопку
-          hideMainButton();
-      }
-    };
-
-    setupMainButtonForPage();
-
-    // Очистка при размонтировании
-    return () => {
-      hideMainButton();
-    };
+    hideMainButton();
   }, [location.pathname]);
 
-  // Настройка кнопки Settings
+  // Кнопка Settings отключена - всегда скрываем
   useEffect(() => {
-    // Показываем кнопку Settings на страницах настроек
-    if (location.pathname === '/settings' || location.pathname === '/profile') {
-      showSettingsButton();
-    } else {
-      hideSettingsButton();
-    }
+    hideSettingsButton();
   }, [location.pathname]);
 
   // Настройка цветов и других параметров
