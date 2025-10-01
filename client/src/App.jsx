@@ -41,30 +41,70 @@ function App() {
   const { user, isLoading, initializeAuth, setUser } = useAuthStore()
 
   useEffect(() => {
-    // Aggressive Telegram WebApp initialization
+    // Ultra aggressive Telegram WebApp initialization
     const initTelegramWebApp = () => {
       const webApp = getTelegramWebApp()
       if (webApp) {
         console.log('React: Telegram WebApp found, initializing...')
         webApp.ready()
         webApp.enableClosingConfirmation()
+        
+        // Immediate multiple expansions
+        webApp.expand()
+        webApp.expand()
+        webApp.expand()
+        webApp.expand()
         webApp.expand()
         
-        // Multiple expansion attempts
+        // Multiple expansion attempts with various delays
         setTimeout(() => {
           console.log('React: Force expanding...')
+          webApp.expand()
+          webApp.expand()
+          webApp.expand()
+        }, 10)
+        
+        setTimeout(() => {
+          console.log('React: Force expanding again...')
+          webApp.expand()
+          webApp.expand()
+          webApp.expand()
+        }, 50)
+        
+        setTimeout(() => {
+          console.log('React: Force expanding again...')
+          webApp.expand()
+          webApp.expand()
           webApp.expand()
         }, 100)
         
         setTimeout(() => {
           console.log('React: Force expanding again...')
           webApp.expand()
+          webApp.expand()
+          webApp.expand()
+        }, 200)
+        
+        setTimeout(() => {
+          console.log('React: Force expanding again...')
+          webApp.expand()
+          webApp.expand()
+          webApp.expand()
         }, 500)
         
         setTimeout(() => {
           console.log('React: Final expansion attempt...')
           webApp.expand()
+          webApp.expand()
+          webApp.expand()
         }, 1000)
+        
+        setTimeout(() => {
+          console.log('React: Ultra final expansion attempt...')
+          webApp.expand()
+          webApp.expand()
+          webApp.expand()
+        }, 2000)
         
         return true
       }

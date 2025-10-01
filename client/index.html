@@ -26,11 +26,25 @@
           webApp.ready();
           webApp.expand();
           
-          // Force expand multiple times
+          // Force expand multiple times immediately
+          webApp.expand();
+          webApp.expand();
+          webApp.expand();
+          
+          // Force expand multiple times with delays
           setTimeout(() => {
             console.log('Force expanding...');
             webApp.expand();
+            webApp.expand();
+            webApp.expand();
           }, 10);
+          
+          setTimeout(() => {
+            console.log('Force expanding again...');
+            webApp.expand();
+            webApp.expand();
+            webApp.expand();
+          }, 50);
           
           return true;
         } else {
@@ -42,15 +56,23 @@
       // Try immediately
       expandTelegramWebApp();
       
-      // Try with various delays
+      // Try with various delays - even more aggressive
+      setTimeout(expandTelegramWebApp, 5);
       setTimeout(expandTelegramWebApp, 10);
+      setTimeout(expandTelegramWebApp, 25);
       setTimeout(expandTelegramWebApp, 50);
+      setTimeout(expandTelegramWebApp, 75);
       setTimeout(expandTelegramWebApp, 100);
+      setTimeout(expandTelegramWebApp, 150);
       setTimeout(expandTelegramWebApp, 200);
+      setTimeout(expandTelegramWebApp, 300);
       setTimeout(expandTelegramWebApp, 500);
+      setTimeout(expandTelegramWebApp, 750);
       setTimeout(expandTelegramWebApp, 1000);
+      setTimeout(expandTelegramWebApp, 1500);
       setTimeout(expandTelegramWebApp, 2000);
       setTimeout(expandTelegramWebApp, 3000);
+      setTimeout(expandTelegramWebApp, 5000);
       
       // Try on window load
       window.addEventListener('load', function() {
