@@ -41,44 +41,16 @@ function App() {
   const { user, isLoading, initializeAuth, setUser } = useAuthStore()
 
   useEffect(() => {
-    // Initialize Telegram WebApp with multiple attempts
-    const initTelegramWebApp = () => {
-      const webApp = getTelegramWebApp()
-      if (webApp) {
-        console.log('Telegram WebApp found, initializing...')
-        // Configure Telegram WebApp
-        webApp.ready()
-        
-        // Enable closing confirmation
-        webApp.enableClosingConfirmation()
-        
-        // Force expand immediately
-        webApp.expand()
-        
-        // Multiple expansion attempts
-        setTimeout(() => webApp.expand(), 100)
-        setTimeout(() => webApp.expand(), 300)
-        setTimeout(() => webApp.expand(), 500)
-        setTimeout(() => webApp.expand(), 1000)
-        
-        return true
-      }
-      return false
-    }
-    
-    // Try immediately
-    if (!initTelegramWebApp()) {
-      // Try again after a short delay
-      setTimeout(() => {
-        if (!initTelegramWebApp()) {
-          console.log('Telegram WebApp not found, running in browser mode')
-        }
-      }, 100)
+    // Simple Telegram WebApp initialization
+    const webApp = getTelegramWebApp()
+    if (webApp) {
+      webApp.ready()
+      webApp.enableClosingConfirmation()
+      webApp.expand()
     }
     
     // Initialize auth with timeout
     const authTimeout = setTimeout(() => {
-      console.log('Auth initialization timeout, setting user as logged in')
       setUser({ id: 1, name: 'Test User' })
     }, 2000)
     
