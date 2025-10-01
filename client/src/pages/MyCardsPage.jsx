@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Edit } from 'lucide-react';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
+import { useTelegramUser } from '../hooks/useTelegramUser';
 
 const MyCardsPage = () => {
   const navigate = useNavigate();
   const getFormattedBalance = useBalanceStore((state) => state.getFormattedBalance);
+  const telegramUser = useTelegramUser();
   
   // Получаем тестовые карты из стора
   const { getAllCards } = useTestCardsStore();
@@ -25,7 +27,7 @@ const MyCardsPage = () => {
       color: '#EF3124',
       logo: 'A',
       cardNumber: '5294 **** **** 2498',
-      cardholderName: 'Евгений Богатов',
+      cardholderName: telegramUser.displayName,
       analytics: {
         income: '125 600 ₽',
         expenses: '89 200 ₽',
@@ -45,7 +47,7 @@ const MyCardsPage = () => {
       color: '#0055BC',
       logo: 'ВТБ',
       cardNumber: '3568 **** **** 8362',
-      cardholderName: 'Евгений Богатов',
+      cardholderName: telegramUser.displayName,
       analytics: {
         income: '45 230 ₽',
         expenses: '12 450 ₽',
@@ -65,7 +67,7 @@ const MyCardsPage = () => {
       color: '#2F2F2F',
       logo: 'T',
       cardNumber: '6352 **** **** 9837',
-      cardholderName: 'Евгений Богатов',
+      cardholderName: telegramUser.displayName,
       analytics: {
         income: '67 890 ₽',
         expenses: '28 340 ₽',
@@ -90,7 +92,7 @@ const MyCardsPage = () => {
     logo: card.bankId === 'sberbank' ? 'С' : 
           card.bankId === 'vtb' ? 'ВТБ' : 
           card.bankId === 'alfa' ? 'А' : 'Т',
-    cardholderName: 'Евгений Богатов',
+    cardholderName: telegramUser.displayName,
     analytics: {
       income: '0 ₽',
       expenses: '0 ₽',

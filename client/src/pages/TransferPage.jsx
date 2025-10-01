@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
 import useTransfersStore from '../stores/transfersStore';
+import { useTelegramUser } from '../hooks/useTelegramUser';
 
 const TransferPage = () => {
   const navigate = useNavigate();
   const { addTransfer } = useTransfersStore();
+  const telegramUser = useTelegramUser();
   const [selectedFromBank, setSelectedFromBank] = useState(null);
   const [selectedToBank, setSelectedToBank] = useState(null);
   const [amount, setAmount] = useState('');
@@ -50,7 +52,7 @@ const TransferPage = () => {
   const initialAllRecipients = [
     { 
       id: 0, 
-      name: 'Евгений Богатов', 
+      name: telegramUser.displayName, 
       phone: '+7 (999) 000-00-00',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
       cards: [
@@ -315,7 +317,7 @@ const TransferPage = () => {
     // Зачисляем деньги только если получатель - это вы сами (Евгений Богатов) или "Между банками"
     const isInternalTransfer = selectedRecipient && (
       selectedRecipient.name === 'Между банками' || 
-      selectedRecipient.name === 'Евгений Богатов'
+      selectedRecipient.name === telegramUser.displayName
     );
     const actualToBank = isInternalTransfer ? selectedToBank : 'other';
     transferMoney(selectedFromBank, actualToBank, transferAmount);

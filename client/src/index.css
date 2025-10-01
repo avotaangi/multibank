@@ -65,6 +65,24 @@ body {
   overflow: hidden !important;
 }
 
+/* Force fullscreen for Telegram WebApp */
+@supports (height: 100dvh) {
+  .telegram-webapp {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+  }
+}
+
+/* Telegram WebApp viewport fix */
+@supports (padding: env(safe-area-inset-top)) {
+  .telegram-webapp {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
 @layer base {
   * {
     @apply border-gray-200;

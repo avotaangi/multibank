@@ -41,110 +41,15 @@ function App() {
   const { user, isLoading, initializeAuth, setUser } = useAuthStore()
 
   useEffect(() => {
-    // Ultra aggressive Telegram WebApp initialization
-    const initTelegramWebApp = () => {
-      const webApp = getTelegramWebApp()
-      if (webApp) {
-        console.log('React: Telegram WebApp found, initializing...')
-        webApp.ready()
-        webApp.enableClosingConfirmation()
-        
-        // Immediate multiple expansions with requestFullscreen
-        webApp.expand()
-        webApp.expand()
-        webApp.expand()
-        webApp.expand()
-        webApp.expand()
-        
-        // Try requestFullscreen immediately
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
-        }
-        
-        // Multiple expansion attempts with various delays and requestFullscreen
-        setTimeout(() => {
-          console.log('React: Force expanding...')
-          webApp.expand()
-          webApp.expand()
-          webApp.expand()
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
-          }
-        }, 10)
-        
-        setTimeout(() => {
-          console.log('React: Force expanding again...')
-          webApp.expand()
-          webApp.expand()
-          webApp.expand()
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
-          }
-        }, 50)
-        
-        setTimeout(() => {
-          console.log('React: Force expanding again...')
-          webApp.expand()
-          webApp.expand()
-          webApp.expand()
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
-          }
-        }, 100)
-        
-        setTimeout(() => {
-          console.log('React: Force expanding again...')
-          webApp.expand()
-          webApp.expand()
-          webApp.expand()
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
-          }
-        }, 200)
-        
-        setTimeout(() => {
-          console.log('React: Force expanding again...')
-          webApp.expand()
-          webApp.expand()
-          webApp.expand()
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
-          }
-        }, 500)
-        
-        setTimeout(() => {
-          console.log('React: Final expansion attempt...')
-          webApp.expand()
-          webApp.expand()
-          webApp.expand()
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
-          }
-        }, 1000)
-        
-        setTimeout(() => {
-          console.log('React: Ultra final expansion attempt...')
-          webApp.expand()
-          webApp.expand()
-          webApp.expand()
-          if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
-          }
-        }, 2000)
-        
-        return true
-      }
-      return false
-    }
-    
-    // Try immediately
-    if (!initTelegramWebApp()) {
-      // Try again after delay
-      setTimeout(() => {
-        if (!initTelegramWebApp()) {
-          console.log('React: Telegram WebApp not found')
-        }
-      }, 100)
+    // Simple Telegram WebApp initialization
+    const webApp = getTelegramWebApp()
+    if (webApp) {
+      console.log('React: Telegram WebApp found, initializing...')
+      webApp.ready()
+      webApp.enableClosingConfirmation()
+      webApp.expand()
+    } else {
+      console.log('React: Telegram WebApp not found')
     }
     
     // Initialize auth with timeout

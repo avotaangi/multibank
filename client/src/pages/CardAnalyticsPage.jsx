@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Edit } from 'lucide-react';
 import useBalanceStore from '../stores/balanceStore';
+import { useTelegramUser } from '../hooks/useTelegramUser';
 
 // CSS анимации
 const styles = `
@@ -74,6 +75,7 @@ const CardAnalyticsPage = () => {
   const location = useLocation();
   const { cardId } = useParams();
   const { getFormattedBalance, bankBalances } = useBalanceStore();
+  const telegramUser = useTelegramUser();
   
   // Вычисляем общий бюджет динамически с реактивным обновлением
   const totalBudget = useMemo(() => {
@@ -313,7 +315,7 @@ const CardAnalyticsPage = () => {
               {/* Bottom section */}
               <div className="flex items-end justify-between">
                 <div className="flex flex-col">
-                  <div className="text-white text-sm font-normal font-ibm mb-1">Евгений Богатов</div>
+                  <div className="text-white text-sm font-normal font-ibm mb-1">{telegramUser.displayName}</div>
                   <div className="text-white text-sm font-normal font-ibm">{currentCard.cardNumber}</div>
                 </div>
                 <div className="text-white text-lg font-bold">МИР</div>

@@ -4,12 +4,14 @@ import useAuthStore from '../stores/authStore';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
 import BankCardStack from '../components/BankCardStack';
+import { useTelegramUser } from '../hooks/useTelegramUser';
 
 const DashboardPage = () => {
   const { user } = useAuthStore();
   const { getFormattedBalance, bankBalances } = useBalanceStore();
   const { addTestCard } = useTestCardsStore();
   const navigate = useNavigate();
+  const telegramUser = useTelegramUser();
 
   // Вычисляем общий бюджет динамически с реактивным обновлением
   const totalBudget = useMemo(() => {
@@ -140,7 +142,7 @@ const DashboardPage = () => {
               <div className="w-14 h-14 bg-red-500 rounded-full overflow-hidden">
                  <img 
                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face" 
-                   alt="Евгений Богатов" 
+                   alt={telegramUser.displayName} 
                    className="w-full h-full object-cover"
                  />
               </div>
@@ -151,7 +153,7 @@ const DashboardPage = () => {
                 Мультибанк
               </div>
               <div className="text-gray-900 font-ibm text-lg font-semibold leading-[110%]">
-                Евгений Богатов
+                {telegramUser.displayName}
               </div>
             </div>
           </div>
