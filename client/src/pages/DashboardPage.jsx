@@ -242,11 +242,8 @@ const DashboardPage = () => {
             className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center"
           >
             <div className="mb-1">
-              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-                <path d="M5 3L19 12L5 21V3Z" fill="#4285F4"/>
-                <path d="M5 3L12 12L5 21V3Z" fill="#34A853"/>
-                <path d="M12 12L19 12L12 21V12Z" fill="#FBBC05"/>
-                <path d="M12 3L19 12L12 12V3Z" fill="#EA4335"/>
+              <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
             <div className="text-black font-ibm text-xs min-[375px]:text-sm font-normal leading-[110%] text-center">

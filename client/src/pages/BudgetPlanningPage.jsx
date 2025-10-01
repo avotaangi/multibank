@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useBalanceStore from '../stores/balanceStore';
 
 const BudgetPlanningPage = () => {
   const navigate = useNavigate();
+  const { bankBalances } = useBalanceStore();
   const [showLifestyleTip, setShowLifestyleTip] = useState(false);
   const [showDreamTip, setShowDreamTip] = useState(false);
   const [showGoalsTip, setShowGoalsTip] = useState(false);
@@ -30,11 +32,17 @@ const BudgetPlanningPage = () => {
   const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
   const [completedPlan, setCompletedPlan] = useState(null);
   const [showGoalsModal, setShowGoalsModal] = useState(false);
+  const [showAddGoalModal, setShowAddGoalModal] = useState(false);
   const [goals, setGoals] = useState([
-    { id: 1, name: 'Купить квартиру', amount: 5000000, current: 1200000 },
-    { id: 2, name: 'Накопить на машину', amount: 1500000, current: 450000 },
-    { id: 3, name: 'Путешествие в Японию', amount: 300000, current: 180000 }
+    { id: 1, name: 'Купить квартиру', amount: 5000000, current: 1200000, targetDate: '2025-12-31' },
+    { id: 2, name: 'Накопить на машину', amount: 1500000, current: 450000, targetDate: '2024-06-15' },
+    { id: 3, name: 'Путешествие в Японию', amount: 300000, current: 180000, targetDate: '2024-03-20' }
   ]);
+  const [newGoalData, setNewGoalData] = useState({
+    name: '',
+    amount: '',
+    targetDate: ''
+  });
   const [newPlanData, setNewPlanData] = useState({
     name: '',
     amount: '',
@@ -56,10 +64,10 @@ const BudgetPlanningPage = () => {
     { id: 2, name: "Путешествие", currentAmount: 10000, targetAmount: 60000 }
   ]);
   const [goalsPlans, setGoalsPlans] = useState([
-    { id: 3, name: "Покупка ноутбука", currentAmount: 60000, targetAmount: 60000, completed: true },
-    { id: 4, name: "Покупка собаки", currentAmount: 65000, targetAmount: 100000 },
-    { id: 5, name: "Путешествие", currentAmount: 20000, targetAmount: 100000 },
-    { id: 6, name: "Переезд в новую квартиру", currentAmount: 5000, targetAmount: 200000 }
+    { id: 3, name: "Покупка ноутбука", currentAmount: 60000, targetAmount: 60000, completed: true, targetDate: '2024-01-15' },
+    { id: 4, name: "Покупка собаки", currentAmount: 65000, targetAmount: 100000, targetDate: '2024-06-15' },
+    { id: 5, name: "Путешествие", currentAmount: 20000, targetAmount: 100000, targetDate: '2024-03-20' },
+    { id: 6, name: "Переезд в новую квартиру", currentAmount: 5000, targetAmount: 200000, targetDate: '2025-12-31' }
   ]);
 
   // Бюджет на планирование - отдельное поле
@@ -160,8 +168,50 @@ const BudgetPlanningPage = () => {
     setTopUpAmount('');
   };
 
+  const handleAddGoal = () => {
+    setShowAddGoalModal(true);
+  };
+
+  const handleCloseAddGoalModal = () => {
+    setShowAddGoalModal(false);
+    setNewGoalData({ name: '', amount: '', targetDate: '' });
+  };
+
+  const handleSubmitGoal = (e) => {
+    e.preventDefault();
+    if (newGoalData.name && newGoalData.amount && newGoalData.targetDate) {
+      const newGoal = {
+        id: Date.now(),
+        name: newGoalData.name,
+        currentAmount: 0, // Начинаем с 0
+        targetAmount: parseFloat(newGoalData.amount),
+        targetDate: newGoalData.targetDate,
+        completed: false
+      };
+      setGoalsPlans([...goalsPlans, newGoal]);
+      handleCloseAddGoalModal();
+    }
+  };
+
   const handleSelectCard = (card) => {
     setSelectedCard(card);
+  };
+
+  // Функция для проверки, просрочена ли цель
+  const isGoalOverdue = (targetDate) => {
+    const today = new Date();
+    const target = new Date(targetDate);
+    return target < today;
+  };
+
+  // Функция для форматирования даты
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   const handleTopUpAmountChange = (e) => {
@@ -358,15 +408,6 @@ const BudgetPlanningPage = () => {
     setShowGoalsModal(false);
   };
 
-  const handleAddGoal = () => {
-    const newGoal = {
-      id: Date.now(),
-      name: 'Новая цель',
-      amount: 0,
-      current: 0
-    };
-    setGoals(prev => [...prev, newGoal]);
-  };
 
   const handleDeleteGoal = (goalId) => {
     setGoals(prev => prev.filter(goal => goal.id !== goalId));
@@ -577,8 +618,8 @@ const BudgetPlanningPage = () => {
                         onClick={() => handleTopUpPlan(plan, 'lifestyle')}
                         className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center hover:bg-yellow-200 transition-colors"
                       >
-                        <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                       </button>
                     )}
@@ -667,8 +708,8 @@ const BudgetPlanningPage = () => {
                         onClick={() => handleTopUpPlan(plan, 'dream')}
                         className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center hover:bg-yellow-200 transition-colors"
                       >
-                        <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                       </button>
                     )}
@@ -776,8 +817,8 @@ const BudgetPlanningPage = () => {
                                 onClick={() => handleTopUpPlan(plan, category.id)}
                                 className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center hover:bg-yellow-200 transition-colors"
                               >
-                                <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                 </svg>
                               </button>
                             )}
@@ -873,14 +914,26 @@ const BudgetPlanningPage = () => {
             <div className="space-y-4">
               {goalsPlans.filter(plan => !plan.completed).map((plan) => (
                 <div key={plan.id} className="flex items-center space-x-3">
-                  <div className="w-8 h-8 border border-black rounded-full"></div>
+                  <div className={`w-8 h-8 border-2 rounded-full flex items-center justify-center ${
+                    isGoalOverdue(plan.targetDate) 
+                      ? 'border-red-500 bg-red-50' 
+                      : 'border-gray-300 bg-white'
+                  }`}>
+                    {isGoalOverdue(plan.targetDate) && (
+                      <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                  </div>
                   <div className="flex-1">
                     <div className="text-black font-ibm text-lg font-medium leading-[110%] mb-1">{plan.name}</div>
                     <div className="text-gray-600 font-ibm text-base font-light leading-[110%] mb-1">
                       {plan.currentAmount.toLocaleString('ru-RU')} ₽ / {plan.targetAmount.toLocaleString('ru-RU')} ₽
                     </div>
-                    <div className="text-gray-600 font-ibm text-sm font-light leading-[110%]">
-                      до 15.11.2025
+                    <div className={`font-ibm text-sm font-light leading-[110%] ${
+                      isGoalOverdue(plan.targetDate) ? 'text-red-500' : 'text-gray-600'
+                    }`}>
+                      до {formatDate(plan.targetDate)}
                     </div>
                   </div>
                 </div>
@@ -891,7 +944,10 @@ const BudgetPlanningPage = () => {
 
         {/* Add Goal Button */}
         <div className="flex justify-center">
-          <button className="flex items-center space-x-2 text-black font-ibm text-base font-medium leading-[110%]">
+          <button 
+            onClick={handleAddGoal}
+            className="flex items-center space-x-2 text-black font-ibm text-base font-medium leading-[110%] hover:text-blue-600 transition-colors"
+          >
             <span className="text-lg">+</span>
             <span>Добавить цель</span>
           </button>
@@ -938,10 +994,16 @@ const BudgetPlanningPage = () => {
                   Сумма (₽)
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   name="amount"
                   value={newPlanData.amount}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Разрешаем только цифры
+                    if (value === '' || /^\d+$/.test(value)) {
+                      handleInputChange(e);
+                    }
+                  }}
                   placeholder="50000"
                   className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
                 />
@@ -1133,7 +1195,7 @@ const BudgetPlanningPage = () => {
               {/* Bank Cards */}
               <div className="space-y-2">
                 <div 
-                  onClick={() => handleSelectCard({ id: 1, name: 'Альфа-Банк', number: '**** 1234', balance: 125000, color: 'bg-blue-500' })}
+                  onClick={() => handleSelectCard({ id: 1, name: 'Альфа-Банк', number: '**** 1234', balance: bankBalances.alfa, color: 'bg-blue-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 1 
                       ? 'bg-blue-100 border-2 border-blue-500' 
@@ -1148,12 +1210,12 @@ const BudgetPlanningPage = () => {
                         <div className="text-gray-600 font-ibm text-sm">**** 1234</div>
                       </div>
                     </div>
-                    <div className="text-black font-ibm text-base font-medium">125 000 ₽</div>
+                    <div className="text-black font-ibm text-base font-medium">{bankBalances.alfa.toLocaleString('ru-RU')} ₽</div>
                   </div>
                 </div>
 
                 <div 
-                  onClick={() => handleSelectCard({ id: 2, name: 'ВТБ', number: '**** 5678', balance: 89500, color: 'bg-red-500' })}
+                  onClick={() => handleSelectCard({ id: 2, name: 'ВТБ', number: '**** 5678', balance: bankBalances.vtb, color: 'bg-red-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 2 
                       ? 'bg-red-100 border-2 border-red-500' 
@@ -1168,12 +1230,12 @@ const BudgetPlanningPage = () => {
                         <div className="text-gray-600 font-ibm text-sm">**** 5678</div>
                       </div>
                     </div>
-                    <div className="text-black font-ibm text-base font-medium">89 500 ₽</div>
+                    <div className="text-black font-ibm text-base font-medium">{bankBalances.vtb.toLocaleString('ru-RU')} ₽</div>
                   </div>
                 </div>
 
                 <div 
-                  onClick={() => handleSelectCard({ id: 3, name: 'Т-Банк', number: '**** 9012', balance: 45300, color: 'bg-green-500' })}
+                  onClick={() => handleSelectCard({ id: 3, name: 'Т-Банк', number: '**** 9012', balance: bankBalances.tbank, color: 'bg-green-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 3 
                       ? 'bg-green-100 border-2 border-green-500' 
@@ -1188,7 +1250,7 @@ const BudgetPlanningPage = () => {
                         <div className="text-gray-600 font-ibm text-sm">**** 9012</div>
                       </div>
                     </div>
-                    <div className="text-black font-ibm text-base font-medium">45 300 ₽</div>
+                    <div className="text-black font-ibm text-base font-medium">{bankBalances.tbank.toLocaleString('ru-RU')} ₽</div>
                   </div>
                 </div>
         </div>
@@ -1258,10 +1320,16 @@ const BudgetPlanningPage = () => {
                   Сумма (₽)
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   name="amount"
                   value={editPlanData.amount}
-                  onChange={handleEditPlanInputChange}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Разрешаем только цифры
+                    if (value === '' || /^\d+$/.test(value)) {
+                      handleEditPlanInputChange(e);
+                    }
+                  }}
                   placeholder="50000"
                   className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
                 />
@@ -1466,6 +1534,92 @@ const BudgetPlanningPage = () => {
                 Продолжить
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Goal Modal */}
+      {showAddGoalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+                Добавить цель
+              </h2>
+              <button 
+                onClick={handleCloseAddGoalModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitGoal} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Название цели
+                </label>
+                <input
+                  type="text"
+                  value={newGoalData.name}
+                  onChange={(e) => setNewGoalData({...newGoalData, name: e.target.value})}
+                  placeholder="Например: Купить машину"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Сумма цели (₽)
+                </label>
+                <input
+                  type="text"
+                  value={newGoalData.amount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Разрешаем только цифры
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setNewGoalData({...newGoalData, amount: value});
+                    }
+                  }}
+                  placeholder="1000000"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Дата реализации
+                </label>
+                <input
+                  type="date"
+                  value={newGoalData.targetDate}
+                  onChange={(e) => setNewGoalData({...newGoalData, targetDate: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseAddGoalModal}
+                  className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-4 bg-blue-500 text-white rounded-xl font-ibm text-base font-medium hover:bg-blue-600 transition-colors"
+                >
+                  Добавить
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

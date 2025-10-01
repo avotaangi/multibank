@@ -141,7 +141,8 @@ const AnalyticsPage = () => {
       'yandex_taxi': 'vtb',  // Яндекс.Такси - ВТБ
       'samokat': 'tbank',    // Самокат - T-Банк
       'yandex_plus': 'alfa', // Яндекс.Плюс - Альфа-Банк
-      'okko': 'vtb'          // Кинотеатр okko - ВТБ
+      'okko': 'vtb',         // Кинотеатр okko - ВТБ
+      'static_transfer': 'alfa' // Статический перевод - Альфа-Банк
     };
     return cardMapping[operationType];
   };
@@ -163,18 +164,31 @@ const AnalyticsPage = () => {
       });
     }
     
-    // Суммируем затраты из статических операций
+    // Суммируем затраты из статических операций с учетом фильтра по месяцам
     const staticOperations = [
       { type: 'magnit', amount: 78 },
       { type: 'yandex_taxi', amount: 578 },
       { type: 'samokat', amount: 1150 },
       { type: 'yandex_plus', amount: 399 },
-      { type: 'okko', amount: 199 }
+      { type: 'okko', amount: 199 },
+      { type: 'static_transfer', amount: 1500 }
     ];
+    
+    // Применяем множитель в зависимости от выбранного периода
+    let periodMultiplier = 1;
+    if (selectedMonth === 'Квартал') {
+      periodMultiplier = 3;
+    } else if (selectedMonth === 'Год') {
+      periodMultiplier = 12;
+    }
     
     staticOperations.forEach(operation => {
       if (shouldShowOperation(operation.type)) {
-        totalSpending += operation.amount;
+        // Исключаем статический перевод, если выбрано "Без перевода"
+        if (operation.type === 'static_transfer' && selectedTransfer === 'Без перевода') {
+          return;
+        }
+        totalSpending += operation.amount * periodMultiplier;
       }
     });
     
@@ -452,6 +466,39 @@ const AnalyticsPage = () => {
               </div>
             );
           })}
+
+          {/* Статический перевод */}
+          {shouldShowOperation('static_transfer') && selectedTransfer === 'Переводы' && (
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+            <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
+              <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xs min-[360px]:text-sm">🔄</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center">
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Перевод другу</div>
+                <div className="ml-2">
+                  <div 
+                    className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #3B82F6 0%, #3B82F6CC 100%)'
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">А</span>
+                      </div>
+                    </div>
+                    <div className="text-white text-xs font-medium">5294</div>
+                  </div>
+                </div>
+              </div>
+              <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">Перевод</div>
+            </div>
+            <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 1 500 ₽</div>
+          </div>
+          )}
           
           {/* Магнит */}
           {shouldShowOperation('magnit') && (

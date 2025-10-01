@@ -5,6 +5,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Telegram WebApp styles */
+.tg-viewport {
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
+  overflow: hidden;
+}
+
+/* Telegram WebApp fullscreen styles */
+.tg-fullscreen {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Hide scrollbars in Telegram WebApp */
+.tg-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.tg-viewport {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer base {
   * {
     @apply border-gray-200;

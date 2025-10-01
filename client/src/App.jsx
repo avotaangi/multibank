@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './stores/authStore'
 import { useEffect } from 'react'
+import { getTelegramWebApp, expandToFullscreen } from './utils/telegram'
 
 // Components
 import Layout from './components/Layout'
@@ -41,6 +42,19 @@ function App() {
 
   useEffect(() => {
     initializeAuth()
+    
+    // Initialize Telegram WebApp
+    const webApp = getTelegramWebApp()
+    if (webApp) {
+      // Configure Telegram WebApp
+      webApp.ready()
+      
+      // Enable closing confirmation
+      webApp.enableClosingConfirmation()
+      
+      // Auto-expand to fullscreen on load
+      expandToFullscreen()
+    }
   }, [initializeAuth])
 
   if (isLoading) {
