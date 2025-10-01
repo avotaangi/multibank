@@ -49,19 +49,27 @@ function App() {
         webApp.ready()
         webApp.enableClosingConfirmation()
         
-        // Immediate multiple expansions
+        // Immediate multiple expansions with requestFullscreen
         webApp.expand()
         webApp.expand()
         webApp.expand()
         webApp.expand()
         webApp.expand()
         
-        // Multiple expansion attempts with various delays
+        // Try requestFullscreen immediately
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
+        }
+        
+        // Multiple expansion attempts with various delays and requestFullscreen
         setTimeout(() => {
           console.log('React: Force expanding...')
           webApp.expand()
           webApp.expand()
           webApp.expand()
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
+          }
         }, 10)
         
         setTimeout(() => {
@@ -69,6 +77,9 @@ function App() {
           webApp.expand()
           webApp.expand()
           webApp.expand()
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
+          }
         }, 50)
         
         setTimeout(() => {
@@ -76,6 +87,9 @@ function App() {
           webApp.expand()
           webApp.expand()
           webApp.expand()
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
+          }
         }, 100)
         
         setTimeout(() => {
@@ -83,6 +97,9 @@ function App() {
           webApp.expand()
           webApp.expand()
           webApp.expand()
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
+          }
         }, 200)
         
         setTimeout(() => {
@@ -90,6 +107,9 @@ function App() {
           webApp.expand()
           webApp.expand()
           webApp.expand()
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
+          }
         }, 500)
         
         setTimeout(() => {
@@ -97,6 +117,9 @@ function App() {
           webApp.expand()
           webApp.expand()
           webApp.expand()
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
+          }
         }, 1000)
         
         setTimeout(() => {
@@ -104,6 +127,9 @@ function App() {
           webApp.expand()
           webApp.expand()
           webApp.expand()
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('React: requestFullscreen failed:', e))
+          }
         }, 2000)
         
         return true

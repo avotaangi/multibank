@@ -18,18 +18,30 @@
     
     <!-- Telegram WebApp Auto-expand Script -->
     <script>
-      // Very aggressive Telegram WebApp expansion
+      // Very aggressive Telegram WebApp expansion with requestFullscreen
       function expandTelegramWebApp() {
         if (window.Telegram && window.Telegram.WebApp) {
           const webApp = window.Telegram.WebApp;
           console.log('Telegram WebApp found, expanding...');
           webApp.ready();
+          
+          // Try both expand and requestFullscreen
           webApp.expand();
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+          }
           
           // Force expand multiple times immediately
           webApp.expand();
           webApp.expand();
           webApp.expand();
+          
+          // Try requestFullscreen multiple times
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+            document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+            document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+          }
           
           // Force expand multiple times with delays
           setTimeout(() => {
@@ -37,6 +49,9 @@
             webApp.expand();
             webApp.expand();
             webApp.expand();
+            if (document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+            }
           }, 10);
           
           setTimeout(() => {
@@ -44,6 +59,9 @@
             webApp.expand();
             webApp.expand();
             webApp.expand();
+            if (document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+            }
           }, 50);
           
           return true;
@@ -56,38 +74,159 @@
       // Try immediately
       expandTelegramWebApp();
       
-      // Try with various delays - even more aggressive
-      setTimeout(expandTelegramWebApp, 5);
-      setTimeout(expandTelegramWebApp, 10);
-      setTimeout(expandTelegramWebApp, 25);
-      setTimeout(expandTelegramWebApp, 50);
-      setTimeout(expandTelegramWebApp, 75);
-      setTimeout(expandTelegramWebApp, 100);
-      setTimeout(expandTelegramWebApp, 150);
-      setTimeout(expandTelegramWebApp, 200);
-      setTimeout(expandTelegramWebApp, 300);
-      setTimeout(expandTelegramWebApp, 500);
-      setTimeout(expandTelegramWebApp, 750);
-      setTimeout(expandTelegramWebApp, 1000);
-      setTimeout(expandTelegramWebApp, 1500);
-      setTimeout(expandTelegramWebApp, 2000);
-      setTimeout(expandTelegramWebApp, 3000);
-      setTimeout(expandTelegramWebApp, 5000);
+      // Try with various delays - even more aggressive with requestFullscreen
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 5);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 10);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 25);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 50);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 75);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 100);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 150);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 200);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 300);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 500);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 750);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 1000);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 1500);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 2000);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 3000);
+      
+      setTimeout(() => {
+        expandTelegramWebApp();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+      }, 5000);
       
       // Try on window load
       window.addEventListener('load', function() {
         console.log('Window loaded, trying to expand...');
         expandTelegramWebApp();
-        setTimeout(expandTelegramWebApp, 100);
-        setTimeout(expandTelegramWebApp, 500);
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+        setTimeout(() => {
+          expandTelegramWebApp();
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+          }
+        }, 100);
+        setTimeout(() => {
+          expandTelegramWebApp();
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+          }
+        }, 500);
       });
       
       // Try on DOM ready
       document.addEventListener('DOMContentLoaded', function() {
         console.log('DOM ready, trying to expand...');
         expandTelegramWebApp();
-        setTimeout(expandTelegramWebApp, 100);
-        setTimeout(expandTelegramWebApp, 500);
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+        }
+        setTimeout(() => {
+          expandTelegramWebApp();
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+          }
+        }, 100);
+        setTimeout(() => {
+          expandTelegramWebApp();
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log('requestFullscreen failed:', e));
+          }
+        }, 500);
         
         // Add Telegram WebApp class to body
         if (window.Telegram && window.Telegram.WebApp) {
