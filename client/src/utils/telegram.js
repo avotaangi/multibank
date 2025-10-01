@@ -24,8 +24,14 @@ export const toggleFullscreen = () => {
 
 export const expandToFullscreen = () => {
   const webApp = getTelegramWebApp();
-  if (webApp && !webApp.isExpanded) {
+  if (webApp) {
+    // Always try to expand, even if already expanded
     webApp.expand();
+    
+    // Also try to set viewport to full height
+    if (webApp.viewportHeight) {
+      webApp.viewportHeight = window.innerHeight;
+    }
   }
 };
 

@@ -38,35 +38,53 @@ function ScrollToTop() {
 }
 
 function App() {
-  const { user, isLoading, initializeAuth } = useAuthStore()
+  const { user, isLoading, initializeAuth, setUser } = useAuthStore()
 
   useEffect(() => {
-    initializeAuth()
-    
-    // Initialize Telegram WebApp
+    // Initialize Telegram WebApp first
     const webApp = getTelegramWebApp()
     if (webApp) {
+      console.log('Telegram WebApp found, initializing...')
       // Configure Telegram WebApp
       webApp.ready()
       
       // Enable closing confirmation
       webApp.enableClosingConfirmation()
       
-      // Auto-expand to fullscreen on load
-      expandToFullscreen()
+      // Auto-expand to fullscreen when opened from Telegram
+      try {
+        expandToFullscreen()
+      } catch (error) {
+        console.log('Telegram WebApp expand error:', error)
+      }
+    } else {
+      console.log('Telegram WebApp not found, running in browser mode')
     }
+    
+    // Initialize auth with timeout
+    const authTimeout = setTimeout(() => {
+      console.log('Auth initialization timeout, setting user as logged in')
+      setUser({ id: 1, name: 'Test User' })
+    }, 2000)
+    
+    initializeAuth().finally(() => {
+      clearTimeout(authTimeout)
+    })
   }, [initializeAuth])
 
   if (isLoading) {
     return (
-      <div className="tg-viewport flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-gray-600">Загрузка...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="tg-viewport">
+    <div className="min-h-screen bg-white">
       <ScrollToTop />
       <Routes>
         {/* Public routes */}

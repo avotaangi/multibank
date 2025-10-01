@@ -10,6 +10,22 @@
     <!-- Telegram Web App Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
+    <!-- Telegram WebApp Auto-expand Script -->
+    <script>
+      // Auto-expand Telegram WebApp on load
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, checking for Telegram WebApp...');
+        if (window.Telegram && window.Telegram.WebApp) {
+          console.log('Telegram WebApp found, initializing...');
+          const webApp = window.Telegram.WebApp;
+          webApp.ready();
+          webApp.expand();
+        } else {
+          console.log('Telegram WebApp not found, running in browser mode');
+        }
+      });
+    </script>
+    
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

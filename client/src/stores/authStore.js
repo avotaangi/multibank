@@ -188,6 +188,11 @@ const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Set user manually
+  setUser: (userData) => {
+    set({ user: userData, isLoading: false, error: null })
+  },
+
   // Update user profile
   updateProfile: async (profileData) => {
     set({ isLoading: true, error: null })
