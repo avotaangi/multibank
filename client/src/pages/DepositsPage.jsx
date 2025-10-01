@@ -9,7 +9,7 @@ const DepositsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: '100px' }}>
+    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">

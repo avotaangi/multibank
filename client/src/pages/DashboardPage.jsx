@@ -132,7 +132,7 @@ const DashboardPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }}>
+    <div className="min-h-screen bg-white relative overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
 
       {/* Top Header with Profile */}
       <div className="relative z-10 bg-gray-100 px-5 pt-6 pb-4 rounded-[40px] animate-slide-in-down">

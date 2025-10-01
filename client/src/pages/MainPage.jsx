@@ -2,9 +2,9 @@ import React from 'react'
 
 const MainPage = () => {
   return (
-    <div className="min-h-screen bg-gray-50" style={{ paddingTop: '200px' }}>
+    <div className="min-h-screen bg-gray-50" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Main Content */}
-      <div className="pt-[100px] px-4">
+      <div className="px-4">
         <div className="bg-white rounded-2xl p-8 shadow-lg max-w-md w-full text-center">
           <div className="mb-6">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">

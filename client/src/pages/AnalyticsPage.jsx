@@ -225,7 +225,7 @@ const AnalyticsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }} onClick={handleOutsideClick}>
+    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }} onClick={handleOutsideClick}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">

@@ -117,7 +117,7 @@ const MyCardsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white animate-slide-up" style={{ paddingTop: '100px' }}>
+    <div className="min-h-screen bg-white animate-slide-up" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="relative z-10 px-3 sm:px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">

@@ -243,7 +243,7 @@ const CardAnalyticsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 100px)' }}>
+    <div className="min-h-screen bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
