@@ -160,17 +160,43 @@ const BudgetPlanningPage = () => {
     const goalsTotal = goalsPlans.reduce((sum, plan) => sum + (plan.currentAmount || 0), 0);
     const jointTotal = jointGoals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
     
+    const lifestyleTargetTotal = lifestylePlans.reduce((sum, plan) => sum + (plan.targetAmount || 0), 0);
+    const dreamTargetTotal = dreamPlans.reduce((sum, plan) => sum + (plan.targetAmount || 0), 0);
+    const goalsTargetTotal = goalsPlans.reduce((sum, plan) => sum + (plan.targetAmount || 0), 0);
+    const jointTargetTotal = jointGoals.reduce((sum, goal) => sum + (goal.targetAmount || 0), 0);
+    
+    // Сумма ежемесячных автоплатежей
+    const autopayMonthlyTotal = autopays
+      .filter(autopay => autopay.status === 'active' && autopay.frequency === 'monthly')
+      .reduce((sum, autopay) => sum + (autopay.amount || 0), 0);
+    
     return [
-      { name: "Планы", amount: lifestyleTotal + dreamTotal, color: "#3C82F6" },
-      { name: "Цели", amount: goalsTotal, color: "#EF4444" },
-      { name: "Совместные цели", amount: jointTotal, color: "#F59E0C" },
-      { name: "Автоплатежи", amount: 0, color: "#844FD9" } // Пока нет автоплатежей
+      { name: "Планы", amount: lifestyleTotal + dreamTotal, targetAmount: lifestyleTargetTotal + dreamTargetTotal, color: "#3C82F6" },
+      { name: "Цели", amount: goalsTotal, targetAmount: goalsTargetTotal, color: "#EF4444" },
+      { name: "Совместные цели", amount: jointTotal, targetAmount: jointTargetTotal, color: "#F59E0C" },
+      { name: "Автоплатежи", amount: autopayMonthlyTotal, targetAmount: autopayMonthlyTotal, color: "#844FD9" }
     ];
-  }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals]);
+  }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals, autopays]);
   
   const totalAmount = budgetData.reduce((sum, item) => sum + item.amount, 0);
   
   const formatCurrency = (value) => `${Math.round(value).toLocaleString('ru-RU')} ₽`;
+  
+  // Функция для получения цвета банка
+  const getBankColor = (bankName) => {
+    switch (bankName) {
+      case 'Альфа-Банк':
+        return 'bg-red-600'; // Красный цвет для Альфа-Банка (как на картах)
+      case 'ВТБ':
+        return 'bg-blue-600'; // Синий цвет для ВТБ (как на картах)
+      case 'Т-Банк':
+        return 'bg-yellow-500'; // Желтый цвет для Т-Банка (как на картах)
+      case 'Сбербанк':
+        return 'bg-green-600'; // Зеленый для Сбербанка (как на картах)
+      default:
+        return 'bg-gray-500'; // Серый для неизвестных банков
+    }
+  };
   
   // Сколько уже накоплено по всем планам/категориям
   const accumulatedSaved = useMemo(() => {
@@ -786,7 +812,7 @@ const BudgetPlanningPage = () => {
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
-      <div className="bg-white px-5 pt-6 pb-4">
+      <div className="bg-white px-5 pt-6 pb-4 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Планирование бюджета
@@ -798,9 +824,9 @@ const BudgetPlanningPage = () => {
       {/* Main Content */}
       <div className="px-0">
         {/* Budget Overview Section */}
-        <div className="flex items-center justify-between mb-8 px-4">
+        <div className="flex items-center justify-between mb-8 px-4 animate-slide-in-down">
           {/* Donut Chart */}
-          <div className="relative w-[150px] h-[150px] flex items-center justify-center">
+          <div className="relative w-[150px] h-[150px] flex items-center justify-center animate-donut-entrance">
             {/* Chart segments */}
             <div 
               className="absolute inset-0 rounded-full" 
@@ -812,11 +838,11 @@ const BudgetPlanningPage = () => {
           </div>
 
           {/* Text Information */}
-          <div className="flex-1 pl-6">
+          <div className="flex-1 pl-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
             <div className="text-black font-ibm text-sm font-normal leading-[110%] mb-2">
               Бюджет на планирование
             </div>
-            <div className="text-black font-ibm text-2xl font-medium leading-[110%] mb-2">
+            <div className="text-black font-ibm text-2xl font-medium leading-[110%] mb-2 whitespace-nowrap">
               {formatCurrency(accumulatedSaved)}
             </div>
             <div className="text-black font-ibm text-sm font-normal leading-[110%]">
@@ -828,23 +854,26 @@ const BudgetPlanningPage = () => {
         {/* Budget Categories */}
         <div className="space-y-4 mb-4 px-4">
           {budgetData.map((item, index) => (
-            <div key={index} className="flex items-center justify-between">
+            <div key={index} className="flex items-center justify-between animate-slide-in-down" style={{ animationDelay: `${0.5 + index * 0.1}s` }}>
               <div className="flex items-center space-x-3">
                 <div 
-                  className="w-6 h-6 rounded-full" 
+                  className="w-6 h-6 rounded-full flex-shrink-0" 
                   style={{ backgroundColor: item.color }}
                 ></div>
                 <span className="text-black font-ibm text-base font-normal leading-[110%]">{item.name}</span>
               </div>
-              <span className="text-black font-ibm text-base font-normal leading-[110%]">
-                {Math.round(item.amount).toLocaleString('ru-RU')} ₽
+              <span className="text-black font-ibm text-xs min-[360px]:text-sm font-normal leading-[110%] whitespace-nowrap">
+                {item.name === "Автоплатежи" 
+                  ? `${Math.round(item.amount).toLocaleString('ru-RU')} ₽`
+                  : `${Math.round(item.amount).toLocaleString('ru-RU')} ₽ из ${Math.round(item.targetAmount || 0).toLocaleString('ru-RU')} ₽`
+                }
               </span>
             </div>
           ))}
         </div>
 
         {/* My Planning Categories Container */}
-        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#3C82F6' }}>
+        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden animate-slide-in-down" style={{ backgroundColor: '#3C82F6', animationDelay: '0.9s' }}>
           <div className="p-4" style={{ backgroundColor: '#3C82F6' }}>
             <div className="flex items-center mb-3">
               <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
@@ -1164,7 +1193,7 @@ const BudgetPlanningPage = () => {
 
 
         {/* My Goals Container */}
-        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#EF4444' }}>
+        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden animate-slide-in-down" style={{ backgroundColor: '#EF4444', animationDelay: '1.1s' }}>
           <div className="p-4" style={{ backgroundColor: '#EF4444' }}>
             <div className="flex items-center mb-3">
               <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
@@ -1241,7 +1270,7 @@ const BudgetPlanningPage = () => {
       </div>
 
       {/* Joint Goals Container */}
-      <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#F59E0C' }}>
+      <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden animate-slide-in-down" style={{ backgroundColor: '#F59E0C', animationDelay: '1.3s' }}>
         {/* Header removed per request */}
 
         {/* New Joint Goal Section */}
@@ -1365,7 +1394,7 @@ const BudgetPlanningPage = () => {
       </div>
 
       {/* Autopay Section */}
-      <div className="rounded-[27px] border border-gray-200 mb-8 overflow-hidden" style={{ backgroundColor: '#844FD9' }}>
+      <div className="rounded-[27px] border border-gray-200 mb-8 overflow-hidden animate-slide-in-down" style={{ backgroundColor: '#844FD9', animationDelay: '1.5s' }}>
         {/* New Autopay Section - unified background */}
         <div className="p-4">
           <div className="flex items-center mb-3">
@@ -1396,10 +1425,7 @@ const BudgetPlanningPage = () => {
             <div key={autopay.id} className="bg-white rounded-2xl p-4 border border-gray-200">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    autopay.category === 'ЖКХ' ? 'bg-orange-500' : 
-                    autopay.category === 'Кредиты' ? 'bg-red-500' : 'bg-blue-500'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getBankColor(autopay.card)}`}>
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
