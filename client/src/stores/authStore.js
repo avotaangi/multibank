@@ -6,6 +6,7 @@ const useAuthStore = create((set, get) => ({
   token: null,
   isLoading: false,
   error: null,
+  isAuthenticated: false,
 
   // Initialize authentication
   initializeAuth: async () => {
@@ -183,8 +184,10 @@ const useAuthStore = create((set, get) => ({
       set({ 
         user: null, 
         token: null, 
-        error: null 
+        error: null,
+        isAuthenticated: false
       })
+      localStorage.removeItem('isAuthenticated')
     }
   },
 
@@ -213,7 +216,24 @@ const useAuthStore = create((set, get) => ({
   },
 
   // Clear error
-  clearError: () => set({ error: null })
+  clearError: () => set({ error: null }),
+
+  // Set authenticated state
+  setAuthenticated: (authenticated) => {
+    set({ isAuthenticated: authenticated })
+    if (authenticated) {
+      localStorage.setItem('isAuthenticated', 'true')
+    } else {
+      localStorage.removeItem('isAuthenticated')
+    }
+  },
+
+  // Check if user is authenticated from localStorage
+  checkAuthentication: () => {
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+    set({ isAuthenticated })
+    return isAuthenticated
+  }
 }))
 
 export default useAuthStore

@@ -148,6 +148,7 @@ const BankCardStack = () => {
 
   return (
     <div className="relative w-full flex justify-center items-center pb-4 px-1 min-[355px]:px-2 min-[380px]:px-5 overflow-hidden">
+
       {/* Triple Arrow Left */}
       <div className="absolute left-1 min-[380px]:left-2 top-1/2 transform -translate-y-1/2 z-40">
         <div className="flex items-center space-x-1">
@@ -182,6 +183,7 @@ const BankCardStack = () => {
       >
         {/* Cards Container - Centered */}
         <div className="relative w-[180px] min-[320px]:w-[200px] min-[355px]:w-[240px] min-[380px]:w-[280px] min-[375px]:w-[300px] sm:w-[320px] md:w-[340px] lg:w-[360px] xl:w-[380px] h-[140px] min-[355px]:h-[160px] min-[380px]:h-[189px] min-[375px]:h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] xl:h-[280px]">
+
           {/* Alpha Bank Card */}
           <div 
             data-card="0"
@@ -194,6 +196,7 @@ const BankCardStack = () => {
             }}
           >
             <div className="p-3 min-[320px]:p-4 min-[355px]:p-6 sm:p-8 md:p-10 lg:p-12 xl:p-14 h-full flex flex-col justify-between">
+
               {/* Top section */}
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
@@ -206,8 +209,8 @@ const BankCardStack = () => {
               {/* Bottom section */}
               <div className="flex items-end justify-between">
                 <div className="flex flex-col">
-                <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm mb-1">{telegramUser.displayName}</div>
-                <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm">{cards[0].cardNumber}</div>
+                  <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm mb-1">{telegramUser.displayName}</div>
+                  <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm">{cards[0].cardNumber}</div>
                 </div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">МИР</div>
               </div>
@@ -226,6 +229,7 @@ const BankCardStack = () => {
             }}
           >
             <div className="p-3 min-[320px]:p-4 min-[355px]:p-6 sm:p-8 md:p-10 lg:p-12 xl:p-14 h-full flex flex-col justify-between">
+
               {/* Top section */}
               <div className="flex items-center justify-between">
                 <div className="text-white text-lg min-[320px]:text-xl min-[355px]:text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold font-ibm">{cards[1].logo}</div>
@@ -255,6 +259,7 @@ const BankCardStack = () => {
             }}
           >
             <div className="p-3 min-[320px]:p-4 min-[355px]:p-6 sm:p-8 md:p-10 lg:p-12 xl:p-14 h-full flex flex-col justify-between">
+
               {/* Top section */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">

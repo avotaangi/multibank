@@ -11,6 +11,12 @@ const BudgetPlanningPage = () => {
   const [showGoalsTip, setShowGoalsTip] = useState(false);
   const [showJointGoalsTip, setShowJointGoalsTip] = useState(false);
   const [showAddJointGoalModal, setShowAddJointGoalModal] = useState(false);
+  const [showEditJointGoalModal, setShowEditJointGoalModal] = useState(false);
+  const [showDeleteJointGoalModal, setShowDeleteJointGoalModal] = useState(false);
+  const [showTopUpJointGoalModal, setShowTopUpJointGoalModal] = useState(false);
+  const [selectedJointGoal, setSelectedJointGoal] = useState(null);
+  const [editJointGoalData, setEditJointGoalData] = useState({ name: '', targetAmount: '', targetDate: '' });
+  const [topUpJointAmount, setTopUpJointAmount] = useState('');
   const [showAddAutopayModal, setShowAddAutopayModal] = useState(false);
   const [showAutopayConfirmModal, setShowAutopayConfirmModal] = useState(false);
   const [autopayToToggle, setAutopayToToggle] = useState(null);
@@ -147,15 +153,50 @@ const BudgetPlanningPage = () => {
   // Бюджет на планирование - отдельное поле
   const planningBudget = "110 000 ₽";
   
-  // Данные для кольцевой диаграммы
-  const budgetData = [
-    { name: "Дом", amount: 60000, color: "#3C82F6" },
-    { name: "Еда", amount: 20000, color: "#EF4444" },
-    { name: "Накопления", amount: 15000, color: "#F59E0C" },
-    { name: "Жизнь", amount: 15000, color: "#844FD9" }
-  ];
+  // Данные для кольцевой диаграммы - динамически вычисляемые на основе реальных данных
+  const budgetData = useMemo(() => {
+    const lifestyleTotal = lifestylePlans.reduce((sum, plan) => sum + (plan.currentAmount || 0), 0);
+    const dreamTotal = dreamPlans.reduce((sum, plan) => sum + (plan.currentAmount || 0), 0);
+    const goalsTotal = goalsPlans.reduce((sum, plan) => sum + (plan.currentAmount || 0), 0);
+    const jointTotal = jointGoals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
+    
+    return [
+      { name: "Планы", amount: lifestyleTotal + dreamTotal, color: "#3C82F6" },
+      { name: "Цели", amount: goalsTotal, color: "#EF4444" },
+      { name: "Совместные цели", amount: jointTotal, color: "#F59E0C" },
+      { name: "Автоплатежи", amount: 0, color: "#844FD9" } // Пока нет автоплатежей
+    ];
+  }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals]);
   
   const totalAmount = budgetData.reduce((sum, item) => sum + item.amount, 0);
+  
+  const formatCurrency = (value) => `${Math.round(value).toLocaleString('ru-RU')} ₽`;
+  
+  // Сколько уже накоплено по всем планам/категориям
+  const accumulatedSaved = useMemo(() => {
+    const sumLifestyle = lifestylePlans.reduce((s, p) => s + (p.currentAmount || 0), 0);
+    const sumDream = dreamPlans.reduce((s, p) => s + (p.currentAmount || 0), 0);
+    const sumGoals = goalsPlans.reduce((s, p) => s + (p.currentAmount || 0), 0);
+    const sumJoint = jointGoals.reduce((s, g) => s + (g.currentAmount || 0), 0);
+    const sumCategories = Object.values(categoryPlans).reduce((sum, plans) => {
+      const list = Array.isArray(plans) ? plans : [];
+      return sum + list.reduce((s, p) => s + (p.currentAmount || 0), 0);
+    }, 0);
+    return sumLifestyle + sumDream + sumGoals + sumJoint + sumCategories;
+  }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals, categoryPlans]);
+
+  // Общая сумма, которая должна собираться (целевые суммы)
+  const totalTargetAmount = useMemo(() => {
+    const sumLifestyle = lifestylePlans.reduce((s, p) => s + (p.targetAmount || 0), 0);
+    const sumDream = dreamPlans.reduce((s, p) => s + (p.targetAmount || 0), 0);
+    const sumGoals = goalsPlans.reduce((s, p) => s + (p.targetAmount || 0), 0);
+    const sumJoint = jointGoals.reduce((s, g) => s + (g.targetAmount || 0), 0);
+    const sumCategories = Object.values(categoryPlans).reduce((sum, plans) => {
+      const list = Array.isArray(plans) ? plans : [];
+      return sum + list.reduce((s, p) => s + (p.targetAmount || 0), 0);
+    }, 0);
+    return sumLifestyle + sumDream + sumGoals + sumJoint + sumCategories;
+  }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals, categoryPlans]);
   
   // Создаем conic-gradient на основе процентного соотношения
   const getConicGradient = () => {
@@ -755,9 +796,9 @@ const BudgetPlanningPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="px-5 pb-8">
+      <div className="px-0">
         {/* Budget Overview Section */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 px-4">
           {/* Donut Chart */}
           <div className="relative w-[150px] h-[150px] flex items-center justify-center">
             {/* Chart segments */}
@@ -776,16 +817,16 @@ const BudgetPlanningPage = () => {
               Бюджет на планирование
             </div>
             <div className="text-black font-ibm text-2xl font-medium leading-[110%] mb-2">
-              {planningBudget}
+              {formatCurrency(accumulatedSaved)}
             </div>
             <div className="text-black font-ibm text-sm font-normal leading-[110%]">
-              29 000 ₽ осталось из бюджета
+              из {formatCurrency(totalTargetAmount)}
             </div>
         </div>
       </div>
 
         {/* Budget Categories */}
-        <div className="space-y-4 mb-8">
+        <div className="space-y-4 mb-4 px-4">
           {budgetData.map((item, index) => (
             <div key={index} className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -796,11 +837,43 @@ const BudgetPlanningPage = () => {
                 <span className="text-black font-ibm text-base font-normal leading-[110%]">{item.name}</span>
               </div>
               <span className="text-black font-ibm text-base font-normal leading-[110%]">
-                {item.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+                {Math.round(item.amount).toLocaleString('ru-RU')} ₽
               </span>
             </div>
           ))}
         </div>
+
+        {/* My Planning Categories Container */}
+        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#3C82F6' }}>
+          <div className="p-4" style={{ backgroundColor: '#3C82F6' }}>
+            <div className="flex items-center mb-3">
+              <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 11h14M7 15h10" />
+                </svg>
+              </div>
+              <div className="text-white font-ibm text-lg font-medium leading-[110%]">Мои категории планирования</div>
+            </div>
+            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+              Добавляйте категории и распределяйте бюджет по направлениям
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAddPlan}
+                className="bg-white text-[#3C82F6] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+              >
+                Добавить план
+              </button>
+              <button
+                onClick={handleAddCategory}
+                className="bg-white text-[#3C82F6] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+              >
+                Добавить категорию
+              </button>
+            </div>
+            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+          </div>
+          <div className="px-4 pb-4 pt-0">
 
         {/* Lifestyle Section */}
         <div className="bg-gray-100 rounded-[27px] mb-4">
@@ -848,37 +921,31 @@ const BudgetPlanningPage = () => {
                         {plan.name}
                       </span>
                     </div>
-                  <div className="flex items-center space-x-2">
-                    <button
+                  </div>
+                  <div className="flex items-center space-x-1 min-[360px]:space-x-2 mb-3">
+                    <button 
                       onClick={() => handleEditPlan(plan, 'lifestyle')}
-                      className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors"
+                      className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-gray-100 text-gray-800 font-ibm text-xs min-[360px]:text-sm hover:bg-gray-200 transition-colors"
                     >
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                      Изменить
                     </button>
-                    <button
+                    <button 
                       onClick={() => handleDeletePlan(plan.id, 'lifestyle')}
-                      className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
+                      className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-red-100 text-red-700 font-ibm text-xs min-[360px]:text-sm hover:bg-red-200 transition-colors"
                     >
-                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      Удалить
                     </button>
                     {!isCompleted && (
-                      <button
+                      <button 
                         onClick={() => handleTopUpPlan(plan, 'lifestyle')}
-                        className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center hover:bg-yellow-200 transition-colors"
+                        className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-green-100 text-green-700 font-ibm text-xs min-[360px]:text-sm hover:bg-green-200 transition-colors"
                       >
-                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
+                        Пополнить
                       </button>
                     )}
                   </div>
-                </div>
                 <div className="text-gray-600 font-ibm text-base font-light leading-[110%] mb-3">
-                  {plan.currentAmount.toLocaleString('ru-RU')} ₽ / {plan.targetAmount.toLocaleString('ru-RU')} ₽
+                  {Math.round(plan.currentAmount).toLocaleString('ru-RU')} ₽ из {Math.round(plan.targetAmount).toLocaleString('ru-RU')} ₽
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1">
                   <div 
@@ -938,37 +1005,31 @@ const BudgetPlanningPage = () => {
                         {plan.name}
                       </span>
                     </div>
-                  <div className="flex items-center space-x-2">
-                    <button
+                  </div>
+                  <div className="flex items-center space-x-1 min-[360px]:space-x-2 mb-3">
+                    <button 
                       onClick={() => handleEditPlan(plan, 'dream')}
-                      className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors"
+                      className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-gray-100 text-gray-800 font-ibm text-xs min-[360px]:text-sm hover:bg-gray-200 transition-colors"
                     >
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                      Изменить
                     </button>
-                    <button
+                    <button 
                       onClick={() => handleDeletePlan(plan.id, 'dream')}
-                      className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
+                      className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-red-100 text-red-700 font-ibm text-xs min-[360px]:text-sm hover:bg-red-200 transition-colors"
                     >
-                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      Удалить
                     </button>
                     {!isCompleted && (
-                      <button
+                      <button 
                         onClick={() => handleTopUpPlan(plan, 'dream')}
-                        className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center hover:bg-yellow-200 transition-colors"
+                        className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-green-100 text-green-700 font-ibm text-xs min-[360px]:text-sm hover:bg-green-200 transition-colors"
                       >
-                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
+                        Пополнить
                       </button>
                     )}
                   </div>
-                </div>
                 <div className="text-gray-600 font-ibm text-base font-light leading-[110%] mb-3">
-                  {plan.currentAmount.toLocaleString('ru-RU')} ₽ / {plan.targetAmount.toLocaleString('ru-RU')} ₽
+                  {Math.round(plan.currentAmount).toLocaleString('ru-RU')} ₽ из {Math.round(plan.targetAmount).toLocaleString('ru-RU')} ₽
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1">
                   <div 
@@ -1019,7 +1080,7 @@ const BudgetPlanningPage = () => {
                   </div>
                 </div>
                 <div className="text-gray-600 font-ibm text-base font-light leading-[110%] mb-2">
-                  {totalCurrent.toLocaleString('ru-RU')} ₽ / {totalTarget.toLocaleString('ru-RU')} ₽
+                  {Math.round(totalCurrent).toLocaleString('ru-RU')} ₽ из {Math.round(totalTarget).toLocaleString('ru-RU')} ₽
                 </div>
               </div>
               <div className="bg-white border-t border-gray-200 rounded-b-[27px] p-4">
@@ -1047,37 +1108,31 @@ const BudgetPlanningPage = () => {
                                 {plan.name}
                               </span>
                             </div>
-                          <div className="flex items-center space-x-2">
-                            <button
+                          </div>
+                          <div className="flex items-center space-x-1 min-[360px]:space-x-2 mb-3">
+                            <button 
                               onClick={() => handleEditPlan(plan, category.id)}
-                              className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors"
+                              className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-gray-100 text-gray-800 font-ibm text-xs min-[360px]:text-sm hover:bg-gray-200 transition-colors"
                             >
-                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
+                              Изменить
                             </button>
-                            <button
+                            <button 
                               onClick={() => handleDeletePlan(plan.id, category.id)}
-                              className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
+                              className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-red-100 text-red-700 font-ibm text-xs min-[360px]:text-sm hover:bg-red-200 transition-colors"
                             >
-                              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
+                              Удалить
                             </button>
                             {!isCompleted && (
-                              <button
+                              <button 
                                 onClick={() => handleTopUpPlan(plan, category.id)}
-                                className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center hover:bg-yellow-200 transition-colors"
+                                className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-green-100 text-green-700 font-ibm text-xs min-[360px]:text-sm hover:bg-green-200 transition-colors"
                               >
-                                <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
+                                Пополнить
                               </button>
                             )}
-              </div>
-                        </div>
+                          </div>
                         <div className="text-gray-600 font-ibm text-base font-light leading-[110%] mb-3">
-                          {plan.currentAmount.toLocaleString('ru-RU')} ₽ / {plan.targetAmount.toLocaleString('ru-RU')} ₽
+                          {Math.round(plan.currentAmount).toLocaleString('ru-RU')} ₽ из {Math.round(plan.targetAmount).toLocaleString('ru-RU')} ₽
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-1">
                           <div 
@@ -1102,51 +1157,38 @@ const BudgetPlanningPage = () => {
           );
         })}
 
-        {/* Add Plan and Category Buttons */}
-        <div className="flex justify-center space-x-4 mb-6">
-          <button 
-            onClick={handleAddPlan}
-            className="flex items-center space-x-2 text-black font-ibm text-base font-medium leading-[110%] hover:text-gray-600 transition-colors"
-          >
-            <span className="text-lg">+</span>
-            <span>Добавить план</span>
-          </button>
-          <button 
-            onClick={handleAddCategory}
-            className="flex items-center space-x-2 text-black font-ibm text-base font-medium leading-[110%] hover:text-gray-600 transition-colors"
-          >
-            <span className="text-lg">+</span>
-            <span>Добавить категорию</span>
-          </button>
+          </div>
         </div>
 
+        
 
-        {/* My Goals Section */}
-        <div className="bg-gray-100 rounded-[27px] mb-2">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-black font-ibm text-lg font-medium leading-[110%]">Мои цели</h3>
-              <button 
-                onClick={() => setShowGoalsTip(!showGoalsTip)}
-                className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-colors"
-              >
-                <span className="text-black font-ibm text-sm font-medium">i</span>
-              </button>
-            </div>
-            {showGoalsTip && (
-              <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                <div className="text-gray-700 font-ibm text-sm leading-[110%]">
-                  В среднем вы тратите 2 500₽ в месяц на такси. Если использовать общественный транспорт 2 раза в неделю, вы будете больше двигаться и сэкономите 1 000₽ в месяц. Это поможет быстрее накопить на собаку - цель будет достигнута на 4 месяца раньше
-                </div>
-                <div className="text-gray-500 font-ibm text-xs mt-1">
-                  ИИ-совет от МультиБанка
-                </div>
+
+        {/* My Goals Container */}
+        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#EF4444' }}>
+          <div className="p-4" style={{ backgroundColor: '#EF4444' }}>
+            <div className="flex items-center mb-3">
+              <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.79-4 4m8 0a4 4 0 01-4 4m0-12v2m0 8v2m-4-6H6m12 0h-2" />
+                </svg>
               </div>
-            )}
+              <div className="text-white font-ibm text-lg font-medium leading-[110%]">Мои цели</div>
+            </div>
+            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+              Создавайте финансовые цели и отслеживайте прогресс накоплений
+            </div>
+            <button
+              onClick={handleAddGoal}
+              className="bg-white text-[#EF4444] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+            >
+              Создать цель
+            </button>
+            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
           </div>
-          <div className="bg-white border-t border-gray-200 rounded-b-[27px] p-4">
-            {/* Completed Goal */}
-            <div className="flex items-center space-x-3 mb-4">
+          <div className="px-4 pb-4 pt-0">
+            <div className="bg-white rounded-[27px] p-4">
+              {/* Completed Goal */}
+              <div className="flex items-center space-x-3 mb-4">
               <div className="w-8 h-8 border-2 border-green-500 rounded-full flex items-center justify-center">
                 <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -1181,7 +1223,7 @@ const BudgetPlanningPage = () => {
                   <div className="flex-1">
                     <div className="text-black font-ibm text-lg font-medium leading-[110%] mb-1">{plan.name}</div>
                     <div className="text-gray-600 font-ibm text-base font-light leading-[110%] mb-1">
-                      {plan.currentAmount.toLocaleString('ru-RU')} ₽ / {plan.targetAmount.toLocaleString('ru-RU')} ₽
+                      {Math.round(plan.currentAmount).toLocaleString('ru-RU')} ₽ из {Math.round(plan.targetAmount).toLocaleString('ru-RU')} ₽
                     </div>
                     <div className={`font-ibm text-sm font-light leading-[110%] ${
                       isGoalOverdue(plan.targetDate) ? 'text-red-500' : 'text-gray-600'
@@ -1192,117 +1234,86 @@ const BudgetPlanningPage = () => {
                 </div>
               ))}
             </div>
+            </div>
           </div>
         </div>
 
-        {/* Add Goal Button */}
-        <div className="flex justify-center mt-0 mb-0">
-          <button 
-            onClick={handleAddGoal}
-            className="flex items-center space-x-2 text-black font-ibm text-base font-medium leading-[110%] hover:text-blue-600 transition-colors"
-          >
-            <span className="text-lg">+</span>
-            <span>Добавить цель</span>
-          </button>
-        </div>
       </div>
 
-      {/* Joint Goals Section */}
-      <div className="bg-gray-100 rounded-[27px] mb-2 -mt-2">
-        <div className="p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-black font-ibm text-lg font-medium leading-[110%]">Совместные цели</h3>
-            <button 
-              onClick={() => setShowJointGoalsTip(!showJointGoalsTip)}
-              className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-colors"
-            >
-              <span className="text-black font-ibm text-sm font-medium">i</span>
-            </button>
-          </div>
-          {showJointGoalsTip && (
-            <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-              <div className="text-gray-700 font-ibm text-sm leading-[110%]">
-                Совместные цели помогают накапливать деньги вместе с близкими. Пригласите участников и отслеживайте прогресс в реальном времени
-              </div>
-              <div className="text-gray-500 font-ibm text-xs mt-1">
-                ИИ-совет от МультиБанка
-              </div>
-            </div>
-          )}
+      {/* Joint Goals Container */}
+      <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#F59E0C' }}>
+        {/* Header removed per request */}
 
-          {/* New Joint Goal Section */}
-          <div className="bg-blue-50 rounded-2xl p-4 mb-4 shadow-sm border border-blue-100">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center mb-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mr-3">
+        {/* New Joint Goal Section */}
+        <div className="p-4 border-t border-white/20">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center mb-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                  Совместные цели
+                </div>
+              </div>
+              <div className="text-white/90 font-ibm text-sm font-normal leading-[110%] mb-4">
+                Настройте новую цель с указанием суммы, срока и участников
+              </div>
+              <button 
+                onClick={handleAddJointGoal}
+                className="bg-white text-orange-600 font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/90 transition-colors"
+              >
+                Создать цель
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Joint Goals List */}
+        <div className="space-y-3 p-4 border-t border-white/20">
+          {jointGoals.map((goal) => (
+            <div key={goal.id} className="bg-white rounded-2xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <div className="text-blue-800 font-ibm text-lg font-medium leading-[110%]">
-                    Новая совместная цель
-                  </div>
-                </div>
-                <div className="text-blue-700 font-ibm text-sm font-normal leading-[110%] mb-4">
-                  Настройте новую цель с указанием суммы, срока и участников
-                </div>
-                <button 
-                  onClick={handleAddJointGoal}
-                  className="bg-blue-600 text-white font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors"
-                >
-                  Создать цель
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Joint Goals List */}
-          <div className="space-y-3">
-            {jointGoals.map((goal) => (
-              <div key={goal.id} className="bg-white rounded-2xl p-4 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                        {goal.name}
-                      </div>
-                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                        {goal.participants} участника • до {formatDate(goal.targetDate)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                      {goal.currentAmount.toLocaleString()} ₽
+                  <div>
+                    <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                      {goal.name}
                     </div>
                     <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                      из {goal.targetAmount.toLocaleString()} ₽
+                      {goal.participants} участника • до {formatDate(goal.targetDate)}
                     </div>
                   </div>
                 </div>
-                
-                {/* Progress Bar */}
-                <div className="mb-3">
-                  <div className="flex justify-between text-sm text-gray-600 mb-1">
-                    <span>{Math.round((goal.currentAmount / goal.targetAmount) * 100)}%</span>
-                    <span>{goal.targetAmount.toLocaleString()} ₽</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)}%` }}
-                    ></div>
-                  </div>
+                {/* Убрали правый блок с суммами; суммы перенесены в блок ниже */}
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="mb-3">
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>{Math.round((goal.currentAmount / goal.targetAmount) * 100)}%</span>
+                  <span>
+                    {Math.round(goal.currentAmount).toLocaleString('ru-RU')} ₽ из {Math.round(goal.targetAmount).toLocaleString('ru-RU')} ₽
+                  </span>
                 </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
 
-                {/* Participants */}
-                <div className="flex items-center justify-between">
+              {/* Participants / Actions / Invite */}
+              <div className="space-y-3">
+                {/* 1-я строка: участники */}
+                <div className="flex items-center">
                   <button 
                     onClick={() => handleShowParticipants(goal)}
                     className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-colors"
@@ -1323,85 +1334,112 @@ const BudgetPlanningPage = () => {
                       {goal.participants} участника
                     </span>
                   </button>
+                </div>
+
+                {/* 2-я строка: действия */}
+                <div className="flex items-center space-x-1 min-[360px]:space-x-2">
+                  <button className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-gray-100 text-gray-800 font-ibm text-xs min-[360px]:text-sm hover:bg-gray-200 transition-colors" onClick={() => { setSelectedJointGoal(goal); setEditJointGoalData({ name: goal.name, targetAmount: String(goal.targetAmount), targetDate: goal.targetDate }); setShowEditJointGoalModal(true); }}>
+                    Изменить
+                  </button>
+                  <button className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-red-100 text-red-700 font-ibm text-xs min-[360px]:text-sm hover:bg-red-200 transition-colors" onClick={() => { setSelectedJointGoal(goal); setShowDeleteJointGoalModal(true); }}>
+                    Удалить
+                  </button>
+                  <button className="flex-1 px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg bg-green-100 text-green-700 font-ibm text-xs min-[360px]:text-sm hover:bg-green-200 transition-colors" onClick={() => { setSelectedJointGoal(goal); setTopUpJointAmount(''); setShowTopUpJointGoalModal(true); }}>
+                    Пополнить
+                  </button>
+                </div>
+
+                {/* 3-я строка: пригласить по ссылке */}
+                <div className="w-full">
                   <button 
                     onClick={() => handleInviteByLink(goal.id)}
-                    className="bg-white border border-blue-500 text-blue-600 font-ibm text-sm font-medium px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                    className="w-full bg-white border border-blue-500 text-blue-600 font-ibm text-xs min-[360px]:text-sm font-medium px-2 min-[360px]:px-3 py-1.5 min-[360px]:py-2 rounded-lg hover:bg-blue-50 transition-colors"
                   >
                     {copiedGoalId === goal.id ? 'Скопировано' : 'Пригласить по ссылке'}
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Autopay Section */}
-      <div className="bg-gray-100 rounded-[27px] mb-4">
+      <div className="rounded-[27px] border border-gray-200 mb-8 overflow-hidden" style={{ backgroundColor: '#844FD9' }}>
+        {/* New Autopay Section - unified background */}
         <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-black font-ibm text-lg font-medium leading-[110%]">Автоплатежи</h3>
-            <button 
-              onClick={handleAddAutopay}
-              className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
-            >
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          <div className="flex items-center mb-3">
+            <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
-            </button>
+            </div>
+            <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+              Автоплатежи
+            </div>
           </div>
+          <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+            Настройте автоматические платежи для регулярных трат
+          </div>
+          <button
+            onClick={handleAddAutopay}
+            className="bg-white text-[#844FD9] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+          >
+            Создать автоплатеж
+          </button>
+          <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+        </div>
 
-          {/* Autopay List */}
-          <div className="space-y-3">
-            {autopays.map((autopay) => (
-              <div key={autopay.id} className="bg-white rounded-2xl p-4 border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      autopay.category === 'ЖКХ' ? 'bg-orange-500' : 
-                      autopay.category === 'Кредиты' ? 'bg-red-500' : 'bg-blue-500'
-                    }`}>
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                        {autopay.name}
-                      </div>
-                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                        {autopay.category} • {autopay.card}
-                      </div>
-                    </div>
+        {/* Autopay List */}
+        <div className="space-y-3 px-4 pb-4 pt-0">
+          {autopays.map((autopay) => (
+            <div key={autopay.id} className="bg-white rounded-2xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    autopay.category === 'ЖКХ' ? 'bg-orange-500' : 
+                    autopay.category === 'Кредиты' ? 'bg-red-500' : 'bg-blue-500'
+                  }`}>
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
                   </div>
-                  <div className="text-right">
-                    <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                      {autopay.amount.toLocaleString()} ₽
+                  <div>
+                    <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                      {autopay.name}
                     </div>
                     <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                      {autopay.frequency === 'monthly' ? 'Ежемесячно' : 'Ежеквартально'}
+                      {autopay.category} • {autopay.card}
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="text-gray-600 font-ibm text-sm">
-                    Следующий платёж: {autopay.nextDate}
+                <div className="text-right">
+                  <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                    {autopay.amount.toLocaleString()} ₽
                   </div>
-                  <button
-                    onClick={() => handleToggleAutopay(autopay.id)}
-                    className={`px-3 py-1 rounded-lg font-ibm text-sm font-medium transition-colors ${
-                      autopay.status === 'active' 
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {autopay.status === 'active' ? 'Активен' : 'Приостановлен'}
-                  </button>
+                  <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                    {autopay.frequency === 'monthly' ? 'Ежемесячно' : 'Ежеквартально'}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+                
+              <div className="flex items-center justify-between">
+                <div className="text-gray-600 font-ibm text-sm">
+                  Следующий платёж: {autopay.nextDate}
+                </div>
+                <button
+                  onClick={() => handleToggleAutopay(autopay.id)}
+                  className={`px-3 py-1 rounded-lg font-ibm text-sm font-medium transition-colors ${
+                    autopay.status === 'active' 
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {autopay.status === 'active' ? 'Активен' : 'Приостановлен'}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -2243,6 +2281,295 @@ const BudgetPlanningPage = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Joint Goal Modal */}
+      {showEditJointGoalModal && selectedJointGoal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {setShowEditJointGoalModal(false); setSelectedJointGoal(null);}}>
+          <div className="bg-white rounded-3xl p-6 mx-4 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+                Редактировать совместную цель
+              </h2>
+              <button 
+                onClick={() => {setShowEditJointGoalModal(false); setSelectedJointGoal(null);}}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Goal Name */}
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Название цели
+                </label>
+                <input
+                  type="text"
+                  value={editJointGoalData.name}
+                  onChange={(e) => setEditJointGoalData({...editJointGoalData, name: e.target.value})}
+                  placeholder="Например: Свадьба"
+                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                />
+              </div>
+
+              {/* Target Amount */}
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Сумма (₽)
+                </label>
+                <input
+                  type="text"
+                  value={editJointGoalData.targetAmount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setEditJointGoalData({...editJointGoalData, targetAmount: value});
+                    }
+                  }}
+                  placeholder="500000"
+                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                />
+              </div>
+
+              {/* Target Date */}
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Срок
+                </label>
+                <input
+                  type="text"
+                  value={editJointGoalData.targetDate}
+                  onChange={(e) => setEditJointGoalData({...editJointGoalData, targetDate: e.target.value})}
+                  placeholder="2024-08-15"
+                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => {setShowEditJointGoalModal(false); setSelectedJointGoal(null);}}
+                className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-2xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-200 transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => {
+                  setJointGoals(prev => prev.map(g => g.id === selectedJointGoal.id ? {
+                    ...g,
+                    name: editJointGoalData.name || g.name,
+                    targetAmount: Number(editJointGoalData.targetAmount) || g.targetAmount,
+                    targetDate: editJointGoalData.targetDate || g.targetDate
+                  } : g));
+                  setShowEditJointGoalModal(false);
+                  setSelectedJointGoal(null);
+                }}
+                className="flex-1 px-4 py-3 bg-orange-500 border-0 rounded-2xl text-white font-ibm text-base font-medium hover:bg-orange-600 transition-all"
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+  {/* Delete Joint Goal Modal */}
+  {showDeleteJointGoalModal && selectedJointGoal && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {setShowDeleteJointGoalModal(false); setSelectedJointGoal(null);}}>
+      <div className="bg-white rounded-3xl p-6 mx-4 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+            Удалить совместную цель
+          </h2>
+          <button 
+            onClick={() => {setShowDeleteJointGoalModal(false); setSelectedJointGoal(null);}}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="text-gray-600 font-ibm text-base mb-6">
+          Вы уверены, что хотите удалить "{selectedJointGoal.name}"? Это действие нельзя отменить.
+        </div>
+
+        <div className="flex space-x-3">
+          <button
+            onClick={() => {setShowDeleteJointGoalModal(false); setSelectedJointGoal(null);}}
+            className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-2xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-200 transition-all"
+          >
+            Отмена
+          </button>
+          <button
+            onClick={() => {
+              setJointGoals(prev => prev.filter(g => g.id !== selectedJointGoal.id));
+              setShowDeleteJointGoalModal(false);
+              setSelectedJointGoal(null);
+            }}
+            className="flex-1 px-4 py-3 bg-red-500 border-0 rounded-2xl text-white font-ibm text-base font-medium hover:bg-red-600 transition-all"
+          >
+            Удалить
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Top Up Joint Goal Modal */}
+  {showTopUpJointGoalModal && selectedJointGoal && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => {setShowTopUpJointGoalModal(false); setSelectedJointGoal(null); setTopUpJointAmount(''); setSelectedCard(null);}}>
+      <div className="bg-white rounded-3xl p-6 mx-4 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+            Пополнить совместную цель
+          </h2>
+          <button 
+            onClick={() => {setShowTopUpJointGoalModal(false); setSelectedJointGoal(null); setTopUpJointAmount(''); setSelectedCard(null);}}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+              Сумма пополнения (₽)
+            </label>
+            <input
+              type="text"
+              value={topUpJointAmount}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || /^\d+$/.test(value)) {
+                  setTopUpJointAmount(value);
+                }
+              }}
+              placeholder="10000"
+              className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+              Выберите карту для пополнения
+            </label>
+            <div className="space-y-2">
+              <button
+                onClick={() => setSelectedCard('Альфа-Банк')}
+                className={`w-full p-3 rounded-xl border-2 transition-all ${
+                  selectedCard === 'Альфа-Банк' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">А</span>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-black font-ibm text-sm font-medium">Альфа-Банк</div>
+                      <div className="text-gray-500 font-ibm text-xs">**** 1234</div>
+                    </div>
+                  </div>
+                  <div className="text-black font-ibm text-sm font-medium">
+                    {bankBalances['Альфа-Банк']?.toLocaleString('ru-RU')} ₽
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setSelectedCard('ВТБ')}
+                className={`w-full p-3 rounded-xl border-2 transition-all ${
+                  selectedCard === 'ВТБ' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">В</span>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-black font-ibm text-sm font-medium">ВТБ</div>
+                      <div className="text-gray-500 font-ibm text-xs">**** 5678</div>
+                    </div>
+                  </div>
+                  <div className="text-black font-ibm text-sm font-medium">
+                    {bankBalances['ВТБ']?.toLocaleString('ru-RU')} ₽
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setSelectedCard('Т-Банк')}
+                className={`w-full p-3 rounded-xl border-2 transition-all ${
+                  selectedCard === 'Т-Банк' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
+                      <span className="text-black font-bold text-sm">Т</span>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-black font-ibm text-sm font-medium">Т-Банк</div>
+                      <div className="text-gray-500 font-ibm text-xs">**** 9012</div>
+                    </div>
+                  </div>
+                  <div className="text-black font-ibm text-sm font-medium">
+                    {bankBalances['Т-Банк']?.toLocaleString('ru-RU')} ₽
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
+          <button
+            onClick={() => {setShowTopUpJointGoalModal(false); setSelectedJointGoal(null); setTopUpJointAmount(''); setSelectedCard(null);}}
+            className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-2xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-200 transition-all"
+          >
+            Отмена
+          </button>
+          <button
+            onClick={() => {
+              const add = Number(topUpJointAmount) || 0;
+              setJointGoals(prev => prev.map(g => g.id === selectedJointGoal.id ? {
+                ...g,
+                currentAmount: Math.min(g.targetAmount, g.currentAmount + add)
+              } : g));
+              setShowTopUpJointGoalModal(false);
+              setSelectedJointGoal(null);
+              setTopUpJointAmount('');
+              setSelectedCard(null);
+            }}
+            disabled={!selectedCard || !topUpJointAmount || Number(topUpJointAmount) <= 0}
+            className={`flex-1 px-4 py-3 border-0 rounded-2xl text-white font-ibm text-base font-medium transition-all ${
+              selectedCard && topUpJointAmount && Number(topUpJointAmount) > 0
+                ? 'bg-orange-500 hover:bg-orange-600 cursor-pointer' 
+                : 'bg-gray-300 cursor-not-allowed'
+            }`}
+          >
+            Пополнить
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
 
       {/* Add Autopay Modal */}
       {showAddAutopayModal && (
