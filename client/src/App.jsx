@@ -40,14 +40,14 @@ function ScrollToTop() {
 }
 
 function App() {
-  const { user, isLoading, initializeAuth, setUser, isAuthenticated, setAuthenticated, checkAuthentication } = useAuthStore()
+  const { user, isLoading, initializeAuth, setUser, isAuthenticated, setAuthenticated } = useAuthStore()
   
   // Инициализируем Telegram кнопки
   useTelegramButtons()
 
   useEffect(() => {
-    // Check if user is already authenticated
-    checkAuthentication()
+    // Always reset authentication state on page load/refresh
+    setAuthenticated(false)
     
     // Simple Telegram WebApp initialization
     const webApp = getTelegramWebApp()
@@ -68,7 +68,7 @@ function App() {
     initializeAuth().finally(() => {
       clearTimeout(authTimeout)
     })
-  }, [initializeAuth, checkAuthentication])
+  }, [initializeAuth, setAuthenticated])
 
   // Проверяем, нужно ли показывать экран входа с паролем
   const shouldShowPasswordAuth = !isAuthenticated && !isLoading

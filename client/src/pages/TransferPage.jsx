@@ -369,7 +369,7 @@ const TransferPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white w-full overflow-visible pb-8" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white w-full overflow-visible pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 pt-6 pb-4 animate-slide-in-down">
         <div className="flex items-center justify-between">
@@ -694,7 +694,7 @@ const TransferPage = () => {
       </div>
 
       {/* Transfer Button */}
-      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 animate-slide-in-down">
+      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 pb-6 animate-slide-in-down">
         <button 
           onClick={handleTransfer}
           className="w-full h-9 sm:h-10 md:h-11 lg:h-12 xl:h-13 2xl:h-14 bg-red-500 hover:bg-red-600 text-white rounded-[25px] sm:rounded-[30px] md:rounded-[35px] lg:rounded-[40px] xl:rounded-[45px] 2xl:rounded-[50px] font-ibm text-sm sm:text-base md:text-lg lg:text-xl xl:text-xl 2xl:text-2xl font-medium leading-[110%] transition-colors"

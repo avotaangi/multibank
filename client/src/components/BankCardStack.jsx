@@ -14,6 +14,18 @@ const BankCardStack = () => {
   const startX = useRef(0);
   const currentX = useRef(0);
 
+  // Функция для форматирования имени: первое слово целиком, второе - одна буква с точкой
+  const formatDisplayName = (fullName) => {
+    if (!fullName) return '';
+    const nameParts = fullName.trim().split(' ');
+    if (nameParts.length === 1) return nameParts[0];
+    if (nameParts.length === 2) {
+      return `${nameParts[0]} ${nameParts[1][0]}.`;
+    }
+    // Если больше двух слов, берем первое и последнее
+    return `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`;
+  };
+
   const baseCards = [
     {
       id: 'alfa',
@@ -209,7 +221,7 @@ const BankCardStack = () => {
               {/* Bottom section */}
               <div className="flex items-end justify-between">
                 <div className="flex flex-col">
-                  <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm mb-1">{telegramUser.displayName}</div>
+                  <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm mb-1">{formatDisplayName(telegramUser.displayName)}</div>
                   <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm">{cards[0].cardNumber}</div>
                 </div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">МИР</div>
@@ -239,7 +251,7 @@ const BankCardStack = () => {
               {/* Bottom section */}
               <div className="flex items-end justify-between">
                 <div className="flex flex-col">
-                  <div className="text-white text-sm font-normal font-ibm mb-1">{telegramUser.displayName}</div>
+                  <div className="text-white text-sm font-normal font-ibm mb-1">{formatDisplayName(telegramUser.displayName)}</div>
                   <div className="text-white text-sm font-normal font-ibm">{cards[1].cardNumber}</div>
                 </div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">МИР</div>
@@ -274,7 +286,7 @@ const BankCardStack = () => {
               {/* Bottom section */}
               <div className="flex items-end justify-between">
                 <div className="flex flex-col">
-                  <div className="text-white text-sm font-normal font-ibm mb-1">{telegramUser.displayName}</div>
+                  <div className="text-white text-sm font-normal font-ibm mb-1">{formatDisplayName(telegramUser.displayName)}</div>
                   <div className="text-white text-sm font-normal font-ibm">{cards[2].cardNumber}</div>
                 </div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">МИР</div>

@@ -62,9 +62,54 @@ const PasswordAuth = ({ onAuthenticated }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      {/* Welcome Banner */}
+      <div className="relative bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-4 text-center shadow-2xl overflow-hidden mx-4 mt-4 mb-4 rounded-2xl">
+        {/* Shimmer Effect */}
+        <div className="absolute inset-0 animate-shimmer"></div>
+        
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/20 to-transparent"></div>
+          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full animate-float"></div>
+          <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/10 rounded-full animate-float" style={{animationDelay: '1.5s'}}></div>
+          <div className="absolute top-1/2 right-1/4 w-12 h-12 bg-white/5 rounded-full animate-float" style={{animationDelay: '3s'}}></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10">
+          {/* Bank Icon */}
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-full mb-3 shadow-lg">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          
+          {/* Welcome Text */}
+          <div className="space-y-1">
+            <div className="text-sm font-medium animate-fade-in-up">
+              Вас приветствует
+            </div>
+            <div className="text-lg font-bold tracking-wide animate-fade-in-up-delay bg-gradient-to-r from-yellow-200 to-white bg-clip-text text-transparent">
+              Мультибанк
+            </div>
+            <div className="text-xs opacity-90 animate-fade-in-up-delay-2">
+              Ваш надежный финансовый партнер
+            </div>
+          </div>
+        </div>
+        
+        {/* Animated Border */}
+        <div className="absolute bottom-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 animate-pulse"></div>
+        
+        {/* Floating Particles */}
+        <div className="absolute top-2 left-2 w-1 h-1 bg-white/20 rounded-full animate-float" style={{animationDelay: '0.5s'}}></div>
+        <div className="absolute top-4 right-4 w-0.5 h-0.5 bg-white/30 rounded-full animate-float" style={{animationDelay: '2s'}}></div>
+        <div className="absolute bottom-4 left-4 w-1 h-1 bg-white/15 rounded-full animate-float" style={{animationDelay: '4s'}}></div>
+      </div>
 
       {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 mx-4">
       <div className="flex flex-col items-center space-y-8">
         {/* User Name */}
         <div className="text-center">
@@ -155,6 +200,7 @@ const PasswordAuth = ({ onAuthenticated }) => {
             </svg>
           </button>
         </div>
+      </div>
       </div>
 
     </div>
