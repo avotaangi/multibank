@@ -112,23 +112,12 @@ const MyCardsPage = () => {
     navigate(`/card-analytics/${card.id}`);
   };
 
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
 
   return (
     <div className="min-h-screen bg-white animate-slide-up" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="relative z-10 px-3 sm:px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <button 
-            onClick={handleBackToDashboard}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
           <div className="text-black font-ibm text-lg font-normal leading-[110%] text-center">
             Мои карты
           </div>

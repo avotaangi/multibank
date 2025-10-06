@@ -4,23 +4,12 @@ import { useNavigate } from 'react-router-dom';
 const DepositsPage = () => {
   const navigate = useNavigate();
 
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <button 
-            onClick={handleBackToDashboard}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Вклады
           </div>
@@ -108,32 +97,6 @@ const DepositsPage = () => {
             </div>
           </div>
 
-          {/* New Joint Goal Section */}
-          <div className="bg-white rounded-2xl p-6 mb-6 animate-slide-in-up-very-slow shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center mb-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mr-3">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                    Новая совместная цель
-                  </div>
-                </div>
-                <div className="text-gray-600 font-ibm text-sm font-normal leading-[110%] mb-4">
-                  Настройте новую цель с указанием суммы, срока и участников
-                </div>
-                <button className="bg-blue-500 text-white font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors">
-                  Создать цель
-                </button>
-              </div>
-              <div className="text-blue-500 font-ibm text-2xl font-bold ml-4">
-                +
-              </div>
-            </div>
-          </div>
 
           {/* Automation Section */}
           <div className="bg-white rounded-2xl p-6 animate-slide-in-up-very-slow shadow-sm border border-gray-200">

@@ -158,9 +158,6 @@ const TransferPage = () => {
     { id: 'other', name: 'Другой банк', logo: '+', color: '#EEEEEE', user: null, balance: null }
   ];
 
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
 
   const handleAmountChange = (e) => {
     setAmount(e.target.value);
@@ -376,14 +373,6 @@ const TransferPage = () => {
       {/* Header */}
       <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 pt-6 pb-4 animate-slide-in-down">
         <div className="flex items-center justify-between">
-          <button 
-            onClick={handleBackToDashboard}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Платежи
           </div>

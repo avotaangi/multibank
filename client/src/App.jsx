@@ -1,12 +1,13 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './stores/authStore'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getTelegramWebApp } from './utils/telegram'
 import { useTelegramButtons } from './hooks/useTelegramButtons'
 
 // Components
 import Layout from './components/Layout'
 import LoadingSpinner from './components/LoadingSpinner'
+import PasswordAuth from './components/PasswordAuth'
 
 // Pages
 import LoginPage from './pages/LoginPage'
@@ -40,6 +41,7 @@ function ScrollToTop() {
 
 function App() {
   const { user, isLoading, initializeAuth, setUser } = useAuthStore()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   
   // Инициализируем Telegram кнопки
   useTelegramButtons()
@@ -66,6 +68,9 @@ function App() {
     })
   }, [initializeAuth])
 
+  // Проверяем, нужно ли показывать экран входа с паролем
+  const shouldShowPasswordAuth = !isAuthenticated && !isLoading
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -75,6 +80,11 @@ function App() {
         </div>
       </div>
     )
+  }
+
+  // Показываем экран входа с паролем
+  if (shouldShowPasswordAuth) {
+    return <PasswordAuth onAuthenticated={() => setIsAuthenticated(true)} />
   }
 
   return (

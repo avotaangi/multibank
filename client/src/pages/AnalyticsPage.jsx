@@ -208,9 +208,6 @@ const AnalyticsPage = () => {
     }
   };
 
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
 
   const handleCardSelect = (card) => {
     setSelectedCard(card);
@@ -229,14 +226,6 @@ const AnalyticsPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <button 
-            onClick={handleBackToDashboard}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Аналитика
           </div>

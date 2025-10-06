@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
+import { getTelegramWebApp } from '../utils/telegram';
 
 const BudgetPlanningPage = () => {
   const navigate = useNavigate();
@@ -8,6 +9,11 @@ const BudgetPlanningPage = () => {
   const [showLifestyleTip, setShowLifestyleTip] = useState(false);
   const [showDreamTip, setShowDreamTip] = useState(false);
   const [showGoalsTip, setShowGoalsTip] = useState(false);
+  const [showJointGoalsTip, setShowJointGoalsTip] = useState(false);
+  const [showAddJointGoalModal, setShowAddJointGoalModal] = useState(false);
+  const [showAddAutopayModal, setShowAddAutopayModal] = useState(false);
+  const [showAutopayConfirmModal, setShowAutopayConfirmModal] = useState(false);
+  const [autopayToToggle, setAutopayToToggle] = useState(null);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
@@ -52,6 +58,74 @@ const BudgetPlanningPage = () => {
     name: '',
     color: ''
   });
+  const [jointGoals, setJointGoals] = useState([
+    {
+      id: 1,
+      name: 'Свадьба',
+      targetAmount: 500000,
+      currentAmount: 150000,
+      targetDate: '2024-08-15',
+      participants: 2,
+      avatars: [
+        'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
+      ]
+    },
+    {
+      id: 2,
+      name: 'Путешествие в Европу',
+      targetAmount: 300000,
+      currentAmount: 80000,
+      targetDate: '2024-06-01',
+      participants: 4,
+      avatars: [
+        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
+        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
+        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face'
+      ]
+    }
+  ]);
+  const [newJointGoalData, setNewJointGoalData] = useState({
+    name: '',
+    targetAmount: '',
+    targetDate: '',
+    description: ''
+  });
+  const [autopays, setAutopays] = useState([
+    {
+      id: 1,
+      name: 'ЖКХ - УК "Дом"',
+      category: 'ЖКХ',
+      amount: 8500,
+      frequency: 'monthly',
+      nextDate: '2024-02-15',
+      card: 'Альфа-Банк',
+      status: 'active'
+    },
+    {
+      id: 2,
+      name: 'Кредит - Сбербанк',
+      category: 'Кредиты',
+      amount: 25000,
+      frequency: 'monthly',
+      nextDate: '2024-02-20',
+      card: 'ВТБ',
+      status: 'active'
+    }
+  ]);
+  const [newAutopayData, setNewAutopayData] = useState({
+    name: '',
+    category: 'ЖКХ',
+    amount: '',
+    frequency: 'monthly',
+    card: '',
+    recipient: '',
+    notifications: true
+  });
+  const [copiedGoalId, setCopiedGoalId] = useState(null);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [selectedGoalParticipants, setSelectedGoalParticipants] = useState(null);
   const [plans, setPlans] = useState([]);
   const [categories, setCategories] = useState([]);
   const [categoryPlans, setCategoryPlans] = useState({});
@@ -99,9 +173,6 @@ const BudgetPlanningPage = () => {
     return `conic-gradient(from 0deg, ${gradients})`;
   };
 
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
 
   const handleAddPlan = () => {
     setShowAddPlanModal(true);
@@ -176,6 +247,195 @@ const BudgetPlanningPage = () => {
     setShowAddGoalModal(false);
     setNewGoalData({ name: '', amount: '', targetDate: '' });
   };
+
+  // Joint Goals Functions
+  const handleAddJointGoal = () => {
+    setShowAddJointGoalModal(true);
+  };
+
+  const handleCloseAddJointGoalModal = () => {
+    setShowAddJointGoalModal(false);
+    setNewJointGoalData({ name: '', targetAmount: '', targetDate: '', description: '' });
+  };
+
+  const handleShowParticipants = (goal) => {
+    setSelectedGoalParticipants(goal);
+    setShowParticipantsModal(true);
+  };
+
+  const handleCloseParticipantsModal = () => {
+    setShowParticipantsModal(false);
+    setSelectedGoalParticipants(null);
+  };
+
+  const handleRemoveParticipant = (goalId, participantIndex) => {
+    setJointGoals(prev => prev.map(goal => {
+      if (goal.id === goalId) {
+        const newAvatars = [...goal.avatars];
+        newAvatars.splice(participantIndex, 1);
+        return {
+          ...goal,
+          participants: Math.max(1, goal.participants - 1),
+          avatars: newAvatars
+        };
+      }
+      return goal;
+    }));
+    
+    // Обновляем модальное окно если оно открыто
+    if (selectedGoalParticipants && selectedGoalParticipants.id === goalId) {
+      const updatedGoal = jointGoals.find(g => g.id === goalId);
+      if (updatedGoal) {
+        setSelectedGoalParticipants(updatedGoal);
+      }
+    }
+  };
+
+  const handleCreateJointGoal = () => {
+    if (newJointGoalData.name && newJointGoalData.targetAmount && newJointGoalData.targetDate) {
+      const newGoal = {
+        id: Date.now(),
+        name: newJointGoalData.name,
+        targetAmount: parseInt(newJointGoalData.targetAmount),
+        currentAmount: 0,
+        targetDate: newJointGoalData.targetDate,
+        participants: 1,
+        avatars: ['https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face']
+      };
+      setJointGoals([...jointGoals, newGoal]);
+      handleCloseAddJointGoalModal();
+    }
+  };
+
+  // Autopay Functions
+  const handleAddAutopay = () => {
+    setShowAddAutopayModal(true);
+  };
+
+  const handleCloseAddAutopayModal = () => {
+    setShowAddAutopayModal(false);
+    setNewAutopayData({
+      name: '',
+      category: 'ЖКХ',
+      amount: '',
+      frequency: 'monthly',
+      card: '',
+      recipient: '',
+      notifications: true
+    });
+  };
+
+  const handleCreateAutopay = () => {
+    if (newAutopayData.name && newAutopayData.amount && newAutopayData.card) {
+      const newAutopay = {
+        id: Date.now(),
+        name: newAutopayData.name,
+        category: newAutopayData.category,
+        amount: parseInt(newAutopayData.amount),
+        frequency: newAutopayData.frequency,
+        nextDate: '2024-03-15', // Примерная дата
+        card: newAutopayData.card,
+        status: 'active'
+      };
+      setAutopays([...autopays, newAutopay]);
+      handleCloseAddAutopayModal();
+    }
+  };
+
+  const handleToggleAutopay = (autopayId) => {
+    const autopay = autopays.find(a => a.id === autopayId);
+    setAutopayToToggle(autopay);
+    setShowAutopayConfirmModal(true);
+  };
+
+  const handleConfirmToggleAutopay = () => {
+    if (autopayToToggle) {
+      setAutopays(prev => prev.map(autopay => 
+        autopay.id === autopayToToggle.id 
+          ? { ...autopay, status: autopay.status === 'active' ? 'paused' : 'active' }
+          : autopay
+      ));
+    }
+    setShowAutopayConfirmModal(false);
+    setAutopayToToggle(null);
+  };
+
+  const handleCancelToggleAutopay = () => {
+    setShowAutopayConfirmModal(false);
+    setAutopayToToggle(null);
+  };
+
+  // Referral link helpers
+  const appBaseUrl = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.origin + window.location.pathname;
+    }
+    return '';
+  }, []);
+
+  const buildReferralLink = (goalId) => {
+    // Telegram deep-link via t.me is usually formed outside WebApp; for WebApp we can share current URL with param
+    const url = new URL(appBaseUrl);
+    url.searchParams.set('join_goal', String(goalId));
+    return url.toString();
+  };
+
+  const handleInviteByLink = async (goalId) => {
+    const link = buildReferralLink(goalId);
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedGoalId(goalId);
+      setTimeout(() => setCopiedGoalId(null), 1500);
+    } catch (_e) {
+      // Fallback: open share dialog if available
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: 'Приглашение в совместную цель', text: 'Присоединяйся к цели в МультиБанк', url: link });
+        } catch (_) {}
+      }
+    }
+  };
+
+  // Auto-join by start param (join_goal) when Mini App opens
+  useEffect(() => {
+    try {
+      const webApp = getTelegramWebApp();
+      // Try URL first
+      const params = new URLSearchParams(window.location.search);
+      const joinParam = params.get('join_goal');
+      if (joinParam) {
+        const joinId = Number(joinParam);
+        const goal = jointGoals.find(g => g.id === joinId);
+        if (goal) {
+          // simulate join: increment participants and add placeholder avatar once
+          setJointGoals(prev => prev.map(g => g.id === joinId ? {
+            ...g,
+            participants: g.participants + 1,
+            avatars: g.avatars.length < 6 ? [...g.avatars, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face'] : g.avatars
+          } : g));
+          // clean param from URL (no reload)
+          const clean = new URL(window.location.href);
+          clean.searchParams.delete('join_goal');
+          window.history.replaceState({}, document.title, clean.toString());
+        }
+        return;
+      }
+      // Also try Telegram initDataUnsafe.start_param if present
+      const startParam = webApp?.initDataUnsafe?.start_param;
+      if (startParam && startParam.startsWith('join_goal_')) {
+        const joinId = Number(startParam.replace('join_goal_', ''));
+        const goal = jointGoals.find(g => g.id === joinId);
+        if (goal) {
+          setJointGoals(prev => prev.map(g => g.id === joinId ? {
+            ...g,
+            participants: g.participants + 1,
+            avatars: g.avatars.length < 6 ? [...g.avatars, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face'] : g.avatars
+          } : g));
+        }
+      }
+    } catch (_e) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmitGoal = (e) => {
     e.preventDefault();
@@ -487,14 +747,6 @@ const BudgetPlanningPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <button 
-            onClick={handleBackToDashboard}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Планирование бюджета
           </div>
@@ -503,7 +755,7 @@ const BudgetPlanningPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="px-5 pb-20">
+      <div className="px-5 pb-8">
         {/* Budget Overview Section */}
         <div className="flex items-center justify-between mb-8">
           {/* Donut Chart */}
@@ -868,8 +1120,9 @@ const BudgetPlanningPage = () => {
           </button>
         </div>
 
+
         {/* My Goals Section */}
-        <div className="bg-gray-100 rounded-[27px] mb-4">
+        <div className="bg-gray-100 rounded-[27px] mb-2">
           <div className="p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-black font-ibm text-lg font-medium leading-[110%]">Мои цели</h3>
@@ -943,7 +1196,7 @@ const BudgetPlanningPage = () => {
         </div>
 
         {/* Add Goal Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center mt-0 mb-0">
           <button 
             onClick={handleAddGoal}
             className="flex items-center space-x-2 text-black font-ibm text-base font-medium leading-[110%] hover:text-blue-600 transition-colors"
@@ -951,6 +1204,204 @@ const BudgetPlanningPage = () => {
             <span className="text-lg">+</span>
             <span>Добавить цель</span>
           </button>
+        </div>
+      </div>
+
+      {/* Joint Goals Section */}
+      <div className="bg-gray-100 rounded-[27px] mb-2 -mt-2">
+        <div className="p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-black font-ibm text-lg font-medium leading-[110%]">Совместные цели</h3>
+            <button 
+              onClick={() => setShowJointGoalsTip(!showJointGoalsTip)}
+              className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-colors"
+            >
+              <span className="text-black font-ibm text-sm font-medium">i</span>
+            </button>
+          </div>
+          {showJointGoalsTip && (
+            <div className="mt-3 p-2 bg-gray-50 rounded-lg">
+              <div className="text-gray-700 font-ibm text-sm leading-[110%]">
+                Совместные цели помогают накапливать деньги вместе с близкими. Пригласите участников и отслеживайте прогресс в реальном времени
+              </div>
+              <div className="text-gray-500 font-ibm text-xs mt-1">
+                ИИ-совет от МультиБанка
+              </div>
+            </div>
+          )}
+
+          {/* New Joint Goal Section */}
+          <div className="bg-blue-50 rounded-2xl p-4 mb-4 shadow-sm border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center mb-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="text-blue-800 font-ibm text-lg font-medium leading-[110%]">
+                    Новая совместная цель
+                  </div>
+                </div>
+                <div className="text-blue-700 font-ibm text-sm font-normal leading-[110%] mb-4">
+                  Настройте новую цель с указанием суммы, срока и участников
+                </div>
+                <button 
+                  onClick={handleAddJointGoal}
+                  className="bg-blue-600 text-white font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  Создать цель
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Joint Goals List */}
+          <div className="space-y-3">
+            {jointGoals.map((goal) => (
+              <div key={goal.id} className="bg-white rounded-2xl p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                        {goal.name}
+                      </div>
+                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                        {goal.participants} участника • до {formatDate(goal.targetDate)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                      {goal.currentAmount.toLocaleString()} ₽
+                    </div>
+                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      из {goal.targetAmount.toLocaleString()} ₽
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="mb-3">
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>{Math.round((goal.currentAmount / goal.targetAmount) * 100)}%</span>
+                    <span>{goal.targetAmount.toLocaleString()} ₽</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Participants */}
+                <div className="flex items-center justify-between">
+                  <button 
+                    onClick={() => handleShowParticipants(goal)}
+                    className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-colors"
+                  >
+                    <div className="flex -space-x-2">
+                      {goal.avatars.slice(0, 3).map((avatar, index) => (
+                        <div key={index} className="w-6 h-6 rounded-full border-2 border-white overflow-hidden">
+                          <img src={avatar} alt={`Participant ${index + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                      {goal.avatars.length > 3 && (
+                        <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-300 flex items-center justify-center">
+                          <span className="text-xs text-gray-600">+{goal.avatars.length - 3}</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-gray-600 font-ibm text-sm">
+                      {goal.participants} участника
+                    </span>
+                  </button>
+                  <button 
+                    onClick={() => handleInviteByLink(goal.id)}
+                    className="bg-white border border-blue-500 text-blue-600 font-ibm text-sm font-medium px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    {copiedGoalId === goal.id ? 'Скопировано' : 'Пригласить по ссылке'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Autopay Section */}
+      <div className="bg-gray-100 rounded-[27px] mb-4">
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-black font-ibm text-lg font-medium leading-[110%]">Автоплатежи</h3>
+            <button 
+              onClick={handleAddAutopay}
+              className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Autopay List */}
+          <div className="space-y-3">
+            {autopays.map((autopay) => (
+              <div key={autopay.id} className="bg-white rounded-2xl p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      autopay.category === 'ЖКХ' ? 'bg-orange-500' : 
+                      autopay.category === 'Кредиты' ? 'bg-red-500' : 'bg-blue-500'
+                    }`}>
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                        {autopay.name}
+                      </div>
+                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                        {autopay.category} • {autopay.card}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                      {autopay.amount.toLocaleString()} ₽
+                    </div>
+                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      {autopay.frequency === 'monthly' ? 'Ежемесячно' : 'Ежеквартально'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="text-gray-600 font-ibm text-sm">
+                    Следующий платёж: {autopay.nextDate}
+                  </div>
+                  <button
+                    onClick={() => handleToggleAutopay(autopay.id)}
+                    className={`px-3 py-1 rounded-lg font-ibm text-sm font-medium transition-colors ${
+                      autopay.status === 'active' 
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {autopay.status === 'active' ? 'Активен' : 'Приостановлен'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1620,6 +2071,380 @@ const BudgetPlanningPage = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Joint Goal Modal */}
+      {showAddJointGoalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+                Создать совместную цель
+              </h2>
+              <button 
+                onClick={handleCloseAddJointGoalModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleCreateJointGoal(); }} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Название цели
+                </label>
+                <input
+                  type="text"
+                  value={newJointGoalData.name}
+                  onChange={(e) => setNewJointGoalData({...newJointGoalData, name: e.target.value})}
+                  placeholder="Например: Свадьба"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Целевая сумма (₽)
+                </label>
+                <input
+                  type="text"
+                  value={newJointGoalData.targetAmount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setNewJointGoalData({...newJointGoalData, targetAmount: value});
+                    }
+                  }}
+                  placeholder="500000"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Дата достижения
+                </label>
+                <input
+                  type="date"
+                  value={newJointGoalData.targetDate}
+                  onChange={(e) => setNewJointGoalData({...newJointGoalData, targetDate: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Описание (необязательно)
+                </label>
+                <textarea
+                  value={newJointGoalData.description}
+                  onChange={(e) => setNewJointGoalData({...newJointGoalData, description: e.target.value})}
+                  placeholder="Расскажите о вашей цели..."
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseAddJointGoalModal}
+                  className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-4 bg-blue-500 text-white rounded-xl font-ibm text-base font-medium hover:bg-blue-600 transition-colors"
+                >
+                  Создать
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Participants Modal */}
+      {showParticipantsModal && selectedGoalParticipants && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+                Участники цели
+              </h2>
+              <button 
+                onClick={handleCloseParticipantsModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-black font-ibm text-lg font-medium leading-[110%] mb-2">
+                {selectedGoalParticipants.name}
+              </h3>
+              <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                {selectedGoalParticipants.participants} участника
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {selectedGoalParticipants.avatars.map((avatar, index) => (
+                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
+                  <div className="w-10 h-10 rounded-full overflow-hidden">
+                    <img src={avatar} alt={`Participant ${index + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                      Участник {index + 1}
+                    </div>
+                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      Присоединился к цели
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="text-green-500 font-ibm text-sm font-medium">
+                      Активен
+                    </div>
+                    <button
+                      onClick={() => handleRemoveParticipant(selectedGoalParticipants.id, index)}
+                      className="w-8 h-8 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center transition-colors"
+                      title="Удалить участника"
+                    >
+                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={handleCloseParticipantsModal}
+                className="w-full py-3 px-4 bg-blue-500 text-white rounded-xl font-ibm text-base font-medium hover:bg-blue-600 transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Autopay Modal */}
+      {showAddAutopayModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+                Создать автоплатёж
+              </h2>
+              <button 
+                onClick={handleCloseAddAutopayModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleCreateAutopay(); }} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Название платежа
+                </label>
+                <input
+                  type="text"
+                  value={newAutopayData.name}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, name: e.target.value})}
+                  placeholder="Например: ЖКХ - УК Дом"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Категория
+                </label>
+                <select
+                  value={newAutopayData.category}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, category: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="ЖКХ">ЖКХ</option>
+                  <option value="Кредиты">Кредиты</option>
+                  <option value="Прочие">Прочие регулярные платежи</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Сумма (₽)
+                </label>
+                <input
+                  type="text"
+                  value={newAutopayData.amount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setNewAutopayData({...newAutopayData, amount: value});
+                    }
+                  }}
+                  placeholder="8500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Периодичность
+                </label>
+                <select
+                  value={newAutopayData.frequency}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, frequency: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="monthly">Ежемесячно</option>
+                  <option value="quarterly">Ежеквартально</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Карта для списания
+                </label>
+                <select
+                  value={newAutopayData.card}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, card: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Выберите карту</option>
+                  <option value="Альфа-Банк">Альфа-Банк</option>
+                  <option value="ВТБ">ВТБ</option>
+                  <option value="Т-Банк">Т-Банк</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Получатель
+                </label>
+                <input
+                  type="text"
+                  value={newAutopayData.recipient}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, recipient: e.target.value})}
+                  placeholder="ИНН, ЕЛС или реквизиты"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="notifications"
+                  checked={newAutopayData.notifications}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, notifications: e.target.checked})}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="notifications" className="text-gray-700 font-ibm text-sm">
+                  Уведомления за 1-2 дня до списания
+                </label>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseAddAutopayModal}
+                  className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-4 bg-blue-500 text-white rounded-xl font-ibm text-base font-medium hover:bg-blue-600 transition-colors"
+                >
+                  Создать
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Autopay Toggle Confirmation Modal */}
+      {showAutopayConfirmModal && autopayToToggle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+                {autopayToToggle.status === 'active' ? 'Приостановить автоплатёж?' : 'Активировать автоплатёж?'}
+              </h2>
+              <button 
+                onClick={handleCancelToggleAutopay}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <div className="text-black font-ibm text-lg font-medium leading-[110%] mb-2">
+                  {autopayToToggle.name}
+                </div>
+                <div className="text-gray-600 font-ibm text-sm leading-[110%] mb-2">
+                  {autopayToToggle.category} • {autopayToToggle.card}
+                </div>
+                <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                  {autopayToToggle.amount.toLocaleString()} ₽
+                </div>
+              </div>
+              
+              <div className="text-gray-700 font-ibm text-sm leading-[110%]">
+                {autopayToToggle.status === 'active' 
+                  ? 'Автоплатёж будет приостановлен и не будет выполняться до повторной активации.'
+                  : 'Автоплатёж будет активирован и начнёт выполняться согласно расписанию.'
+                }
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancelToggleAutopay}
+                className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-50 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleConfirmToggleAutopay}
+                className={`flex-1 py-3 px-4 rounded-xl font-ibm text-base font-medium transition-colors ${
+                  autopayToToggle.status === 'active'
+                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                    : 'bg-green-500 text-white hover:bg-green-600'
+                }`}
+              >
+                {autopayToToggle.status === 'active' ? 'Приостановить' : 'Активировать'}
+              </button>
+            </div>
           </div>
         </div>
       )}
