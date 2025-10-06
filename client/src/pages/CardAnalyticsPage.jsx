@@ -4,6 +4,18 @@ import { Edit } from 'lucide-react';
 import useBalanceStore from '../stores/balanceStore';
 import { useTelegramUser } from '../hooks/useTelegramUser';
 
+// Функция для форматирования имени: первое слово целиком, второе - одна буква с точкой
+const formatDisplayName = (fullName) => {
+  if (!fullName) return '';
+  const nameParts = fullName.trim().split(' ');
+  if (nameParts.length === 1) return nameParts[0];
+  if (nameParts.length === 2) {
+    return `${nameParts[0]} ${nameParts[1][0]}.`;
+  }
+  // Если больше двух слов, берем первое и последнее
+  return `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`;
+};
+
 // CSS анимации
 const styles = `
   @keyframes fadeInUp {
@@ -366,7 +378,7 @@ const CardAnalyticsPage = () => {
                 {card.id === 'alfa' && (
                   <div className="text-white text-sm font-bold font-ibm mb-1">A</div>
                 )}
-                <div className="text-white text-sm font-normal font-ibm">{telegramUser.shortName}</div>
+                <div className="text-white text-sm font-normal font-ibm">{formatDisplayName(telegramUser.displayName)}</div>
               </div>
             );
           })}

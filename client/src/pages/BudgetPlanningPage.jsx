@@ -810,7 +810,7 @@ const BudgetPlanningPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4 animate-fade-in">
         <div className="flex items-center justify-between">

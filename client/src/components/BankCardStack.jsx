@@ -221,7 +221,7 @@ const BankCardStack = () => {
               {/* Bottom section */}
               <div className="flex items-end justify-between">
                 <div className="flex flex-col">
-                  <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm mb-1">{formatDisplayName(telegramUser.displayName)}</div>
+                  <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm mb-1">{telegramUser.displayName}</div>
                   <div className="text-white text-xs min-[320px]:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-normal font-ibm">{cards[0].cardNumber}</div>
                 </div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">МИР</div>
@@ -251,7 +251,7 @@ const BankCardStack = () => {
               {/* Bottom section */}
               <div className="flex items-end justify-between">
                 <div className="flex flex-col">
-                  <div className="text-white text-sm font-normal font-ibm mb-1">{formatDisplayName(telegramUser.displayName)}</div>
+                  <div className="text-white text-sm font-normal font-ibm mb-1">{telegramUser.displayName}</div>
                   <div className="text-white text-sm font-normal font-ibm">{cards[1].cardNumber}</div>
                 </div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">МИР</div>
@@ -286,7 +286,7 @@ const BankCardStack = () => {
               {/* Bottom section */}
               <div className="flex items-end justify-between">
                 <div className="flex flex-col">
-                  <div className="text-white text-sm font-normal font-ibm mb-1">{formatDisplayName(telegramUser.displayName)}</div>
+                  <div className="text-white text-sm font-normal font-ibm mb-1">{telegramUser.displayName}</div>
                   <div className="text-white text-sm font-normal font-ibm">{cards[2].cardNumber}</div>
                 </div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">МИР</div>
