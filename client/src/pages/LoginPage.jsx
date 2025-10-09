@@ -49,7 +49,7 @@ const LoginPage = () => {
 
   if (!isTelegramReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="min-h-screen flex items-center justify-center bg-white" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="text-center">
           <LoadingSpinner size="lg" />
           <p className="mt-4 text-gray-600">Инициализация...</p>
@@ -59,7 +59,7 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white flex items-center justify-center p-4" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo */}

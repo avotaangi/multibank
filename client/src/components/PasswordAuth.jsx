@@ -64,27 +64,9 @@ const PasswordAuth = ({ onAuthenticated }) => {
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Welcome Banner */}
-      <div className="relative bg-gradient-to-r from-red-500 to-red-600 text-white py-4 px-4 text-center shadow-2xl overflow-hidden mx-4 mt-4 mb-4 rounded-2xl">
-        {/* Shimmer Effect */}
-        <div className="absolute inset-0 animate-shimmer"></div>
-        
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/20 to-transparent"></div>
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full animate-float"></div>
-          <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/10 rounded-full animate-float" style={{animationDelay: '1.5s'}}></div>
-          <div className="absolute top-1/2 right-1/4 w-12 h-12 bg-white/5 rounded-full animate-float" style={{animationDelay: '3s'}}></div>
-        </div>
-        
+      <div className="relative py-2 px-3 text-center shadow-2xl mx-4 mt-2 mb-2 rounded-xl" style={{ backgroundColor: '#25355A', color: '#F4EBE2' }}>
         {/* Content */}
-        <div className="relative z-10">
-          {/* Bank Icon */}
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 rounded-full mb-3 shadow-lg">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          
+        <div>
           {/* Welcome Text */}
           <div className="space-y-1">
             <div className="text-sm font-medium animate-fade-in-up">
@@ -100,7 +82,7 @@ const PasswordAuth = ({ onAuthenticated }) => {
         </div>
         
         {/* Animated Border */}
-        <div className="absolute bottom-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-full h-2 animate-pulse" style={{ backgroundColor: '#D35B7A' }}></div>
         
         {/* Floating Particles */}
         <div className="absolute top-2 left-2 w-1 h-1 bg-white/20 rounded-full animate-float" style={{animationDelay: '0.5s'}}></div>
@@ -159,8 +141,8 @@ const PasswordAuth = ({ onAuthenticated }) => {
       </div>
 
       {/* Keypad */}
-      <div className="w-full max-w-xs mt-16">
-        <div className="grid grid-cols-3 gap-4">
+      <div className="w-full max-w-xs mt-16 mx-auto">
+        <div className="grid grid-cols-3 gap-4 justify-items-center">
           {/* Numbers 1-9 */}
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
             <button
