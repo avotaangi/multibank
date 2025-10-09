@@ -253,18 +253,20 @@ const CardAnalyticsPage = () => {
 
   return (
     <div className="min-h-screen bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      {/* Header */}
-      <div className="px-5 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
-            {currentCard?.name || 'Аналитика карт'}
+      {/* Fixed Header and Card Stack */}
+      <div className="sticky top-0 z-20 bg-white">
+        {/* Header */}
+        <div className="px-5 pt-6 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+              {currentCard?.name || 'Аналитика карт'}
+            </div>
+            <div className="w-10"></div> {/* Spacer for centering */}
           </div>
-          <div className="w-10"></div> {/* Spacer for centering */}
         </div>
-      </div>
 
-      {/* Card Stack with Swipe */}
-      <div className="relative w-full flex justify-center pb-8 px-4 min-[360px]:pb-10 min-[360px]:px-6 min-[375px]:pb-12 min-[375px]:px-8 sm:px-10 md:px-12 overflow-hidden">
+        {/* Card Stack with Swipe */}
+        <div className="relative w-full flex justify-center pb-8 px-4 min-[360px]:pb-10 min-[360px]:px-6 min-[375px]:pb-12 min-[375px]:px-8 sm:px-10 md:px-12 overflow-hidden">
         
         <div 
           className="relative h-[160px] w-[280px] min-[370px]:h-[170px] min-[370px]:w-[300px] min-[375px]:h-[180px] min-[375px]:w-[320px] min-[380px]:h-[190px] min-[380px]:w-[340px] sm:h-[210px] sm:w-[380px] md:h-[230px] md:w-[420px] lg:h-[250px] lg:w-[460px] xl:h-[270px] xl:w-[500px] 2xl:h-[290px] 2xl:w-[540px] cursor-pointer select-none overflow-visible flex justify-center"
@@ -341,10 +343,11 @@ const CardAnalyticsPage = () => {
           </div>
         </div>
         
+        </div>
       </div>
 
-      {/* Total Budget Section */}
-      <div className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5">
+      {/* Total Budget Section - Fixed */}
+      <div className="sticky z-10 bg-white px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5" style={{ top: 'calc(env(safe-area-inset-top) + 300px)' }}>
         <div className="text-center">
           <div className="text-black font-ibm text-sm min-[360px]:text-base sm:text-lg md:text-xl font-normal leading-[110%]">
             Общий бюджет {totalBudget}
