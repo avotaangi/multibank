@@ -250,6 +250,26 @@ const CardAnalyticsPage = () => {
     setIsDragging(false);
   };
 
+  // Функция для обработки клика по карте в разделе переводов
+  const handleTransferCardClick = (selectedCard) => {
+    // Отправитель - карта, на которой мы сейчас стоим (сверху)
+    const fromCard = currentCard; // "Банк, с которого хотите перевести"
+    // Получатель - выбранная карта из блока "Перевод между своими банками"
+    const toCard = selectedCard; // Получатель (выбранная карта из блока "Перевод между своими банками")
+    
+    console.log('Логика перевода:');
+    console.log('Отправитель (карта сверху):', fromCard.name, '- "Банк, с которого хотите перевести"');
+    console.log('Получатель (выбранная карта из блока "Перевод между своими банками"):', toCard.name, '- Получатель');
+    
+    // Навигация на страницу "Между банками" с параметрами
+    navigate('/transfer', {
+      state: {
+        fromCard: fromCard, // Отправитель (карта сверху)
+        toCard: toCard,     // Получатель (выбранная карта)
+        transferType: 'internal'
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
@@ -344,13 +364,13 @@ const CardAnalyticsPage = () => {
         </div>
         
         </div>
-      </div>
-
-      {/* Total Budget Section - Fixed */}
-      <div className="sticky z-10 bg-white px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5" style={{ top: 'calc(env(safe-area-inset-top) + 300px)' }}>
-        <div className="text-center">
-          <div className="text-black font-ibm text-sm min-[360px]:text-base sm:text-lg md:text-xl font-normal leading-[110%]">
-            Общий бюджет {totalBudget}
+        
+        {/* Total Budget Section - Fixed with cards */}
+        <div className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5">
+          <div className="text-center">
+            <div className="text-black font-ibm text-sm min-[360px]:text-base sm:text-lg md:text-xl font-normal leading-[110%]">
+              Общий бюджет {totalBudget}
+            </div>
           </div>
         </div>
       </div>
@@ -366,7 +386,12 @@ const CardAnalyticsPage = () => {
             if (card.id === currentCard.id) return null; // Пропускаем текущую карту
             
             return (
-              <div key={card.id} className="flex-shrink-0 w-[70px] h-[80px] min-[360px]:w-[75px] min-[360px]:h-[85px] min-[370px]:w-[80px] min-[370px]:h-[90px] min-[375px]:w-[85px] min-[375px]:h-[95px] min-[380px]:w-[90px] min-[380px]:h-[100px] sm:w-[100px] sm:h-[110px] md:w-[110px] md:h-[120px] rounded-[22px] flex flex-col items-center justify-center p-1" style={{ backgroundColor: card.color }}>
+              <div 
+                key={card.id} 
+                className="flex-shrink-0 w-[70px] h-[80px] min-[360px]:w-[75px] min-[360px]:h-[85px] min-[370px]:w-[80px] min-[370px]:h-[90px] min-[375px]:w-[85px] min-[375px]:h-[95px] min-[380px]:w-[90px] min-[380px]:h-[100px] sm:w-[100px] sm:h-[110px] md:w-[110px] md:h-[120px] rounded-[22px] flex flex-col items-center justify-center p-1 cursor-pointer hover:scale-105 transition-transform duration-200" 
+                style={{ backgroundColor: card.color }}
+                onClick={() => handleTransferCardClick(card)}
+              >
                 {card.id === 'vtb' && (
                   <div className="text-white text-sm font-bold font-ibm mb-1">ВТБ</div>
                 )}
@@ -424,7 +449,7 @@ const CardAnalyticsPage = () => {
             </div>
           ) : (
             currentCard.operations.map((operation, index) => (
-            <div key={index} className="relative w-full max-w-[335px] h-[45px] min-[360px]:max-w-[350px] min-[360px]:h-[47px] min-[375px]:max-w-[365px] min-[375px]:h-[49px] sm:max-w-[350px] sm:h-[55px] md:max-w-[380px] md:h-[60px] bg-gray-100 rounded-[32px] flex items-center px-4 min-[360px]:px-5 min-[375px]:px-5 mx-auto">
+            <div key={index} className="relative w-full h-[45px] min-[360px]:h-[47px] min-[375px]:h-[49px] sm:h-[55px] md:h-[60px] bg-gray-100 rounded-[32px] flex items-center px-4 min-[360px]:px-5 min-[375px]:px-5">
               <div className={`w-[35px] h-[35px] min-[360px]:w-[38px] min-[360px]:h-[38px] min-[375px]:w-[42px] min-[375px]:h-[42px] sm:w-[60px] sm:h-[55px] md:w-[65px] md:h-[60px] ${operation.iconColor} rounded-[30px] flex items-center justify-center mr-3 min-[360px]:mr-4`}>
                 <div className={`${operation.textColor} font-bold text-xs min-[360px]:text-sm`}>
                   {operation.icon}

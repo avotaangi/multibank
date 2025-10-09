@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
 import useTransfersStore from '../stores/transfersStore';
 import { useTelegramUser } from '../hooks/useTelegramUser';
 
 const TransferPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addTransfer } = useTransfersStore();
   const telegramUser = useTelegramUser();
+  
+  // Получаем данные из навигации (отправитель и получатель)
+  const { fromCard, toCard, transferType } = location.state || {};
+  
   const [selectedFromBank, setSelectedFromBank] = useState(null);
   const [selectedToBank, setSelectedToBank] = useState(null);
   const [amount, setAmount] = useState('');
@@ -27,6 +32,31 @@ const TransferPage = () => {
     'Карина Громенко': [100, 250, 400]
   });
   const { bankBalances, transferMoney, getFormattedBalance } = useBalanceStore();
+
+  // Предустановка карт при загрузке страницы
+  useEffect(() => {
+    if (fromCard && toCard && transferType === 'internal') {
+      console.log('Предустановка карт:');
+      console.log('Отправитель (карта сверху):', fromCard.name, '- "Банк, с которого хотите перевести"');
+      console.log('Получатель (выбранная карта из блока "Перевод между своими банками"):', toCard.name, '- Получатель');
+      
+      // Устанавливаем отправителя (карта сверху - текущая карта)
+      setSelectedFromBank(fromCard.id);
+      
+      // Устанавливаем получателя (выбранная карта из блока "Перевод между своими банками")
+      setSelectedToBank(toCard.id);
+      
+      // Создаем объект получателя для внутренних переводов со всеми картами пользователя
+      const recipient = {
+        id: 'internal',
+        name: 'Между банками',
+        phone: 'Внутренний перевод',
+        avatar: '/default-avatar.png',
+        cards: userCards // Все карты пользователя
+      };
+      setSelectedRecipient(recipient);
+    }
+  }, [fromCard, toCard, transferType]);
 
   const frequentRecipients = [
     { 
