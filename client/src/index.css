@@ -66,22 +66,7 @@ body {
   padding-top: 12px;
 }
 
-/* iOS WebApp - стандартные отступы без дополнительных */
-.ios-webapp {
-  /* Стандартные отступы для iOS */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.ios-webapp-header {
-  /* Стандартные отступы для заголовков на iOS */
-  padding-top: env(safe-area-inset-top);
-}
-
-.ios-webapp-bottom {
-  /* Стандартные отступы для нижней навигации на iOS */
-  padding-bottom: env(safe-area-inset-bottom);
-}
+/* iOS WebApp - использует стандартные env() без дополнительных классов */
 
 /* Улучшенная поддержка Android WebView */
 @supports (padding: max(0px)) {

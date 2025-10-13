@@ -27,7 +27,7 @@ export const useAndroidAdaptation = () => {
       };
     }
     
-    // Для iOS и других платформ используем стандартные отступы
+    // Для iOS и других платформ - БЕЗ дополнительных отступов
     return {
       container: {
         paddingTop: 'env(safe-area-inset-top)',
@@ -52,20 +52,13 @@ export const useAndroidAdaptation = () => {
       };
     }
     
-    if (isIOSDevice && isWebApp) {
-      return {
-        container: 'ios-webapp',
-        header: 'ios-webapp-header',
-        bottomNav: 'ios-webapp-bottom'
-      };
-    }
-    
+    // Для iOS и других платформ НЕ применяем дополнительные классы
     return {
       container: '',
       header: '',
       bottomNav: ''
     };
-  }, [isAndroidDevice, isIOSDevice, isWebApp]);
+  }, [isAndroidDevice, isWebApp]);
   
   return {
     isAndroidDevice,
