@@ -5,6 +5,8 @@ import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
 import BankCardStack from '../components/BankCardStack';
 import { useTelegramUser } from '../hooks/useTelegramUser';
+import { useAndroidAdaptation } from '../hooks/useAndroidAdaptation';
+import AndroidTestPanel from '../components/AndroidTestPanel';
 
 const DashboardPage = () => {
   const { user } = useAuthStore();
@@ -131,8 +133,13 @@ const DashboardPage = () => {
 
 
 
+  const { styles, classes } = useAndroidAdaptation();
+  
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div 
+      className={`min-h-screen bg-white relative overflow-hidden ${classes.container}`}
+      style={styles.container}
+    >
 
       {/* Top Header with Profile */}
       <div className="relative z-10 bg-gray-100 px-5 pt-6 pb-4 rounded-[40px] animate-slide-in-down">
@@ -504,6 +511,9 @@ const DashboardPage = () => {
           </div>
         </div>
       )}
+
+      {/* Android Test Panel - только в development */}
+      {process.env.NODE_ENV === 'development' && <AndroidTestPanel />}
 
     </div>
   );

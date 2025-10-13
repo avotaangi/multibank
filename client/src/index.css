@@ -48,6 +48,40 @@ body {
   overflow-y: auto;
 }
 
+/* Android WebApp specific styles */
+.android-webapp {
+  /* Дополнительные отступы для Android */
+  padding-top: env(safe-area-inset-top, 24px);
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+.android-webapp-header {
+  /* Отступы для заголовков на Android */
+  padding-top: env(safe-area-inset-top, 24px);
+}
+
+.android-webapp-bottom {
+  /* Отступы для нижней навигации на Android */
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+  padding-top: 12px;
+}
+
+/* Улучшенная поддержка Android WebView */
+@supports (padding: max(0px)) {
+  .android-webapp {
+    padding-top: max(env(safe-area-inset-top), 24px);
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
+  }
+  
+  .android-webapp-header {
+    padding-top: max(env(safe-area-inset-top), 24px);
+  }
+  
+  .android-webapp-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
+  }
+}
+
 /* Force fullscreen for Telegram WebApp */
 @supports (height: 100dvh) {
   html, body, #root {

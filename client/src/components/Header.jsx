@@ -1,11 +1,16 @@
 import useAuthStore from '../stores/authStore'
 import { Bell, Menu } from 'lucide-react'
+import { useAndroidAdaptation } from '../hooks/useAndroidAdaptation'
 
 const Header = () => {
   const { user } = useAuthStore()
+  const { styles, classes } = useAndroidAdaptation()
 
   return (
-    <header className="bg-transparent absolute top-0 left-0 right-0 z-50">
+    <header 
+      className={`bg-transparent absolute top-0 left-0 right-0 z-50 ${classes.header}`}
+      style={styles.header}
+    >
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
