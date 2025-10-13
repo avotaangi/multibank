@@ -1,9 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { useAndroidAdaptation } from '../hooks/useAndroidAdaptation'
 
 const BottomNavigation = () => {
   const location = useLocation()
-  const { styles, classes } = useAndroidAdaptation()
   
   const navItems = [
     { path: '/dashboard', label: 'Главный' },
@@ -14,10 +12,7 @@ const BottomNavigation = () => {
   ]
 
   return (
-    <nav 
-      className={`fixed bottom-0 left-0 right-0 bg-white px-1 py-3 z-50 ${classes.bottomNav}`}
-      style={styles.bottomNav}
-    >
+    <nav className="fixed bottom-0 left-0 right-0 bg-white px-1 py-3 z-50">
       <div className="flex justify-between items-center w-full">
         {navItems.map(({ path, label }, index) => (
           <NavLink
