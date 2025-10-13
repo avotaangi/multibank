@@ -48,22 +48,39 @@ body {
   overflow-y: auto;
 }
 
-/* Android WebApp specific styles */
+/* Android WebApp specific styles - только для Android */
 .android-webapp {
-  /* Дополнительные отступы для Android */
+  /* Дополнительные отступы только для Android */
   padding-top: env(safe-area-inset-top, 24px);
   padding-bottom: env(safe-area-inset-bottom, 8px);
 }
 
 .android-webapp-header {
-  /* Отступы для заголовков на Android */
+  /* Отступы для заголовков только на Android */
   padding-top: env(safe-area-inset-top, 24px);
 }
 
 .android-webapp-bottom {
-  /* Отступы для нижней навигации на Android */
+  /* Отступы для нижней навигации только на Android */
   padding-bottom: env(safe-area-inset-bottom, 8px);
   padding-top: 12px;
+}
+
+/* iOS WebApp - стандартные отступы без дополнительных */
+.ios-webapp {
+  /* Стандартные отступы для iOS */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.ios-webapp-header {
+  /* Стандартные отступы для заголовков на iOS */
+  padding-top: env(safe-area-inset-top);
+}
+
+.ios-webapp-bottom {
+  /* Стандартные отступы для нижней навигации на iOS */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Улучшенная поддержка Android WebView */

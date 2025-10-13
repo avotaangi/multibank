@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { isAndroid, isTelegramWebApp, getSafeAreaStyles } from '../utils/platform';
+import { isAndroid, isIOS, isTelegramWebApp, getSafeAreaStyles } from '../utils/platform';
 
 /**
  * Хук для адаптации под Android в Telegram WebApp
  */
 export const useAndroidAdaptation = () => {
   const isAndroidDevice = isAndroid();
+  const isIOSDevice = isIOS();
   const isWebApp = isTelegramWebApp();
   
   const styles = useMemo(() => {
@@ -26,6 +27,7 @@ export const useAndroidAdaptation = () => {
       };
     }
     
+    // Для iOS и других платформ используем стандартные отступы
     return {
       container: {
         paddingTop: 'env(safe-area-inset-top)',
@@ -50,12 +52,20 @@ export const useAndroidAdaptation = () => {
       };
     }
     
+    if (isIOSDevice && isWebApp) {
+      return {
+        container: 'ios-webapp',
+        header: 'ios-webapp-header',
+        bottomNav: 'ios-webapp-bottom'
+      };
+    }
+    
     return {
       container: '',
       header: '',
       bottomNav: ''
     };
-  }, [isAndroidDevice, isWebApp]);
+  }, [isAndroidDevice, isIOSDevice, isWebApp]);
   
   return {
     isAndroidDevice,

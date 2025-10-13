@@ -4,6 +4,7 @@ import { isAndroid, isIOS, isTelegramWebApp } from '../utils/platform';
 
 const AndroidTestPanel = () => {
   const { isAndroidDevice, isWebApp, isAndroidWebApp, styles, classes } = useAndroidAdaptation();
+  const isIOSDevice = isIOS();
   
   const platformInfo = {
     isAndroid: isAndroid(),
@@ -24,6 +25,7 @@ const AndroidTestPanel = () => {
         
         <div className="mt-2"><strong>Adaptation:</strong></div>
         <div>• Android Device: {isAndroidDevice ? '✅' : '❌'}</div>
+        <div>• iOS Device: {isIOSDevice ? '✅' : '❌'}</div>
         <div>• Web App: {isWebApp ? '✅' : '❌'}</div>
         <div>• Android WebApp: {isAndroidWebApp ? '✅' : '❌'}</div>
         
