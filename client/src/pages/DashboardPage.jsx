@@ -512,8 +512,8 @@ const DashboardPage = () => {
         </div>
       )}
 
-      {/* Android Test Panel - только в development */}
-      {process.env.NODE_ENV === 'development' && <AndroidTestPanel />}
+      {/* Android Test Panel - только в development и если включен через localStorage */}
+      {import.meta.env.DEV && typeof window !== 'undefined' && localStorage.getItem('showTestPanel') === 'true' && <AndroidTestPanel />}
 
     </div>
   );

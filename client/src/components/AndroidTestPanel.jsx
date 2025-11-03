@@ -6,22 +6,39 @@ const AndroidTestPanel = () => {
   const { isAndroidDevice, isWebApp, isAndroidWebApp, styles, classes } = useAndroidAdaptation();
   const isIOSDevice = isIOS();
   
+  const webApp = typeof window !== 'undefined' && window.Telegram?.WebApp;
+  const telegramPlatform = webApp?.platform || 'N/A';
+  
   const platformInfo = {
     isAndroid: isAndroid(),
     isIOS: isIOS(),
     isTelegramWebApp: isTelegramWebApp(),
+    telegramPlatform: telegramPlatform,
     userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A'
   };
 
   return (
     <div className="fixed top-4 right-4 bg-black/80 text-white p-4 rounded-lg text-xs z-50 max-w-xs">
-      <div className="font-bold mb-2">🔧 Android Test Panel</div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-bold">🔧 Android Test Panel</div>
+        <button
+          onClick={() => {
+            localStorage.setItem('showTestPanel', 'false');
+            window.location.reload();
+          }}
+          className="text-red-400 hover:text-red-300 text-lg leading-none"
+          title="Закрыть панель"
+        >
+          ×
+        </button>
+      </div>
       
       <div className="space-y-1">
         <div><strong>Platform:</strong></div>
         <div>• Android: {platformInfo.isAndroid ? '✅' : '❌'}</div>
         <div>• iOS: {platformInfo.isIOS ? '✅' : '❌'}</div>
         <div>• Telegram WebApp: {platformInfo.isTelegramWebApp ? '✅' : '❌'}</div>
+        <div>• Telegram Platform: {platformInfo.telegramPlatform}</div>
         
         <div className="mt-2"><strong>Adaptation:</strong></div>
         <div>• Android Device: {isAndroidDevice ? '✅' : '❌'}</div>

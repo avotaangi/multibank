@@ -10,6 +10,18 @@ export const getTelegramWebApp = () => {
   return null;
 };
 
+/**
+ * Получает платформу из Telegram WebApp API
+ * Возвращает: 'android', 'ios', 'web', 'tdesktop', 'macos', 'linux', 'windows' и т.д.
+ */
+export const getTelegramPlatform = () => {
+  const webApp = getTelegramWebApp();
+  if (webApp && webApp.platform) {
+    return webApp.platform.toLowerCase();
+  }
+  return null;
+};
+
 // Fullscreen functionality
 export const toggleFullscreen = () => {
   const webApp = getTelegramWebApp();
