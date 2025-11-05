@@ -30,6 +30,7 @@ import DepositsPage from './pages/DepositsPage'
 import CreditsPage from './pages/CreditsPage'
 import RewardsPage from './pages/RewardsPage'
 import LeadsPage from './pages/LeadsPage'
+import SecurityPage from './pages/SecurityPage'
 import InsuranceDetailsPage from './pages/InsuranceDetailsPage'
 import InsuranceCascoPage from './pages/InsuranceCascoPage'
 
@@ -129,6 +130,7 @@ function App() {
               <Route path="credits" element={<CreditsPage />} />
               <Route path="rewards" element={<RewardsPage />} />
               <Route path="leads" element={<LeadsPage />} />
+              <Route path="security" element={<SecurityPage />} />
               <Route path="insurance-details/:policyId" element={<InsuranceDetailsPage />} />
               <Route path="insurance-casco" element={<InsuranceCascoPage />} />
             </Route>

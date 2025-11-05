@@ -327,16 +327,16 @@ const DashboardPage = () => {
           </button>
           
           <button 
-            onClick={() => navigate('/leads')}
+            onClick={() => navigate('/security')}
             className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center"
           >
             <div className="mb-1">
               <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
             <div className="text-black font-ibm text-xs min-[375px]:text-sm font-normal leading-[110%] text-center">
-              Управление лидами
+              Безопасность
             </div>
           </button>
         </div>
