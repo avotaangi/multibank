@@ -8,7 +8,7 @@ export const useTelegramUser = () => {
     username: 'evgeny_bogatov',
     displayName: 'Евгений Богатов',
     shortName: 'Евгений Б.',
-    photoUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+    photoUrl: ''
   });
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export const useTelegramUser = () => {
       const firstName = user.first_name || 'Пользователь';
       const lastName = user.last_name || '';
       const username = user.username || '';
-      const photoUrl = user.photo_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face';
+      const photoUrl = '';
       
       // Формируем отображаемое имя
       let displayName = firstName;

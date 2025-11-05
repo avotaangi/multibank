@@ -1,9 +1,14 @@
+import { useState } from 'react'
 import { useQuery } from 'react-query'
 import { accountAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { CreditCard, Plus, Star } from 'lucide-react'
+import InfoPanel from '../components/InfoPanel'
+import { usePageInfo } from '../hooks/usePageInfo'
+import { CreditCard, Plus, Star, Info } from 'lucide-react'
 
 const AccountsPage = () => {
+  const pageInfo = usePageInfo()
+  const [showInfoPanel, setShowInfoPanel] = useState(false)
   const { data: accountsData, isLoading, refetch } = useQuery(
     'accounts',
     () => accountAPI.getAccounts(),
@@ -27,9 +32,17 @@ const AccountsPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Мои счета</h1>
-        <button className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors">
-          <Plus size={20} />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info size={20} />
+          </button>
+          <button className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors">
+            <Plus size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Total Balance */}
@@ -168,6 +181,15 @@ const AccountsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   )
 }

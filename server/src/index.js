@@ -12,6 +12,17 @@ const userRoutes = require('./routes/users');
 const accountRoutes = require('./routes/accounts');
 const transactionRoutes = require('./routes/transactions');
 const telegramRoutes = require('./routes/telegram');
+const rewardsRoutes = require('./routes/rewards');
+const leadsRoutes = require('./routes/leads');
+const creditProductsRoutes = require('./routes/creditProducts');
+const cashLoanApplicationsRoutes = require('./routes/cashLoanApplications');
+const cardManagementRoutes = require('./routes/cardManagement');
+const cardOperationsRoutes = require('./routes/cardOperations');
+const universalPaymentsRoutes = require('./routes/universalPayments');
+const mobilePaymentsRoutes = require('./routes/mobilePayments');
+
+// Open Banking API routes (ES modules - need dynamic import)
+let consentsRoutes, paymentsRoutes, productsRoutes;
 
 const app = express();
 
@@ -63,6 +74,44 @@ app.use('/api/users', userRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/rewards', rewardsRoutes);
+app.use('/api/leads', leadsRoutes);
+app.use('/api/credit-products', creditProductsRoutes);
+app.use('/api/cash-loan-applications', cashLoanApplicationsRoutes);
+app.use('/api/card-management', cardManagementRoutes);
+app.use('/api/card-operations', cardOperationsRoutes);
+app.use('/api/universal-payments', universalPaymentsRoutes);
+app.use('/api/mobile-payments', mobilePaymentsRoutes);
+
+// Open Banking API routes (dynamically imported)
+(async () => {
+  try {
+    const consentsModule = await import('./routes/consents.js');
+    consentsRoutes = consentsModule.default;
+    app.use('/api/consents', consentsRoutes);
+    console.log('✅ Consents routes loaded');
+  } catch (error) {
+    console.error('❌ Error loading consents routes:', error.message);
+  }
+
+  try {
+    const paymentsModule = await import('./routes/payments.js');
+    paymentsRoutes = paymentsModule.default;
+    app.use('/api/payments', paymentsRoutes);
+    console.log('✅ Payments routes loaded');
+  } catch (error) {
+    console.error('❌ Error loading payments routes:', error.message);
+  }
+
+  try {
+    const productsModule = await import('./routes/products.js');
+    productsRoutes = productsModule.default;
+    app.use('/api/products', productsRoutes);
+    console.log('✅ Products routes loaded');
+  } catch (error) {
+    console.error('❌ Error loading products routes:', error.message);
+  }
+})();
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

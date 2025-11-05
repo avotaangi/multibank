@@ -28,15 +28,38 @@ const BankCardStack = () => {
 
   const baseCards = [
     {
-      id: 'alfa',
-      name: 'Альфа-Банк',
+      id: 'vbank',
+      name: 'VBank',
       balance: (() => {
-        const balance = getFormattedBalance('alfa');
-        console.log('🔄 BankCardStack - Альфа-Банк баланс:', balance);
+        const balance = getFormattedBalance('vbank');
+        console.log('🔄 BankCardStack - VBank баланс:', balance);
+        return balance;
+      })(),
+      color: '#0055BC',
+      logo: 'VBank',
+      cardNumber: '3568 **** **** 8362',
+      analytics: {
+        income: '45 230 ₽',
+        expenses: '12 450 ₽',
+        transactions: 23,
+        categories: [
+          { name: 'Продукты', amount: '3 200 ₽', percentage: 25 },
+          { name: 'Транспорт', amount: '2 800 ₽', percentage: 22 },
+          { name: 'Развлечения', amount: '1 900 ₽', percentage: 15 },
+          { name: 'Остальное', amount: '4 550 ₽', percentage: 38 }
+        ]
+      }
+    },
+    {
+      id: 'abank',
+      name: 'ABank',
+      balance: (() => {
+        const balance = getFormattedBalance('abank');
+        console.log('🔄 BankCardStack - ABank баланс:', balance);
         return balance;
       })(),
       color: '#EF3124',
-      logo: 'A',
+      logo: 'ABank',
       cardNumber: '5294 **** **** 2498',
       cardholderName: 'София Львова',
       analytics: {
@@ -52,38 +75,15 @@ const BankCardStack = () => {
       }
     },
     {
-      id: 'vtb',
-      name: 'ВТБ',
+      id: 'sbank',
+      name: 'SBank',
       balance: (() => {
-        const balance = getFormattedBalance('vtb');
-        console.log('🔄 BankCardStack - ВТБ баланс:', balance);
+        const balance = getFormattedBalance('sbank');
+        console.log('🔄 BankCardStack - SBank баланс:', balance);
         return balance;
       })(),
-      color: '#0055BC',
-      logo: 'ВТБ',
-      cardNumber: '3568 **** **** 8362',
-      analytics: {
-        income: '45 230 ₽',
-        expenses: '12 450 ₽',
-        transactions: 23,
-        categories: [
-          { name: 'Продукты', amount: '3 200 ₽', percentage: 25 },
-          { name: 'Транспорт', amount: '2 800 ₽', percentage: 22 },
-          { name: 'Развлечения', amount: '1 900 ₽', percentage: 15 },
-          { name: 'Остальное', amount: '4 550 ₽', percentage: 38 }
-        ]
-      }
-    },
-    {
-      id: 'tbank',
-      name: 'T-Банк',
-      balance: (() => {
-        const balance = getFormattedBalance('tbank');
-        console.log('🔄 BankCardStack - T-Банк баланс:', balance);
-        return balance;
-      })(),
-      color: '#2F2F2F',
-      logo: 'T',
+      color: '#00A859',
+      logo: 'SBank',
       cardNumber: '6352 **** **** 9837',
       analytics: {
         income: '67 890 ₽',
@@ -211,10 +211,7 @@ const BankCardStack = () => {
 
               {/* Top section */}
               <div className="flex items-center justify-between">
-                <div className="flex flex-col">
                   <div className="text-white text-lg min-[320px]:text-xl min-[355px]:text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold font-ibm">{cards[0].logo}</div>
-                  <div className="w-8 h-0.5 bg-white mt-1"></div>
-                </div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-normal font-ibm">{cards[0].balance}</div>
               </div>
               
@@ -229,7 +226,7 @@ const BankCardStack = () => {
             </div>
           </div>
           
-          {/* VTB Card */}
+          {/* ABank Card */}
           <div 
             data-card="1"
             className="absolute top-0 w-[200px] min-[355px]:w-[240px] min-[380px]:w-[280px] min-[375px]:w-[300px] sm:w-[320px] md:w-[340px] lg:w-[360px] xl:w-[380px] h-[140px] min-[355px]:h-[160px] min-[380px]:h-[189px] min-[375px]:h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] xl:h-[280px] rounded-[27px] z-20 transition-transform duration-200"
@@ -259,7 +256,7 @@ const BankCardStack = () => {
             </div>
           </div>
           
-          {/* T-Bank Card */}
+          {/* SBank Card */}
           <div 
             data-card="2"
             className="absolute top-0 w-[200px] min-[355px]:w-[240px] min-[380px]:w-[280px] min-[375px]:w-[300px] sm:w-[320px] md:w-[340px] lg:w-[360px] xl:w-[380px] h-[140px] min-[355px]:h-[160px] min-[380px]:h-[189px] min-[375px]:h-[200px] sm:h-[220px] md:h-[240px] lg:h-[260px] xl:h-[280px] rounded-[27px] z-10 transition-transform duration-200"
@@ -274,12 +271,7 @@ const BankCardStack = () => {
 
               {/* Top section */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
-                    <span className="text-gray-800 font-bold text-sm">{cards[2].logo}</span>
-                  </div>
-                  <div className="text-white text-lg min-[320px]:text-xl min-[355px]:text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold font-ibm">БАНК</div>
-                </div>
+                <div className="text-white text-lg min-[320px]:text-xl min-[355px]:text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold font-ibm">{cards[2].logo}</div>
                 <div className="text-white text-sm min-[320px]:text-base min-[355px]:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-normal font-ibm">{cards[2].balance}</div>
               </div>
               

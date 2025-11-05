@@ -17,6 +17,7 @@ import CardAnalyticsPage from './pages/CardAnalyticsPage'
 import AccountsPage from './pages/AccountsPage'
 import TransactionsPage from './pages/TransactionsPage'
 import TransferPage from './pages/TransferPage'
+import TransferByAccountPage from './pages/TransferByAccountPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import PaymentsPage from './pages/PaymentsPage'
@@ -27,6 +28,10 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import BudgetPlanningPage from './pages/BudgetPlanningPage'
 import DepositsPage from './pages/DepositsPage'
 import CreditsPage from './pages/CreditsPage'
+import RewardsPage from './pages/RewardsPage'
+import LeadsPage from './pages/LeadsPage'
+import InsuranceDetailsPage from './pages/InsuranceDetailsPage'
+import InsuranceCascoPage from './pages/InsuranceCascoPage'
 
 // Component to scroll to top on route change
 function ScrollToTop() {
@@ -111,6 +116,7 @@ function App() {
               <Route path="accounts" element={<AccountsPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="transfer" element={<TransferPage />} />
+              <Route path="transfer-by-account" element={<TransferByAccountPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="payments" element={<PaymentsPage />} />
@@ -121,6 +127,10 @@ function App() {
               <Route path="budget-planning" element={<BudgetPlanningPage />} />
               <Route path="deposits" element={<DepositsPage />} />
               <Route path="credits" element={<CreditsPage />} />
+              <Route path="rewards" element={<RewardsPage />} />
+              <Route path="leads" element={<LeadsPage />} />
+              <Route path="insurance-details/:policyId" element={<InsuranceDetailsPage />} />
+              <Route path="insurance-casco" element={<InsuranceCascoPage />} />
             </Route>
         
         {/* Catch all route */}

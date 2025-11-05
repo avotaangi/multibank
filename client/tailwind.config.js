@@ -29,9 +29,9 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        'ibm': ['IBM Plex Sans', 'sans-serif'],
-        'manrope': ['Manrope', 'sans-serif'],
+        sans: ['Inter Tight', 'system-ui', 'sans-serif'],
+        'ibm': ['Inter Tight', 'sans-serif'],
+        'manrope': ['Inter Tight', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

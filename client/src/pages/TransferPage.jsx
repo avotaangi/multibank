@@ -3,10 +3,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
 import useTransfersStore from '../stores/transfersStore';
 import { useTelegramUser } from '../hooks/useTelegramUser';
+import InfoPanel from '../components/InfoPanel';
+import { usePageInfo } from '../hooks/usePageInfo';
+import { Info } from 'lucide-react';
 
 const TransferPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const pageInfo = usePageInfo();
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const { addTransfer } = useTransfersStore();
   const telegramUser = useTelegramUser();
   
@@ -68,13 +73,13 @@ const TransferPage = () => {
     { 
       id: 1, 
       name: 'Ксения Шанина', 
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face', 
+      avatar: '', 
       type: 'person'
     },
     { 
       id: 2, 
       name: 'Карина Громенко', 
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face', 
+      avatar: '', 
       type: 'person'
     }
   ];
@@ -84,71 +89,71 @@ const TransferPage = () => {
       id: 0, 
       name: telegramUser.displayName, 
       phone: '+7 (999) 000-00-00',
-      avatar: telegramUser.photoUrl,
+      avatar: '',
       cards: [
-        { id: 'vtb', name: 'ВТБ', logo: 'ВТБ', color: '#0055BC', user: telegramUser.shortName, balance: '2 876,87 ₽' },
-        { id: 'tbank', name: 'T-Банк', logo: 'T', color: '#2F2F2F', user: telegramUser.shortName, balance: '4 983,43 ₽' },
-        { id: 'alfa', name: 'Альфа-Банк', logo: 'A', color: '#EF3124', user: telegramUser.shortName, balance: '10 544,40 ₽' }
+        { id: 'vbank', name: 'VBank', logo: 'VBank', color: '#0055BC', user: telegramUser.shortName, balance: '2 876,87 ₽' },
+        { id: 'abank', name: 'ABank', logo: 'ABank', color: '#EF3124', user: telegramUser.shortName, balance: '10 544,40 ₽' },
+        { id: 'sbank', name: 'SBank', logo: 'SBank', color: '#00A859', user: telegramUser.shortName, balance: '4 983,43 ₽' }
       ]
     },
     { 
       id: 1, 
       name: 'Ксения Шанина', 
       phone: '+7 (999) 123-45-67',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
+      avatar: '',
       cards: [
-        { id: 'vtb', name: 'ВТБ', logo: 'ВТБ', color: '#0055BC', user: 'Ксения Ш.', balance: '15 420,50 ₽' },
-        { id: 'alfa', name: 'Альфа-Банк', logo: 'A', color: '#EF3124', user: 'Ксения Ш.', balance: '8 750,30 ₽' }
+        { id: 'vbank', name: 'VBank', logo: 'VBank', color: '#0055BC', user: 'Ксения Ш.', balance: '15 420,50 ₽' },
+        { id: 'abank', name: 'ABank', logo: 'ABank', color: '#EF3124', user: 'Ксения Ш.', balance: '8 750,30 ₽' }
       ]
     },
     { 
       id: 2, 
       name: 'Карина Громенко', 
       phone: '+7 (999) 234-56-78',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
+      avatar: '',
       cards: [
-        { id: 'tbank', name: 'T-Банк', logo: 'T', color: '#2F2F2F', user: 'Карина Г.', balance: '12 300,75 ₽' },
-        { id: 'vtb', name: 'ВТБ', logo: 'ВТБ', color: '#0055BC', user: 'Карина Г.', balance: '5 600,20 ₽' }
+        { id: 'sbank', name: 'SBank', logo: 'SBank', color: '#00A859', user: 'Карина Г.', balance: '12 300,75 ₽' },
+        { id: 'vbank', name: 'VBank', logo: 'VBank', color: '#0055BC', user: 'Карина Г.', balance: '5 600,20 ₽' }
       ]
     },
     { 
       id: 3, 
       name: 'Анна Петрова', 
       phone: '+7 (999) 345-67-89',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+      avatar: '',
       cards: [
-        { id: 'alfa', name: 'Альфа-Банк', logo: 'A', color: '#EF3124', user: 'Анна П.', balance: '9 850,40 ₽' },
-        { id: 'tbank', name: 'T-Банк', logo: 'T', color: '#2F2F2F', user: 'Анна П.', balance: '3 200,60 ₽' }
+        { id: 'abank', name: 'ABank', logo: 'ABank', color: '#EF3124', user: 'Анна П.', balance: '9 850,40 ₽' },
+        { id: 'sbank', name: 'SBank', logo: 'SBank', color: '#00A859', user: 'Анна П.', balance: '3 200,60 ₽' }
       ]
     },
     { 
       id: 4, 
       name: 'Михаил Соколов', 
       phone: '+7 (999) 456-78-90',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+      avatar: '',
       cards: [
-        { id: 'vtb', name: 'ВТБ', logo: 'ВТБ', color: '#0055BC', user: 'Михаил С.', balance: '22 100,80 ₽' },
-        { id: 'alfa', name: 'Альфа-Банк', logo: 'A', color: '#EF3124', user: 'Михаил С.', balance: '7 500,90 ₽' }
+        { id: 'vbank', name: 'VBank', logo: 'VBank', color: '#0055BC', user: 'Михаил С.', balance: '22 100,80 ₽' },
+        { id: 'abank', name: 'ABank', logo: 'ABank', color: '#EF3124', user: 'Михаил С.', balance: '7 500,90 ₽' }
       ]
     },
     { 
       id: 5, 
       name: 'Елена Волкова', 
       phone: '+7 (999) 567-89-01',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face',
+      avatar: '',
       cards: [
-        { id: 'tbank', name: 'T-Банк', logo: 'T', color: '#2F2F2F', user: 'Елена В.', balance: '18 750,25 ₽' },
-        { id: 'vtb', name: 'ВТБ', logo: 'ВТБ', color: '#0055BC', user: 'Елена В.', balance: '4 300,15 ₽' }
+        { id: 'sbank', name: 'SBank', logo: 'SBank', color: '#00A859', user: 'Елена В.', balance: '18 750,25 ₽' },
+        { id: 'vbank', name: 'VBank', logo: 'VBank', color: '#0055BC', user: 'Елена В.', balance: '4 300,15 ₽' }
       ]
     },
     { 
       id: 6, 
       name: 'Дмитрий Козлов', 
       phone: '+7 (999) 678-90-12',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+      avatar: '',
       cards: [
-        { id: 'alfa', name: 'Альфа-Банк', logo: 'A', color: '#EF3124', user: 'Дмитрий К.', balance: '11 200,45 ₽' },
-        { id: 'tbank', name: 'T-Банк', logo: 'T', color: '#2F2F2F', user: 'Дмитрий К.', balance: '6 800,70 ₽' }
+        { id: 'abank', name: 'ABank', logo: 'ABank', color: '#EF3124', user: 'Дмитрий К.', balance: '11 200,45 ₽' },
+        { id: 'sbank', name: 'SBank', logo: 'SBank', color: '#00A859', user: 'Дмитрий К.', balance: '6 800,70 ₽' }
       ]
     }
   ];
@@ -156,28 +161,28 @@ const TransferPage = () => {
   // Карты пользователя (откуда переводим)
   const userCards = [
     { 
-      id: 'vtb', 
-      name: 'ВТБ', 
-      logo: 'ВТБ', 
+      id: 'vbank', 
+      name: 'VBank', 
+      logo: 'VBank', 
       color: '#0055BC', 
       user: telegramUser.shortName, 
-      balance: `${bankBalances.vtb.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
+      balance: `${bankBalances.vbank.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
     },
     { 
-      id: 'tbank', 
-      name: 'T-Банк', 
-      logo: 'T', 
-      color: '#2F2F2F', 
-      user: telegramUser.shortName, 
-      balance: `${bankBalances.tbank.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
-    },
-    { 
-      id: 'alfa', 
-      name: 'Альфа-Банк', 
-      logo: 'A', 
+      id: 'abank', 
+      name: 'ABank', 
+      logo: 'ABank', 
       color: '#EF3124', 
       user: telegramUser.shortName, 
-      balance: `${bankBalances.alfa.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
+      balance: `${bankBalances.abank.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
+    },
+    { 
+      id: 'sbank', 
+      name: 'SBank', 
+      logo: 'SBank', 
+      color: '#00A859', 
+      user: telegramUser.shortName, 
+      balance: `${bankBalances.sbank.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽` 
     }
   ];
 
@@ -401,17 +406,26 @@ const TransferPage = () => {
   return (
     <div className="min-h-screen bg-white w-full overflow-visible pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
-      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 pt-6 pb-4 animate-slide-in-down">
+      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 pt-6 pb-4 ">
         <div className="flex items-center justify-between">
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
-            Платежи
-          </div>
           <div className="w-10"></div>
+          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center flex-1">
+            Между банками
+          </div>
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info className="w-6 h-6" />
+          </button>
         </div>
       </div>
 
       {/* Frequent Recipients */}
-      <div className="relative z-30 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-2 animate-slide-in-down">
+      <div className="relative z-30 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-2 ">
+        <h2 className="text-black font-ibm text-lg font-medium leading-[110%] mb-3 px-1">
+          Недавние переводы
+        </h2>
         <div className="flex space-x-3 overflow-x-auto scrollbar-hide py-2 pl-1">
           {frequentRecipients.map((recipient) => (
             <div
@@ -436,18 +450,18 @@ const TransferPage = () => {
                     name: 'Между банками',
                     avatar: '',
                     cards: [
-                      { id: 'alfa', name: 'Альфа-Банк', balance: '10 544,40 ₽', color: '#EF3124', logo: 'A', cardNumber: '5294 **** **** 2498' },
-                      { id: 'vtb', name: 'ВТБ', balance: '45 230 ₽', color: '#0055BC', logo: 'ВТБ', cardNumber: '3568 **** **** 8362' },
-                      { id: 'tbank', name: 'T-Банк', balance: '67 890 ₽', color: '#2F2F2F', logo: 'T', cardNumber: '6352 **** **** 9837' }
+                      { id: 'vbank', name: 'VBank', balance: '45 230 ₽', color: '#0055BC', logo: 'VBank', cardNumber: '3568 **** **** 8362' },
+                      { id: 'abank', name: 'ABank', balance: '10 544,40 ₽', color: '#EF3124', logo: 'ABank', cardNumber: '5294 **** **** 2498' },
+                      { id: 'sbank', name: 'SBank', balance: '67 890 ₽', color: '#00A859', logo: 'SBank', cardNumber: '6352 **** **** 9837' }
                     ]
                   });
                 } else {
                   // Для конкретных людей - показываем их карты
                   const recipientCards = recipient.name === 'Ксения Шанина' ? [
                     { id: 'ksenia_sber', name: 'Сбербанк', balance: '15 230 ₽', color: '#21A038', logo: 'С', cardNumber: '1234 **** **** 5678', cardholderName: 'Ксения Ш.' },
-                    { id: 'ksenia_vtb', name: 'ВТБ', balance: '8 450 ₽', color: '#0055BC', logo: 'ВТБ', cardNumber: '9876 **** **** 4321', cardholderName: 'Ксения Ш.' }
+                    { id: 'ksenia_vbank', name: 'VBank', balance: '8 450 ₽', color: '#0055BC', logo: 'VBank', cardNumber: '9876 **** **** 4321', cardholderName: 'Ксения Ш.' }
                   ] : [
-                    { id: 'karina_alfa', name: 'Альфа-Банк', balance: '22 100 ₽', color: '#EF3124', logo: 'A', cardNumber: '5555 **** **** 9999', cardholderName: 'Карина Г.' },
+                    { id: 'karina_abank', name: 'ABank', balance: '22 100 ₽', color: '#EF3124', logo: 'ABank', cardNumber: '5555 **** **** 9999', cardholderName: 'Карина Г.' },
                     { id: 'karina_tinkoff', name: 'Тинькофф', balance: '12 800 ₽', color: '#FFDD2D', logo: 'Т', cardNumber: '7777 **** **** 1111', cardholderName: 'Карина Г.' }
                   ];
                   
@@ -465,12 +479,10 @@ const TransferPage = () => {
                   </svg>
                 </div>
               ) : (
-                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 2xl:w-22 2xl:h-22 rounded-full overflow-hidden border-2 border-blue-200 mb-3 sm:mb-4 md:mb-5 lg:mb-6 xl:mb-7 2xl:mb-8">
-                  <img 
-                    src={recipient.avatar} 
-                    alt={recipient.name}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 xl:w-20 xl:h-20 2xl:w-22 2xl:h-22 rounded-full bg-gray-300 flex items-center justify-center border-2 border-blue-200 mb-3 sm:mb-4 md:mb-5 lg:mb-6 xl:mb-7 2xl:mb-8">
+                  <svg className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-9 lg:w-9 xl:w-10 xl:h-10 2xl:w-11 2xl:h-11 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                 </div>
               )}
               <div className="text-black font-ibm text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl 2xl:text-3xl font-normal leading-[110%] text-center">
@@ -482,7 +494,7 @@ const TransferPage = () => {
       </div>
 
       {/* New Transfer Section */}
-      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 animate-slide-in-down">
+      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 ">
         <div className="mb-3">
           <div className="text-black font-ibm text-base font-medium leading-[110%]">
             Новый перевод
@@ -498,7 +510,7 @@ const TransferPage = () => {
             <div
               key={`from-${bank.id}`}
               className={`w-[95px] h-[100px] sm:w-[115px] sm:h-[120px] md:w-[135px] md:h-[140px] lg:w-[155px] lg:h-[160px] xl:w-[175px] xl:h-[180px] 2xl:w-[195px] 2xl:h-[200px] rounded-[18px] cursor-pointer transition-all duration-300 flex flex-col items-center justify-center p-3 sm:p-4 md:p-5 lg:p-6 xl:p-7 2xl:p-8 ${
-                selectedFromBank === bank.id ? (bank.id === 'alfa' ? 'ring-2 ring-black shadow-lg' : 'ring-2 ring-red-500 shadow-lg') : ''
+                selectedFromBank === bank.id ? (bank.id === 'abank' ? 'ring-2 ring-black shadow-lg' : 'ring-2 ring-red-500 shadow-lg') : ''
               }`}
               style={{ backgroundColor: bank.color }}
                 onClick={() => handleFromBankSelect(bank.id)}
@@ -524,7 +536,7 @@ const TransferPage = () => {
       </div>
 
       {/* Recipient Section */}
-      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 animate-slide-in-down">
+      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 ">
         <div className="flex items-center justify-between mb-3">
           <div className="text-black font-ibm text-sm font-medium leading-[110%]">
             Получатель
@@ -543,11 +555,11 @@ const TransferPage = () => {
         {/* Selected Recipient Display */}
         {selectedRecipient && (
           <div className="mb-3 p-3 bg-white rounded-xl flex items-center space-x-3">
-            <img
-              src={selectedRecipient.avatar}
-              alt={selectedRecipient.name}
-              className="w-8 h-8 rounded-full object-cover"
-            />
+            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
             <div className="flex-1">
               <div className="text-sm font-medium text-gray-900">{selectedRecipient.name}</div>
               <div className="text-xs text-gray-500">{selectedRecipient.phone}</div>
@@ -569,7 +581,7 @@ const TransferPage = () => {
             <div
               key={`to-${card.id}`}
               className={`w-[95px] h-[100px] sm:w-[115px] sm:h-[120px] md:w-[135px] md:h-[140px] lg:w-[155px] lg:h-[160px] xl:w-[175px] xl:h-[180px] 2xl:w-[195px] 2xl:h-[200px] rounded-[18px] cursor-pointer transition-all duration-300 flex flex-col items-center justify-center p-3 sm:p-4 md:p-5 lg:p-6 xl:p-7 2xl:p-8 ${
-                selectedToBank === card.id ? (card.id === 'alfa' ? 'ring-2 ring-black shadow-lg' : 'ring-2 ring-red-500 shadow-lg') : ''
+                selectedToBank === card.id ? (card.id === 'abank' ? 'ring-2 ring-black shadow-lg' : 'ring-2 ring-red-500 shadow-lg') : ''
               }`}
               style={{ backgroundColor: card.color }}
               onClick={() => handleToBankSelect(card.id)}
@@ -589,7 +601,7 @@ const TransferPage = () => {
       </div>
 
       {/* Input Fields */}
-      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 space-y-3 animate-slide-in-down">
+      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 space-y-3 ">
         {/* Selected Bank Balance Display */}
         {selectedFromBank && selectedFromBank !== 'other' && (
           <div className="mb-4">
@@ -724,7 +736,7 @@ const TransferPage = () => {
       </div>
 
       {/* Transfer Button */}
-      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 pb-6 animate-slide-in-down">
+      <div className="relative z-20 px-4 sm:px-2 md:px-1 lg:px-1 xl:px-1 2xl:px-1 py-1 pb-6 ">
         <button 
           onClick={handleTransfer}
           className="w-full h-9 sm:h-10 md:h-11 lg:h-12 xl:h-13 2xl:h-14 bg-red-500 hover:bg-red-600 text-white rounded-[25px] sm:rounded-[30px] md:rounded-[35px] lg:rounded-[40px] xl:rounded-[45px] 2xl:rounded-[50px] font-ibm text-sm sm:text-base md:text-lg lg:text-xl xl:text-xl 2xl:text-2xl font-medium leading-[110%] transition-colors"
@@ -757,11 +769,11 @@ const TransferPage = () => {
                   onClick={() => handleRecipientSelect(recipient)}
                   className="w-full flex items-center space-x-3 sm:space-x-4 md:space-x-5 lg:space-x-6 p-4 sm:p-5 md:p-6 lg:p-8 xl:p-10 2xl:p-12 rounded-xl sm:rounded-2xl md:rounded-3xl lg:rounded-[2rem] hover:bg-gray-200 transition-colors"
                 >
-                  <img
-                    src={recipient.avatar}
-                    alt={recipient.name}
-                    className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 xl:w-18 xl:h-18 2xl:w-20 2xl:h-20 rounded-full object-cover"
-                  />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 xl:w-18 xl:h-18 2xl:w-20 2xl:h-20 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9 2xl:w-10 2xl:h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
                   <div className="flex-1 text-left">
                     <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl 2xl:text-3xl font-medium text-gray-900">{recipient.name}</div>
                     <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-500">{recipient.phone}</div>
@@ -821,9 +833,9 @@ const TransferPage = () => {
                 <button
                   onClick={() => {
                     setBankBalances({
-                      vtb: 2876.87,
-                      tbank: 4983.43,
-                      alfa: 10544.40
+                      vbank: 2876.87,
+                      abank: 10544.40,
+                      sbank: 4983.43
                     });
                     setSelectedFromBank(null);
                     setSelectedToBank(null);
@@ -838,6 +850,15 @@ const TransferPage = () => {
           </div>
         </div>
       )}
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   );
 };

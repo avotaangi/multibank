@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import InfoPanel from '../components/InfoPanel';
+import { usePageInfo } from '../hooks/usePageInfo';
+import { Info } from 'lucide-react';
 
 const DepositsPage = () => {
   const navigate = useNavigate();
+  const pageInfo = usePageInfo();
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
 
 
   return (
@@ -13,14 +18,19 @@ const DepositsPage = () => {
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Вклады
           </div>
-          <div className="w-10"></div>
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info className="w-6 h-6" />
+          </button>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="px-5 pb-4">
         {/* Header Section */}
-        <div className="bg-white rounded-2xl p-6 mb-6 animate-slide-in-down-very-slow shadow-sm border border-gray-200">
+        <div className="bg-white rounded-2xl p-6 mb-6  shadow-sm border border-gray-200">
           <div className="text-center">
             <div className="text-gray-600 font-ibm text-sm font-normal leading-[110%] mb-2">
               Сумма вкладов
@@ -35,17 +45,17 @@ const DepositsPage = () => {
         </div>
 
         {/* Content Area */}
-        <div className="animate-fade-in-very-slow">
+        <div className="">
           {/* Status Message */}
-          <div className="text-center mb-8 animate-slide-in-up-very-slow">
+          <div className="text-center mb-8 ">
             <div className="text-black font-ibm text-sm font-normal leading-[110%]">
               Статус: сейчас ты управляешь своими деньгами, а не они тобой
             </div>
           </div>
 
           {/* Deposit Cards */}
-          <div className="space-y-3 mb-6 animate-slide-in-up-very-slow">
-            {/* VTB Deposit */}
+          <div className="space-y-3 mb-6 ">
+            {/* VBank Deposit */}
             <div className="bg-blue-600 rounded-2xl p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -53,7 +63,7 @@ const DepositsPage = () => {
                     100 000,00 ₽
                   </div>
                   <div className="text-white font-ibm text-sm font-normal leading-[110%]">
-                    Вклад ВТБ
+                    Вклад VBank
                   </div>
                 </div>
                 <div className="text-white font-ibm text-sm font-medium leading-[110%]">
@@ -70,7 +80,7 @@ const DepositsPage = () => {
                     200 000,00 ₽
                   </div>
                   <div className="text-white font-ibm text-sm font-normal leading-[110%]">
-                    Вклад Т-банк
+                    Вклад SBank
                   </div>
                 </div>
                 <div className="text-white font-ibm text-sm font-medium leading-[110%]">
@@ -79,7 +89,7 @@ const DepositsPage = () => {
               </div>
             </div>
 
-            {/* Alfa Deposit */}
+            {/* ABank Deposit */}
             <div className="bg-red-500 rounded-2xl p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -87,7 +97,7 @@ const DepositsPage = () => {
                     300 000,00 ₽
                   </div>
                   <div className="text-white font-ibm text-sm font-normal leading-[110%]">
-                    Вклад Альфа
+                    Вклад ABank
                   </div>
                 </div>
                 <div className="text-white font-ibm text-sm font-medium leading-[110%]">
@@ -99,7 +109,7 @@ const DepositsPage = () => {
 
 
           {/* Automation Section */}
-          <div className="bg-white rounded-2xl p-6 animate-slide-in-up-very-slow shadow-sm border border-gray-200">
+          <div className="bg-white rounded-2xl p-6  shadow-sm border border-gray-200">
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,6 +135,15 @@ const DepositsPage = () => {
 
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   );
 };

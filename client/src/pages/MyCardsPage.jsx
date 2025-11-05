@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit } from 'lucide-react';
+import { Edit, Info } from 'lucide-react';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
 import { useTelegramUser } from '../hooks/useTelegramUser';
+import InfoPanel from '../components/InfoPanel';
+import { usePageInfo } from '../hooks/usePageInfo';
 
 const MyCardsPage = () => {
   const navigate = useNavigate();
+  const pageInfo = usePageInfo();
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const getFormattedBalance = useBalanceStore((state) => state.getFormattedBalance);
   const telegramUser = useTelegramUser();
   
@@ -21,11 +25,11 @@ const MyCardsPage = () => {
   
   const baseCards = [
     {
-      id: 'alfa',
-      name: 'Альфа-Банк',
-      balance: getFormattedBalance('alfa'),
-      color: '#EF3124',
-      logo: 'A',
+      id: 'vbank',
+      name: 'VBank',
+      balance: getFormattedBalance('vbank'),
+      color: '#0055BC',
+      logo: 'VBank',
       cardNumber: '5294 **** **** 2498',
       cardholderName: telegramUser.displayName,
       analytics: {
@@ -41,11 +45,11 @@ const MyCardsPage = () => {
       }
     },
     {
-      id: 'vtb',
-      name: 'ВТБ',
-      balance: getFormattedBalance('vtb'),
-      color: '#0055BC',
-      logo: 'ВТБ',
+      id: 'abank',
+      name: 'ABank',
+      balance: getFormattedBalance('abank'),
+      color: '#EF3124',
+      logo: 'ABank',
       cardNumber: '3568 **** **** 8362',
       cardholderName: telegramUser.displayName,
       analytics: {
@@ -61,11 +65,11 @@ const MyCardsPage = () => {
       }
     },
     {
-      id: 'tbank',
-      name: 'T-Банк',
-      balance: getFormattedBalance('tbank'),
-      color: '#2F2F2F',
-      logo: 'T',
+      id: 'sbank',
+      name: 'SBank',
+      balance: getFormattedBalance('sbank'),
+      color: '#00A859',
+      logo: 'SBank',
       cardNumber: '6352 **** **** 9837',
       cardholderName: telegramUser.displayName,
       analytics: {
@@ -87,11 +91,11 @@ const MyCardsPage = () => {
     ...card,
     balance: getFormattedBalance(card.bankId) || '0 ₽',
     color: card.bankId === 'sberbank' ? '#21A038' : 
-            card.bankId === 'vtb' ? '#0055BC' : 
-            card.bankId === 'alfa' ? '#EF3124' : '#2F2F2F',
+            card.bankId === 'vbank' ? '#0055BC' : 
+            card.bankId === 'abank' ? '#EF3124' : '#00A859',
     logo: card.bankId === 'sberbank' ? 'С' : 
-          card.bankId === 'vtb' ? 'ВТБ' : 
-          card.bankId === 'alfa' ? 'А' : 'Т',
+          card.bankId === 'vbank' ? 'VBank' : 
+          card.bankId === 'abank' ? 'ABank' : 'SBank',
     cardholderName: telegramUser.displayName,
     analytics: {
       income: '0 ₽',
@@ -114,14 +118,19 @@ const MyCardsPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-white animate-slide-up" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="min-h-screen bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="relative z-10 px-3 sm:px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <div className="text-black font-ibm text-lg font-normal leading-[110%] text-center">
+          <div className="text-black font-ibm text-lg font-normal leading-[110%] text-center flex-1">
             Мои карты
           </div>
-          <div className="w-10"></div> {/* Spacer for centering */}
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info className="w-6 h-6" />
+          </button>
         </div>
       </div>
 
@@ -131,7 +140,7 @@ const MyCardsPage = () => {
           {cards.map((card, index) => (
             <div
               key={card.id}
-              className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 animate-slide-in-down-slow`}
+              className={`relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all duration-600 ease-out hover:scale-105 `}
               style={{ 
                 backgroundColor: card.color,
                 boxShadow: '0px 4px 3.8px 1px rgba(0, 0, 0, 0.25)'
@@ -142,22 +151,14 @@ const MyCardsPage = () => {
               <div className="p-6 h-full flex flex-col justify-between">
                 {/* Top section */}
                 <div className="flex items-center justify-between">
-                  {card.id === 'alfa' && (
-                    <div className="flex flex-col">
+                  {card.id === 'vbank' && (
                       <div className="text-white text-2xl font-bold font-ibm">{card.logo}</div>
-                      <div className="w-8 h-0.5 bg-white mt-1"></div>
-                    </div>
                   )}
-                  {card.id === 'vtb' && (
+                  {card.id === 'abank' && (
                     <div className="text-white text-2xl font-bold font-ibm">{card.logo}</div>
                   )}
-                  {card.id === 'tbank' && (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
-                        <span className="text-gray-800 font-bold text-sm">{card.logo}</span>
-                      </div>
-                      <div className="text-white text-2xl font-bold font-ibm">БАНК</div>
-                    </div>
+                  {card.id === 'sbank' && (
+                    <div className="text-white text-2xl font-bold font-ibm">{card.logo}</div>
                   )}
                   {card.isTest && (
                     <div className="text-white text-2xl font-bold font-ibm">{card.logo}</div>
@@ -185,6 +186,15 @@ const MyCardsPage = () => {
 
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   );
 };

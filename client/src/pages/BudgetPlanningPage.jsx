@@ -2,10 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
 import { getTelegramWebApp } from '../utils/telegram';
+import InfoPanel from '../components/InfoPanel';
+import { usePageInfo } from '../hooks/usePageInfo';
+import { Info } from 'lucide-react';
 
 const BudgetPlanningPage = () => {
   const navigate = useNavigate();
   const { bankBalances } = useBalanceStore();
+  const pageInfo = usePageInfo();
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [showLifestyleTip, setShowLifestyleTip] = useState(false);
   const [showDreamTip, setShowDreamTip] = useState(false);
   const [showGoalsTip, setShowGoalsTip] = useState(false);
@@ -72,10 +77,7 @@ const BudgetPlanningPage = () => {
       currentAmount: 150000,
       targetDate: '2024-08-15',
       participants: 2,
-      avatars: [
-        'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
-      ]
+      avatars: []
     },
     {
       id: 2,
@@ -84,12 +86,7 @@ const BudgetPlanningPage = () => {
       currentAmount: 80000,
       targetDate: '2024-06-01',
       participants: 4,
-      avatars: [
-        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face'
-      ]
+      avatars: []
     }
   ]);
   const [newJointGoalData, setNewJointGoalData] = useState({
@@ -106,7 +103,7 @@ const BudgetPlanningPage = () => {
       amount: 8500,
       frequency: 'monthly',
       nextDate: '2024-02-15',
-      card: 'Альфа-Банк',
+      card: 'VBank',
       status: 'active'
     },
     {
@@ -116,7 +113,7 @@ const BudgetPlanningPage = () => {
       amount: 25000,
       frequency: 'monthly',
       nextDate: '2024-02-20',
-      card: 'ВТБ',
+      card: 'ABank',
       status: 'active'
     }
   ]);
@@ -185,12 +182,12 @@ const BudgetPlanningPage = () => {
   // Функция для получения цвета банка
   const getBankColor = (bankName) => {
     switch (bankName) {
-      case 'Альфа-Банк':
-        return 'bg-red-600'; // Красный цвет для Альфа-Банка (как на картах)
-      case 'ВТБ':
-        return 'bg-blue-600'; // Синий цвет для ВТБ (как на картах)
-      case 'Т-Банк':
-        return 'bg-yellow-500'; // Желтый цвет для Т-Банка (как на картах)
+      case 'ABank':
+        return 'bg-red-600'; // Красный цвет для ABank (как на картах)
+      case 'VBank':
+        return 'bg-blue-600'; // Синий цвет для VBank (как на картах)
+      case 'SBank':
+        return 'bg-green-500'; // Зеленый цвет для SBank (как на картах)
       case 'Сбербанк':
         return 'bg-green-600'; // Зеленый для Сбербанка (как на картах)
       default:
@@ -367,7 +364,7 @@ const BudgetPlanningPage = () => {
         currentAmount: 0,
         targetDate: newJointGoalData.targetDate,
         participants: 1,
-        avatars: ['https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face']
+        avatars: []
       };
       setJointGoals([...jointGoals, newGoal]);
       handleCloseAddJointGoalModal();
@@ -478,7 +475,7 @@ const BudgetPlanningPage = () => {
           setJointGoals(prev => prev.map(g => g.id === joinId ? {
             ...g,
             participants: g.participants + 1,
-            avatars: g.avatars.length < 6 ? [...g.avatars, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face'] : g.avatars
+            avatars: g.avatars.length < 6 ? [...g.avatars, ''] : g.avatars
           } : g));
           // clean param from URL (no reload)
           const clean = new URL(window.location.href);
@@ -496,7 +493,7 @@ const BudgetPlanningPage = () => {
           setJointGoals(prev => prev.map(g => g.id === joinId ? {
             ...g,
             participants: g.participants + 1,
-            avatars: g.avatars.length < 6 ? [...g.avatars, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face'] : g.avatars
+            avatars: g.avatars.length < 6 ? [...g.avatars, ''] : g.avatars
           } : g));
         }
       }
@@ -812,19 +809,24 @@ const BudgetPlanningPage = () => {
   return (
     <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
-      <div className="bg-white px-5 pt-6 pb-4 animate-fade-in">
+      <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Планирование бюджета
           </div>
-          <div className="w-10"></div>
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info className="w-6 h-6" />
+          </button>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="px-0">
         {/* Budget Overview Section */}
-        <div className="flex items-center justify-between mb-8 px-4 animate-slide-in-down">
+        <div className="flex items-center justify-between mb-8 px-4">
           {/* Donut Chart */}
           <div className="relative w-[150px] h-[150px] flex items-center justify-center animate-donut-entrance">
             {/* Chart segments */}
@@ -838,7 +840,7 @@ const BudgetPlanningPage = () => {
           </div>
 
           {/* Text Information */}
-          <div className="flex-1 pl-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+          <div className="flex-1 pl-6">
             <div className="text-black font-ibm text-sm font-normal leading-[110%] mb-2">
               Бюджет на планирование
             </div>
@@ -854,7 +856,7 @@ const BudgetPlanningPage = () => {
         {/* Budget Categories */}
         <div className="space-y-4 mb-4 px-4">
           {budgetData.map((item, index) => (
-            <div key={index} className="flex items-center justify-between animate-slide-in-down" style={{ animationDelay: `${0.5 + index * 0.1}s` }}>
+            <div key={index} className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div 
                   className="w-6 h-6 rounded-full flex-shrink-0" 
@@ -873,7 +875,7 @@ const BudgetPlanningPage = () => {
         </div>
 
         {/* My Planning Categories Container */}
-        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden animate-slide-in-down" style={{ backgroundColor: '#3C82F6', animationDelay: '0.9s' }}>
+        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#3C82F6' }}>
           <div className="p-4" style={{ backgroundColor: '#3C82F6' }}>
             <div className="flex items-center mb-3">
               <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
@@ -1015,6 +1017,32 @@ const BudgetPlanningPage = () => {
             )}
           </div>
           <div className="bg-white border-t border-gray-200 rounded-b-[27px] p-4">
+            {/* Пример с учетом страховки для отпуска */}
+            {dreamPlans.some(plan => plan.name?.toLowerCase().includes('отпуск')) && (
+              <div className="mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="text-black font-ibm text-sm font-medium mb-1">
+                  Отпуск: 150 000 ₽ + страховка путешественника (2 100 ₽)
+                </div>
+                <div className="text-gray-600 font-ibm text-xs">
+                  Общая сумма: 152 100 ₽
+                </div>
+              </div>
+            )}
+
+            {/* AI подсказка по страховкам */}
+            <div className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
+              <div className="flex items-start space-x-2">
+                <div className="flex-1">
+                  <div className="text-black font-ibm text-xs font-medium mb-1">
+                    AI-подсказка
+                  </div>
+                  <div className="text-gray-700 font-ibm text-xs leading-relaxed">
+                    Сократите ДМС до базового — сэкономите 1 800 ₽/мес
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {dreamPlans.map((plan) => {
               const isCompleted = plan.currentAmount >= plan.targetAmount;
               return (
@@ -1193,7 +1221,7 @@ const BudgetPlanningPage = () => {
 
 
         {/* My Goals Container */}
-        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden animate-slide-in-down" style={{ backgroundColor: '#EF4444', animationDelay: '1.1s' }}>
+        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#EF4444' }}>
           <div className="p-4" style={{ backgroundColor: '#EF4444' }}>
             <div className="flex items-center mb-3">
               <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
@@ -1270,7 +1298,7 @@ const BudgetPlanningPage = () => {
       </div>
 
       {/* Joint Goals Container */}
-      <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden animate-slide-in-down" style={{ backgroundColor: '#F59E0C', animationDelay: '1.3s' }}>
+      <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#F59E0C' }}>
         {/* Header removed per request */}
 
         {/* New Joint Goal Section */}
@@ -1349,8 +1377,10 @@ const BudgetPlanningPage = () => {
                   >
                     <div className="flex -space-x-2">
                       {goal.avatars.slice(0, 3).map((avatar, index) => (
-                        <div key={index} className="w-6 h-6 rounded-full border-2 border-white overflow-hidden">
-                          <img src={avatar} alt={`Participant ${index + 1}`} className="w-full h-full object-cover" />
+                        <div key={index} className="w-6 h-6 rounded-full border-2 border-white bg-gray-300 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
                         </div>
                       ))}
                       {goal.avatars.length > 3 && (
@@ -1394,7 +1424,7 @@ const BudgetPlanningPage = () => {
       </div>
 
       {/* Autopay Section */}
-      <div className="rounded-[27px] border border-gray-200 mb-8 overflow-hidden animate-slide-in-down" style={{ backgroundColor: '#844FD9', animationDelay: '1.5s' }}>
+      <div className="rounded-[27px] border border-gray-200 mb-8 overflow-hidden" style={{ backgroundColor: '#844FD9' }}>
         {/* New Autopay Section - unified background */}
         <div className="p-4">
           <div className="flex items-center mb-3">
@@ -1710,7 +1740,7 @@ const BudgetPlanningPage = () => {
               {/* Bank Cards */}
               <div className="space-y-2">
                 <div 
-                  onClick={() => handleSelectCard({ id: 1, name: 'Альфа-Банк', number: '**** 1234', balance: bankBalances.alfa, color: 'bg-blue-500' })}
+                  onClick={() => handleSelectCard({ id: 1, name: 'VBank', number: '**** 1234', balance: bankBalances.vbank, color: 'bg-blue-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 1 
                       ? 'bg-blue-100 border-2 border-blue-500' 
@@ -1721,16 +1751,16 @@ const BudgetPlanningPage = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
                       <div>
-                        <div className="text-black font-ibm text-base font-medium">Альфа-Банк</div>
+                        <div className="text-black font-ibm text-base font-medium">VBank</div>
                         <div className="text-gray-600 font-ibm text-sm">**** 1234</div>
                       </div>
                     </div>
-                    <div className="text-black font-ibm text-base font-medium">{bankBalances.alfa.toLocaleString('ru-RU')} ₽</div>
+                    <div className="text-black font-ibm text-base font-medium">{bankBalances.vbank.toLocaleString('ru-RU')} ₽</div>
                   </div>
                 </div>
 
                 <div 
-                  onClick={() => handleSelectCard({ id: 2, name: 'ВТБ', number: '**** 5678', balance: bankBalances.vtb, color: 'bg-red-500' })}
+                  onClick={() => handleSelectCard({ id: 2, name: 'ABank', number: '**** 5678', balance: bankBalances.abank, color: 'bg-red-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 2 
                       ? 'bg-red-100 border-2 border-red-500' 
@@ -1741,16 +1771,16 @@ const BudgetPlanningPage = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-red-500 rounded-full"></div>
                       <div>
-                        <div className="text-black font-ibm text-base font-medium">ВТБ</div>
+                        <div className="text-black font-ibm text-base font-medium">ABank</div>
                         <div className="text-gray-600 font-ibm text-sm">**** 5678</div>
                       </div>
                     </div>
-                    <div className="text-black font-ibm text-base font-medium">{bankBalances.vtb.toLocaleString('ru-RU')} ₽</div>
+                    <div className="text-black font-ibm text-base font-medium">{bankBalances.abank.toLocaleString('ru-RU')} ₽</div>
                   </div>
                 </div>
 
                 <div 
-                  onClick={() => handleSelectCard({ id: 3, name: 'Т-Банк', number: '**** 9012', balance: bankBalances.tbank, color: 'bg-green-500' })}
+                  onClick={() => handleSelectCard({ id: 3, name: 'SBank', number: '**** 9012', balance: bankBalances.sbank, color: 'bg-green-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 3 
                       ? 'bg-green-100 border-2 border-green-500' 
@@ -1761,11 +1791,11 @@ const BudgetPlanningPage = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-green-500 rounded-full"></div>
                       <div>
-                        <div className="text-black font-ibm text-base font-medium">Т-Банк</div>
+                        <div className="text-black font-ibm text-base font-medium">SBank</div>
                         <div className="text-gray-600 font-ibm text-sm">**** 9012</div>
                       </div>
                     </div>
-                    <div className="text-black font-ibm text-base font-medium">{bankBalances.tbank.toLocaleString('ru-RU')} ₽</div>
+                    <div className="text-black font-ibm text-base font-medium">{bankBalances.sbank.toLocaleString('ru-RU')} ₽</div>
                   </div>
                 </div>
         </div>
@@ -2267,8 +2297,10 @@ const BudgetPlanningPage = () => {
             <div className="space-y-3">
               {selectedGoalParticipants.avatars.map((avatar, index) => (
                 <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
-                  <div className="w-10 h-10 rounded-full overflow-hidden">
-                    <img src={avatar} alt={`Participant ${index + 1}`} className="w-full h-full object-cover" />
+                  <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </div>
                   <div className="flex-1">
                     <div className="text-black font-ibm text-base font-medium leading-[110%]">
@@ -2490,9 +2522,9 @@ const BudgetPlanningPage = () => {
             </label>
             <div className="space-y-2">
               <button
-                onClick={() => setSelectedCard('Альфа-Банк')}
+                onClick={() => setSelectedCard('VBank')}
                 className={`w-full p-3 rounded-xl border-2 transition-all ${
-                  selectedCard === 'Альфа-Банк' 
+                  selectedCard === 'VBank' 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
@@ -2503,20 +2535,20 @@ const BudgetPlanningPage = () => {
                       <span className="text-white font-bold text-sm">А</span>
                     </div>
                     <div className="text-left">
-                      <div className="text-black font-ibm text-sm font-medium">Альфа-Банк</div>
+                      <div className="text-black font-ibm text-sm font-medium">VBank</div>
                       <div className="text-gray-500 font-ibm text-xs">**** 1234</div>
                     </div>
                   </div>
                   <div className="text-black font-ibm text-sm font-medium">
-                    {bankBalances['Альфа-Банк']?.toLocaleString('ru-RU')} ₽
+                    {bankBalances.vbank?.toLocaleString('ru-RU')} ₽
                   </div>
                 </div>
               </button>
 
               <button
-                onClick={() => setSelectedCard('ВТБ')}
+                onClick={() => setSelectedCard('ABank')}
                 className={`w-full p-3 rounded-xl border-2 transition-all ${
-                  selectedCard === 'ВТБ' 
+                  selectedCard === 'ABank' 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
@@ -2527,36 +2559,36 @@ const BudgetPlanningPage = () => {
                       <span className="text-white font-bold text-sm">В</span>
                     </div>
                     <div className="text-left">
-                      <div className="text-black font-ibm text-sm font-medium">ВТБ</div>
+                      <div className="text-black font-ibm text-sm font-medium">ABank</div>
                       <div className="text-gray-500 font-ibm text-xs">**** 5678</div>
                     </div>
                   </div>
                   <div className="text-black font-ibm text-sm font-medium">
-                    {bankBalances['ВТБ']?.toLocaleString('ru-RU')} ₽
+                    {bankBalances.abank?.toLocaleString('ru-RU')} ₽
                   </div>
                 </div>
               </button>
 
               <button
-                onClick={() => setSelectedCard('Т-Банк')}
+                onClick={() => setSelectedCard('SBank')}
                 className={`w-full p-3 rounded-xl border-2 transition-all ${
-                  selectedCard === 'Т-Банк' 
+                  selectedCard === 'SBank' 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                      <span className="text-black font-bold text-sm">Т</span>
+                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">S</span>
                     </div>
                     <div className="text-left">
-                      <div className="text-black font-ibm text-sm font-medium">Т-Банк</div>
+                      <div className="text-black font-ibm text-sm font-medium">SBank</div>
                       <div className="text-gray-500 font-ibm text-xs">**** 9012</div>
                     </div>
                   </div>
                   <div className="text-black font-ibm text-sm font-medium">
-                    {bankBalances['Т-Банк']?.toLocaleString('ru-RU')} ₽
+                    {bankBalances.sbank?.toLocaleString('ru-RU')} ₽
                   </div>
                 </div>
               </button>
@@ -2689,9 +2721,9 @@ const BudgetPlanningPage = () => {
                   required
                 >
                   <option value="">Выберите карту</option>
-                  <option value="Альфа-Банк">Альфа-Банк</option>
-                  <option value="ВТБ">ВТБ</option>
-                  <option value="Т-Банк">Т-Банк</option>
+                  <option value="VBank">VBank</option>
+                  <option value="ABank">ABank</option>
+                  <option value="SBank">SBank</option>
                 </select>
               </div>
 
@@ -2801,6 +2833,15 @@ const BudgetPlanningPage = () => {
           </div>
         </div>
       )}
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   );
 };
