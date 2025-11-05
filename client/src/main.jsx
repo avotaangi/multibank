@@ -20,6 +20,13 @@ const initTelegramWebApp = () => {
   if (window.Telegram?.WebApp) {
     const tg = window.Telegram.WebApp;
     
+    // Clear caches on load to prevent stale content
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name));
+      });
+    }
+    
     // Configure the app
     tg.ready();
     tg.expand();

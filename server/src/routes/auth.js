@@ -233,4 +233,46 @@ router.get('/me',
   }
 );
 
+// Get list of available banks
+router.get('/banks', (req, res) => {
+  try {
+    // Возвращаем список доступных банков
+    // TODO: Позже будет маппинг с персонажами
+    const banks = [
+      { id: 'vbank', name: 'VBank', url: 'https://vbank.open.bankingapi.ru' },
+      { id: 'abank', name: 'ABank', url: 'https://abank.open.bankingapi.ru' },
+      { id: 'sbank', name: 'SBank', url: 'https://sbank.open.bankingapi.ru' }
+    ];
+    
+    res.json({ banks });
+  } catch (error) {
+    console.error('Get banks error:', error);
+    res.status(500).json({ 
+      message: 'Failed to get banks',
+      code: 'BANKS_FETCH_FAILED'
+    });
+  }
+});
+
+// Get bank token (stub for now - will be replaced with real bankingClient)
+router.post('/bank-token', async (req, res) => {
+  try {
+    const { bank } = req.query;
+    
+    // TODO: Позже будет реальная интеграция с bankingClient
+    // Сейчас возвращаем заглушку
+    res.json({
+      message: 'Bank token endpoint - stub',
+      bank: bank || 'vbank',
+      note: 'This will be implemented with real bankingClient integration'
+    });
+  } catch (error) {
+    console.error('Get bank token error:', error);
+    res.status(500).json({ 
+      message: 'Failed to get bank token',
+      code: 'BANK_TOKEN_FAILED'
+    });
+  }
+});
+
 module.exports = router;

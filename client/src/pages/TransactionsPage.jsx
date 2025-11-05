@@ -2,9 +2,13 @@ import { useState } from 'react'
 import { useQuery } from 'react-query'
 import { transactionAPI } from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { Filter, Search, ArrowUpRight, ArrowDownLeft, CreditCard } from 'lucide-react'
+import InfoPanel from '../components/InfoPanel'
+import { usePageInfo } from '../hooks/usePageInfo'
+import { Filter, Search, ArrowUpRight, ArrowDownLeft, CreditCard, Info } from 'lucide-react'
 
 const TransactionsPage = () => {
+  const pageInfo = usePageInfo()
+  const [showInfoPanel, setShowInfoPanel] = useState(false)
   const [filters, setFilters] = useState({
     type: '',
     status: '',
@@ -87,9 +91,17 @@ const TransactionsPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">История транзакций</h1>
-        <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors">
-          <Filter size={20} />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info size={20} />
+          </button>
+          <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors">
+            <Filter size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -231,6 +243,15 @@ const TransactionsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   )
 }

@@ -14,14 +14,27 @@ export default defineConfig({
       '.ngrok.io',
       'multibank-dev.loca.lt',
       '.loca.lt'
-    ]
+    ],
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name]-[hash].js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`
+      }
+    }
   },
   define: {
     // Telegram Web App globals
     global: 'globalThis',
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || Date.now()),
   }
 })

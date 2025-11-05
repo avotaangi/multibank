@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Edit } from 'lucide-react';
+import { Edit, Eye, EyeOff, CreditCard, Lock, Smartphone, Shield, XCircle, Key, Download, Info } from 'lucide-react';
+import { useQuery, useMutation } from 'react-query';
 import useBalanceStore from '../stores/balanceStore';
 import { useTelegramUser } from '../hooks/useTelegramUser';
+import { cardManagementAPI, cardOperationsAPI } from '../services/api';
+import LoadingSpinner from '../components/LoadingSpinner';
+import InfoPanel from '../components/InfoPanel';
+import { usePageInfo } from '../hooks/usePageInfo';
 
 // Функция для форматирования имени: первое слово целиком, второе - одна буква с точкой
 const formatDisplayName = (fullName) => {
@@ -62,15 +67,15 @@ const styles = `
     }
   }
   
-  .animate-sequential-1 {
+  . {
     animation: sequentialFadeIn 0.8s ease-out 0.1s both;
   }
   
-  .animate-sequential-2 {
+  . {
     animation: sequentialFadeIn 0.8s ease-out 0.3s both;
   }
   
-  .animate-sequential-3 {
+  . {
     animation: sequentialFadeIn 0.8s ease-out 0.5s both;
   }
 `;
@@ -86,6 +91,8 @@ const CardAnalyticsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { cardId } = useParams();
+  const pageInfo = usePageInfo();
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const { getFormattedBalance, bankBalances } = useBalanceStore();
   const telegramUser = useTelegramUser();
   
@@ -97,9 +104,9 @@ const CardAnalyticsPage = () => {
   
   const [currentCardIndex, setCurrentCardIndex] = useState(() => {
     // Устанавливаем правильный индекс на основе cardId
-    if (cardId === 'alfa') return 0; // Красная карта - первая
-    if (cardId === 'vtb') return 1;  // Синяя карта - вторая  
-    if (cardId === 'tbank') return 2; // Черная карта - третья
+    if (cardId === 'vbank') return 0; // Синяя карта - первая
+    if (cardId === 'abank') return 1;  // Красная карта - вторая  
+    if (cardId === 'sbank') return 2; // Зеленая карта - третья
     return 0; // По умолчанию
   });
   const [isDragging, setIsDragging] = useState(false);
@@ -108,13 +115,25 @@ const CardAnalyticsPage = () => {
   const startX = useRef(0);
   const currentX = useRef(0);
 
-  const cards = [
+  // Card Management state
+  const [showCvv, setShowCvv] = useState(false);
+  const [showCredentials, setShowCredentials] = useState(false);
+  
+  // Card Operations state
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [cardStatus, setCardStatus] = useState('ACTIVE'); // ACTIVE, BLOCK, PERMANENTBLOCK
+  const [pinData, setPinData] = useState({ pin: '', publicKeyId: '' });
+  
+  // Define cards first
+  const cards = useMemo(() => [
     {
-      id: 'alfa',
-      name: 'Альфа-Банк',
-      balance: getFormattedBalance('alfa'),
-      color: '#EF3124',
-      logo: 'A',
+      id: 'vbank',
+      name: 'VBank',
+      balance: getFormattedBalance('vbank'),
+      color: '#0055BC',
+      logo: 'VBank',
       cardNumber: '5294 **** **** 2498',
       operations: [
         { name: 'Surf Coffee', category: 'Кофейня', amount: '- 650 ₽', icon: '☕', iconColor: 'bg-blue-100', textColor: 'text-blue-600' },
@@ -134,14 +153,14 @@ const CardAnalyticsPage = () => {
       }
     },
     {
-      id: 'vtb',
-      name: 'ВТБ',
-      balance: getFormattedBalance('vtb'),
-      color: '#0055BC',
-      logo: 'ВТБ',
+      id: 'abank',
+      name: 'ABank',
+      balance: getFormattedBalance('abank'),
+      color: '#EF3124',
+      logo: 'ABank',
       cardNumber: '3568 **** **** 8362',
       operations: [
-        { name: 'Перевод', category: 'Переводы', amount: '- 150 ₽', icon: 'ВТБ', iconColor: 'bg-blue-100', textColor: 'text-blue-600' },
+        { name: 'Перевод', category: 'Переводы', amount: '- 150 ₽', icon: 'VBank', iconColor: 'bg-blue-100', textColor: 'text-blue-600' },
         { name: 'Яндекс.Такси', category: 'Такси', amount: '- 578 ₽', icon: 'YT', iconColor: 'bg-yellow-100', textColor: 'text-yellow-600' },
         { name: 'Самокат', category: 'Продукты', amount: '- 1 150 ₽', icon: 'S', iconColor: 'bg-pink-100', textColor: 'text-pink-600' }
       ],
@@ -158,16 +177,16 @@ const CardAnalyticsPage = () => {
       }
     },
     {
-      id: 'tbank',
-      name: 'T-Банк',
-      balance: getFormattedBalance('tbank'),
-      color: '#2F2F2F',
-      logo: 'T',
+      id: 'sbank',
+      name: 'SBank',
+      balance: getFormattedBalance('sbank'),
+      color: '#00A859',
+      logo: 'SBank',
       cardNumber: '6352 **** **** 9837',
       operations: [
         { name: 'Магнит', category: 'Продукты', amount: '- 78 ₽', icon: 'M', iconColor: 'bg-red-100', textColor: 'text-red-600' },
         { name: 'MTC', category: 'Мобильная связь', amount: '- 600 ₽', icon: 'MTC', iconColor: 'bg-red-100', textColor: 'text-red-600' },
-        { name: 'WB', category: 'Переводы', amount: '- 3 157 ₽', icon: 'WB', iconColor: 'bg-purple-100', textColor: 'text-purple-600' }
+        { name: 'Самокат', category: 'Продукты', amount: '- 1 150 ₽', icon: 'S', iconColor: 'bg-pink-100', textColor: 'text-pink-600' }
       ],
       analytics: {
         income: '67 890 ₽',
@@ -181,20 +200,144 @@ const CardAnalyticsPage = () => {
         ]
       }
     }
-  ];
+  ], [getFormattedBalance]);
+  
+  // Get publicId from current card
+  const publicId = useMemo(() => {
+    const currentCard = cards[currentCardIndex];
+    return currentCard?.id || cardId;
+  }, [currentCardIndex, cardId, cards]);
+  
+  // Fetch card credentials
+  const { data: cardCredentials, isLoading: isLoadingCredentials, refetch: refetchCredentials } = useQuery(
+    ['cardCredentials', publicId],
+    () => cardManagementAPI.getCredentials(publicId),
+    {
+      enabled: showCredentials && !!publicId,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    }
+  );
+  
+  // Fetch CVV
+  const { data: cardCvv, isLoading: isLoadingCvv, refetch: refetchCvv } = useQuery(
+    ['cardCvv', publicId],
+    () => cardManagementAPI.getCvv(publicId),
+    {
+      enabled: showCvv && !!publicId,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    }
+  );
+  
+  // Fetch tokens
+  const { data: cardTokens, isLoading: isLoadingTokens, refetch: refetchTokens } = useQuery(
+    ['cardTokens', publicId],
+    () => cardManagementAPI.getTokens(publicId),
+    {
+      enabled: !!publicId,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    }
+  );
+  
+  // Card Operations mutations
+  const blockCardMutation = useMutation(
+    (data) => cardOperationsAPI.changeStatus(publicId, data),
+    {
+      onSuccess: () => {
+        console.log('Card status changed successfully');
+        setCardStatus('BLOCK');
+        setShowBlockModal(false);
+      },
+      onError: (error) => {
+        console.error('Error changing card status:', error);
+      },
+    }
+  );
+  
+  const unblockCardMutation = useMutation(
+    (data) => cardOperationsAPI.changeStatus(publicId, data),
+    {
+      onSuccess: () => {
+        console.log('Card unblocked successfully');
+        setCardStatus('ACTIVE');
+        setShowBlockModal(false);
+      },
+      onError: (error) => {
+        console.error('Error unblocking card:', error);
+      },
+    }
+  );
+  
+  const closeCardMutation = useMutation(
+    () => cardOperationsAPI.closeCard(publicId),
+    {
+      onSuccess: () => {
+        console.log('Card closed successfully');
+        setShowCloseModal(false);
+      },
+      onError: (error) => {
+        console.error('Error closing card:', error);
+      },
+    }
+  );
+  
+  const changePinMutation = useMutation(
+    (data) => cardOperationsAPI.changePin(publicId, data),
+    {
+      onSuccess: () => {
+        console.log('PIN changed successfully');
+        setShowPinModal(false);
+        setPinData({ pin: '', publicKeyId: '' });
+      },
+      onError: (error) => {
+        console.error('Error changing PIN:', error);
+      },
+    }
+  );
+  
+  const handleBlockCard = () => {
+    blockCardMutation.mutate({
+      newStatus: 'BLOCK',
+      reason: 'Заблокировано пользователем'
+    });
+  };
+  
+  const handleUnblockCard = () => {
+    unblockCardMutation.mutate({
+      newStatus: 'ACTIVE',
+      reason: 'Разблокировано пользователем'
+    });
+  };
+  
+  const handleCloseCard = () => {
+    closeCardMutation.mutate();
+  };
+  
+  const handleChangePin = () => {
+    if (!pinData.pin || !pinData.publicKeyId) {
+      alert('Пожалуйста, заполните все поля');
+      return;
+    }
+    changePinMutation.mutate({
+      Pin: pinData.pin,
+      publicKeyId: pinData.publicKeyId
+    });
+  };
 
   // Обновляем индекс карты при изменении cardId
   useEffect(() => {
     console.log('CardAnalyticsPage - cardId:', cardId);
     if (cardId) {
-      if (cardId === 'alfa') {
-        console.log('Setting cardIndex to 0 (Альфа-Банк)');
+      if (cardId === 'vbank') {
+        console.log('Setting cardIndex to 0 (VBank)');
         setCurrentCardIndex(0);
-      } else if (cardId === 'vtb') {
-        console.log('Setting cardIndex to 1 (ВТБ)');
+      } else if (cardId === 'abank') {
+        console.log('Setting cardIndex to 1 (ABank)');
         setCurrentCardIndex(1);
-      } else if (cardId === 'tbank') {
-        console.log('Setting cardIndex to 2 (T-Банк)');
+      } else if (cardId === 'sbank') {
+        console.log('Setting cardIndex to 2 (SBank)');
         setCurrentCardIndex(2);
       }
     }
@@ -281,7 +424,12 @@ const CardAnalyticsPage = () => {
             <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
               {currentCard?.name || 'Аналитика карт'}
             </div>
-            <div className="w-10"></div> {/* Spacer for centering */}
+            <button
+              onClick={() => setShowInfoPanel(true)}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              <Info className="w-6 h-6" />
+            </button>
           </div>
         </div>
 
@@ -312,22 +460,14 @@ const CardAnalyticsPage = () => {
             <div className="p-6 h-full flex flex-col justify-between">
               {/* Top section */}
               <div className="flex items-center justify-between">
-                {currentCard.id === 'alfa' && (
-                  <div className="flex flex-col">
+                {currentCard.id === 'vbank' && (
                     <div className="text-white text-2xl font-bold font-ibm">{currentCard.logo}</div>
-                    <div className="w-8 h-0.5 bg-white mt-1"></div>
-                  </div>
                 )}
-                {currentCard.id === 'vtb' && (
+                {currentCard.id === 'abank' && (
                   <div className="text-white text-2xl font-bold font-ibm">{currentCard.logo}</div>
                 )}
-                {currentCard.id === 'tbank' && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
-                      <span className="text-gray-800 font-bold text-sm">{currentCard.logo}</span>
-                    </div>
-                    <div className="text-white text-2xl font-bold font-ibm">БАНК</div>
-                  </div>
+                {currentCard.id === 'sbank' && (
+                  <div className="text-white text-2xl font-bold font-ibm">{currentCard.logo}</div>
                 )}
                 {currentCard.id === 'unconfirmed' && (
                   <div className="text-white text-2xl font-bold font-ibm">{currentCard.logo}</div>
@@ -376,7 +516,7 @@ const CardAnalyticsPage = () => {
       </div>
 
       {/* Transfer Section */}
-      <div key={`transfer-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5 animate-sequential-1">
+      <div key={`transfer-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5 ">
         <div className="text-black font-ibm text-lg sm:text-xl md:text-2xl font-medium leading-[110%] mb-4 sm:mb-5 md:mb-6">
           Перевод между своими банками
         </div>
@@ -392,19 +532,14 @@ const CardAnalyticsPage = () => {
                 style={{ backgroundColor: card.color }}
                 onClick={() => handleTransferCardClick(card)}
               >
-                {card.id === 'vtb' && (
-                  <div className="text-white text-sm font-bold font-ibm mb-1">ВТБ</div>
+                {card.id === 'vbank' && (
+                  <div className="text-white text-sm font-bold font-ibm mb-1">{card.logo}</div>
                 )}
-                {card.id === 'tbank' && (
-                  <div className="flex items-center space-x-1 mb-1">
-                    <div className="w-4 h-4 bg-yellow-400 rounded flex items-center justify-center">
-                      <span className="text-gray-800 font-bold text-xs">T</span>
-                    </div>
-                    <div className="text-white text-sm font-bold font-ibm">БАНК</div>
-                  </div>
+                {card.id === 'abank' && (
+                  <div className="text-white text-sm font-bold font-ibm mb-1">{card.logo}</div>
                 )}
-                {card.id === 'alfa' && (
-                  <div className="text-white text-sm font-bold font-ibm mb-1">A</div>
+                {card.id === 'sbank' && (
+                  <div className="text-white text-sm font-bold font-ibm mb-1">{card.logo}</div>
                 )}
                 <div className="text-white text-sm font-normal font-ibm">{formatDisplayName(telegramUser.displayName)}</div>
               </div>
@@ -421,8 +556,405 @@ const CardAnalyticsPage = () => {
         </div>
       </div>
 
+      {/* Card Information Section */}
+      <div key={`card-info-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5 ">
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 font-ibm flex items-center">
+              <CreditCard className="w-5 h-5 mr-2" />
+              Информация о карте
+            </h2>
+            <button
+              onClick={() => {
+                const currentCard = cards[currentCardIndex];
+                const cardInfo = {
+                  bank: currentCard?.name || 'Неизвестно',
+                  cardNumber: currentCard?.cardNumber || 'Недоступно',
+                  balance: currentCard?.balance || 'Недоступно',
+                  status: cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK' ? 'Заблокирована' : 'Активна',
+                  credentials: cardCredentials?.data ? {
+                    pan: cardCredentials.data.encryptedPan ? (() => {
+                      try {
+                        return atob(cardCredentials.data.encryptedPan);
+                      } catch (e) {
+                        return cardCredentials.data.encryptedPan.substring(0, 20) + '...';
+                      }
+                    })() : 'Недоступно',
+                    expiry: cardCredentials.data.cardExpiry || 'Недоступно',
+                    holder: cardCredentials.data.embossingName || 'Недоступно'
+                  } : null,
+                  tokens: cardTokens?.data?.tokens || []
+                };
+
+                // Формируем текст выписки
+                let statementText = `ВЫПИСКА ПО КАРТЕ\n`;
+                statementText += `Дата формирования: ${new Date().toLocaleString('ru-RU')}\n\n`;
+                statementText += `БАНК: ${cardInfo.bank}\n`;
+                statementText += `НОМЕР КАРТЫ: ${cardInfo.cardNumber}\n`;
+                statementText += `БАЛАНС: ${cardInfo.balance}\n`;
+                statementText += `СТАТУС: ${cardInfo.status}\n\n`;
+
+                if (cardInfo.credentials) {
+                  statementText += `РЕКВИЗИТЫ КАРТЫ:\n`;
+                  statementText += `Номер карты: ${cardInfo.credentials.pan}\n`;
+                  statementText += `Срок действия: ${cardInfo.credentials.expiry}\n`;
+                  statementText += `Держатель: ${cardInfo.credentials.holder}\n\n`;
+                }
+
+                if (cardInfo.tokens.length > 0) {
+                  statementText += `ТОКЕНЫ КОШЕЛЬКОВ:\n`;
+                  cardInfo.tokens.forEach((token, index) => {
+                    statementText += `${index + 1}. ${token.name || `Токен ${index + 1}`}: ${token.value}\n`;
+                  });
+                  statementText += `\n`;
+                }
+
+                statementText += `\n---\n`;
+                statementText += `Сгенерировано в MultiBank\n`;
+
+                // Создаем Blob и скачиваем файл
+                const blob = new Blob([statementText], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Выписка_${cardInfo.bank}_${new Date().toISOString().split('T')[0]}.txt`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+              }}
+              className="flex items-center space-x-2 px-4 py-2 text-white rounded-[27px] hover:opacity-90 transition-opacity font-ibm text-sm font-medium"
+              style={{ backgroundColor: cards[currentCardIndex]?.color || '#3C82F6' }}
+            >
+              <Download className="w-4 h-4" />
+              <span>Скачать выписку</span>
+            </button>
+          </div>
+          
+          {/* Credentials Section */}
+          <div className="mb-4">
+            <button
+              onClick={() => {
+                setShowCredentials(!showCredentials);
+                if (!showCredentials && !cardCredentials) {
+                  refetchCredentials();
+                }
+              }}
+              className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <span className="text-gray-700 font-ibm font-medium">Реквизиты карты</span>
+              {showCredentials ? <EyeOff className="w-4 h-4 text-gray-500" /> : <Eye className="w-4 h-4 text-gray-500" />}
+            </button>
+            
+            {showCredentials && (
+              <div className="mt-3 p-4 bg-gray-50 rounded-lg">
+                {isLoadingCredentials ? (
+                  <div className="flex justify-center py-4">
+                    <LoadingSpinner size="md" />
+                  </div>
+                ) : cardCredentials?.data ? (
+                  <div className="space-y-3 font-ibm">
+                    <div>
+                      <span className="text-sm font-medium text-gray-600">Номер карты: </span>
+                      <span className="text-sm text-gray-900 font-mono">
+                        {cardCredentials.data.encryptedPan ? 
+                          (() => {
+                            try {
+                              const decoded = atob(cardCredentials.data.encryptedPan);
+                              return decoded.replace(/(.{4})/g, '$1 ').trim();
+                            } catch (e) {
+                              return cardCredentials.data.encryptedPan.substring(0, 20) + '...';
+                            }
+                          })() : 
+                          'Недоступно'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-600">Срок действия: </span>
+                      <span className="text-sm text-gray-900">{cardCredentials.data.cardExpiry || 'Недоступно'}</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-600">Держатель: </span>
+                      <span className="text-sm text-gray-900">{cardCredentials.data.embossingName || 'Недоступно'}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm font-ibm">Нажмите, чтобы загрузить реквизиты</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* CVV Section */}
+          <div className="mb-4">
+            <button
+              onClick={() => {
+                setShowCvv(!showCvv);
+                if (!showCvv && !cardCvv) {
+                  refetchCvv();
+                }
+              }}
+              className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <span className="text-gray-700 font-ibm font-medium flex items-center">
+                <Lock className="w-4 h-4 mr-2" />
+                CVV код
+              </span>
+              {showCvv ? <EyeOff className="w-4 h-4 text-gray-500" /> : <Eye className="w-4 h-4 text-gray-500" />}
+            </button>
+            
+            {showCvv && (
+              <div className="mt-3 p-4 bg-gray-50 rounded-lg">
+                {isLoadingCvv ? (
+                  <div className="flex justify-center py-4">
+                    <LoadingSpinner size="md" />
+                  </div>
+                ) : cardCvv?.data?.Cvv ? (
+                  <div className="font-ibm">
+                    <div className="text-center">
+                      <span className="text-2xl font-bold text-gray-900 font-mono">
+                        {(() => {
+                          try {
+                            return atob(cardCvv.data.Cvv);
+                          } catch (e) {
+                            return cardCvv.data.Cvv;
+                          }
+                        })()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 text-center mt-2">Храните в безопасности</p>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm font-ibm text-center">Нажмите, чтобы загрузить CVV</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tokens Section */}
+          {cardTokens?.data?.tokens && cardTokens.data.tokens.length > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-gray-700 font-ibm font-medium flex items-center">
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Токены кошельков
+                </span>
+                <span className="text-xs text-gray-500 font-ibm">
+                  {cardTokens.data.tokens.length} токен(ов)
+                </span>
+              </div>
+              
+              <div className="mt-3 space-y-2">
+                {cardTokens.data.tokens.map((token, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-medium text-gray-700 font-ibm mb-1">
+                      {token.name || `Токен ${index + 1}`}
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono font-ibm break-all">
+                      {token.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Card Operations Section */}
+          <div className="border-t pt-4 mt-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-3 font-ibm">Управление картой</h3>
+            
+            <div className="space-y-2">
+              {/* Block/Unblock Card Button */}
+              <button
+                onClick={() => setShowBlockModal(true)}
+                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors font-ibm ${
+                  cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK'
+                    ? 'bg-green-50 hover:bg-green-100 text-green-700'
+                    : 'bg-red-50 hover:bg-red-100 text-red-700'
+                }`}
+              >
+                <span className="font-medium flex items-center">
+                  <Shield className="w-4 h-4 mr-2" />
+                  {cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK' ? 'Разблокировать карту' : 'Заблокировать карту'}
+                </span>
+                <span className={`text-xs px-2 py-1 rounded ${
+                  cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK'
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK' ? 'Заблокирована' : 'Активна'}
+                </span>
+              </button>
+
+              {/* Change PIN Button */}
+              <button
+                onClick={() => setShowPinModal(true)}
+                className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-ibm"
+              >
+                <span className="text-gray-700 font-medium flex items-center">
+                  <Key className="w-4 h-4 mr-2" />
+                  Изменить PIN-код
+                </span>
+              </button>
+
+              {/* Close Card Button */}
+              <button
+                onClick={() => setShowCloseModal(true)}
+                className="w-full flex items-center justify-between p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-ibm text-red-700"
+              >
+                <span className="font-medium flex items-center">
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Закрыть карту
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Block/Unblock Modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 font-ibm">
+              {cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK' ? 'Разблокировать карту?' : 'Заблокировать карту?'}
+            </h3>
+            <p className="text-gray-600 mb-6 font-ibm text-sm">
+              {cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK'
+                ? 'Вы уверены, что хотите разблокировать карту?'
+                : 'Вы уверены, что хотите заблокировать карту? Вы сможете разблокировать ее позже.'}
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowBlockModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-ibm"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK' ? handleUnblockCard : handleBlockCard}
+                disabled={blockCardMutation.isLoading || unblockCardMutation.isLoading}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors font-ibm ${
+                  cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK'
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-red-600 hover:bg-red-700 text-white'
+                } disabled:opacity-50`}
+              >
+                {blockCardMutation.isLoading || unblockCardMutation.isLoading ? 'Обработка...' : 'Подтвердить'}
+              </button>
+            </div>
+            {(blockCardMutation.isError || unblockCardMutation.isError) && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 text-sm font-ibm">
+                  {blockCardMutation.error?.response?.data?.message || unblockCardMutation.error?.response?.data?.message || 'Ошибка при изменении статуса карты'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Close Card Modal */}
+      {showCloseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 font-ibm">Закрыть карту?</h3>
+            <p className="text-gray-600 mb-6 font-ibm text-sm">
+              Внимание! Закрытие карты возможно только при нулевом балансе. Это действие необратимо.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowCloseModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-ibm"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleCloseCard}
+                disabled={closeCardMutation.isLoading}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-ibm disabled:opacity-50"
+              >
+                {closeCardMutation.isLoading ? 'Закрытие...' : 'Закрыть карту'}
+              </button>
+            </div>
+            {closeCardMutation.isError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 text-sm font-ibm">
+                  {closeCardMutation.error?.response?.data?.message || 'Ошибка при закрытии карты'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Change PIN Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 font-ibm">Изменить PIN-код</h3>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-ibm">
+                  Зашифрованный PIN-код
+                </label>
+                <input
+                  type="password"
+                  value={pinData.pin}
+                  onChange={(e) => setPinData({ ...pinData, pin: e.target.value })}
+                  placeholder="Введите PIN"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-ibm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 font-ibm">
+                  ID публичного ключа
+                </label>
+                <input
+                  type="text"
+                  value={pinData.publicKeyId}
+                  onChange={(e) => setPinData({ ...pinData, publicKeyId: e.target.value })}
+                  placeholder="Введите ID ключа"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-ibm"
+                />
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowPinModal(false);
+                  setPinData({ pin: '', publicKeyId: '' });
+                }}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-ibm"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleChangePin}
+                disabled={changePinMutation.isLoading}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-ibm disabled:opacity-50"
+              >
+                {changePinMutation.isLoading ? 'Изменение...' : 'Изменить'}
+              </button>
+            </div>
+            {changePinMutation.isError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 text-sm font-ibm">
+                  {changePinMutation.error?.response?.data?.message || 'Ошибка при изменении PIN-кода'}
+                </p>
+              </div>
+            )}
+            {changePinMutation.isSuccess && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-800 text-sm font-ibm">PIN-код успешно изменен!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Operations Section */}
-      <div key={`operations-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5 animate-sequential-2">
+      <div key={`operations-${animationKey}`} className="px-4 min-[360px]:px-6 min-[375px]:px-8 sm:px-10 md:px-12 py-2 min-[360px]:py-3 min-[375px]:py-4 sm:py-4 md:py-5 ">
         <div className="flex items-center justify-between mb-3 min-[360px]:mb-4 min-[375px]:mb-4 sm:mb-5 md:mb-6">
           <div className="text-black font-ibm text-base min-[360px]:text-lg sm:text-xl md:text-2xl font-medium leading-[110%]">
             Операции
@@ -437,7 +969,7 @@ const CardAnalyticsPage = () => {
         
         {/* Operations List */}
         <div className="space-y-3">
-          {currentCard.isUnconfirmed ? (
+          {currentCard?.isUnconfirmed ? (
             <div className="text-center py-8">
               <div className="text-gray-500 font-ibm text-lg mb-4">Подтвердите карту в банке</div>
               <button 
@@ -448,7 +980,7 @@ const CardAnalyticsPage = () => {
               </button>
             </div>
           ) : (
-            currentCard.operations.map((operation, index) => (
+            currentCard?.operations?.map((operation, index) => (
             <div key={index} className="relative w-full h-[45px] min-[360px]:h-[47px] min-[375px]:h-[49px] sm:h-[55px] md:h-[60px] bg-gray-100 rounded-[32px] flex items-center px-4 min-[360px]:px-5 min-[375px]:px-5">
               <div className={`w-[35px] h-[35px] min-[360px]:w-[38px] min-[360px]:h-[38px] min-[375px]:w-[42px] min-[375px]:h-[42px] sm:w-[60px] sm:h-[55px] md:w-[65px] md:h-[60px] ${operation.iconColor} rounded-[30px] flex items-center justify-center mr-3 min-[360px]:mr-4`}>
                 <div className={`${operation.textColor} font-bold text-xs min-[360px]:text-sm`}>
@@ -465,7 +997,6 @@ const CardAnalyticsPage = () => {
           )}
         </div>
       </div>
-
 
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
@@ -488,6 +1019,15 @@ const CardAnalyticsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   );
 };

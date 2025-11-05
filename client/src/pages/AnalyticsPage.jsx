@@ -2,9 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useTestCardsStore from '../stores/testCardsStore';
 import useTransfersStore from '../stores/transfersStore';
+import InfoPanel from '../components/InfoPanel';
+import { usePageInfo } from '../hooks/usePageInfo';
+import { Info } from 'lucide-react';
 
 const AnalyticsPage = () => {
   const navigate = useNavigate();
+  const pageInfo = usePageInfo();
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const { getAllCards } = useTestCardsStore();
   const { getAllTransfers } = useTransfersStore();
   
@@ -14,9 +19,9 @@ const AnalyticsPage = () => {
   // Функция для форматирования перевода
   const formatTransfer = (transfer) => {
     const bankNames = {
-      'alfa': 'Альфа-Банк',
-      'vtb': 'ВТБ', 
-      'tbank': 'T-Банк'
+      'abank': 'ABank',
+      'vbank': 'VBank', 
+      'sbank': 'SBank'
     };
     
     const fromBankName = bankNames[transfer.fromBank] || transfer.fromBank;
@@ -30,7 +35,7 @@ const AnalyticsPage = () => {
         title: `Перевод между банками`,
         subtitle: `${fromBankName} → ${toBankName}`,
         amount: `- ${transfer.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`,
-        icon: '🔄',
+        icon: '',
         iconBg: 'bg-blue-500',
         cardInfo: fromCard ? {
           name: fromCard.name,
@@ -44,7 +49,7 @@ const AnalyticsPage = () => {
         title: `Перевод ${transfer.recipient}`,
         subtitle: `С ${fromBankName}`,
         amount: `- ${transfer.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`,
-        icon: '👤',
+        icon: '',
         iconBg: 'bg-green-500',
         cardInfo: fromCard ? {
           name: fromCard.name,
@@ -67,30 +72,11 @@ const AnalyticsPage = () => {
   // Базовые карты
   const baseCards = [
     {
-      id: 'alfa',
-      name: 'Альфа-Банк',
-      balance: '10 544,40 ₽',
-      color: '#EF3124',
-      logo: 'A',
-      cardNumber: '5294 **** **** 2498',
-      analytics: {
-        income: '125 600 ₽',
-        expenses: '89 200 ₽',
-        transactions: 67,
-        categories: [
-          { name: 'Бизнес', amount: '25 000 ₽', percentage: 28 },
-          { name: 'Инвестиции', amount: '18 500 ₽', percentage: 21 },
-          { name: 'Личные', amount: '22 300 ₽', percentage: 25 },
-          { name: 'Остальное', amount: '23 400 ₽', percentage: 26 }
-        ]
-      }
-    },
-    {
-      id: 'vtb',
-      name: 'ВТБ',
+      id: 'vbank',
+      name: 'VBank',
       balance: '45 230 ₽',
       color: '#0055BC',
-      logo: 'ВТБ',
+      logo: 'VBank',
       cardNumber: '3568 **** **** 8362',
       analytics: {
         income: '45 230 ₽',
@@ -105,11 +91,30 @@ const AnalyticsPage = () => {
       }
     },
     {
-      id: 'tbank',
-      name: 'T-Банк',
+      id: 'abank',
+      name: 'ABank',
+      balance: '10 544,40 ₽',
+      color: '#EF3124',
+      logo: 'ABank',
+      cardNumber: '5294 **** **** 2498',
+      analytics: {
+        income: '125 600 ₽',
+        expenses: '89 200 ₽',
+        transactions: 67,
+        categories: [
+          { name: 'Бизнес', amount: '25 000 ₽', percentage: 28 },
+          { name: 'Инвестиции', amount: '18 500 ₽', percentage: 21 },
+          { name: 'Личные', amount: '22 300 ₽', percentage: 25 },
+          { name: 'Остальное', amount: '23 400 ₽', percentage: 26 }
+        ]
+      }
+    },
+    {
+      id: 'sbank',
+      name: 'SBank',
       balance: '67 890 ₽',
-      color: '#2F2F2F',
-      logo: 'T',
+      color: '#00A859',
+      logo: 'SBank',
       cardNumber: '6352 **** **** 9837',
       analytics: {
         income: '67 890 ₽',
@@ -137,12 +142,12 @@ const AnalyticsPage = () => {
   // Функция для определения карты операции
   const getOperationCard = (operationType) => {
     const cardMapping = {
-      'magnit': 'alfa',      // Магнит - Альфа-Банк
-      'yandex_taxi': 'vtb',  // Яндекс.Такси - ВТБ
-      'samokat': 'tbank',    // Самокат - T-Банк
-      'yandex_plus': 'alfa', // Яндекс.Плюс - Альфа-Банк
-      'okko': 'vtb',         // Кинотеатр okko - ВТБ
-      'static_transfer': 'alfa' // Статический перевод - Альфа-Банк
+      'magnit': 'abank',      // Магнит - ABank
+      'yandex_taxi': 'vbank',  // Яндекс.Такси - VBank
+      'samokat': 'sbank',    // Самокат - SBank
+      'yandex_plus': 'abank', // Яндекс.Плюс - ABank
+      'okko': 'vbank',         // Кинотеатр okko - VBank
+      'static_transfer': 'abank' // Статический перевод - ABank
     };
     return cardMapping[operationType];
   };
@@ -197,6 +202,44 @@ const AnalyticsPage = () => {
 
   const totalSpending = calculateSpendingByCard();
 
+  // Данные о страховых полисах (для расчета ПДН)
+  const insurancePolicies = [
+    {
+      id: 'osago-1',
+      type: 'OSAGO',
+      company: 'Ингосстрах',
+      monthlyPayment: 4500
+    },
+    {
+      id: 'dms-1',
+      type: 'DMS',
+      company: 'ВСК',
+      monthlyPayment: 3500
+    }
+  ];
+
+  // Расчет ПДН с учетом страховок
+  const totalInsurancePayments = insurancePolicies.reduce((sum, policy) => sum + (policy.monthlyPayment || 0), 0);
+  const monthlyIncome = 120473; // Доходы из статистики
+  const monthlyExpenses = totalSpending;
+  const pdn = monthlyIncome - monthlyExpenses - totalInsurancePayments;
+
+  // AI рекомендации по страховкам
+  const insuranceRecommendations = [
+    {
+      type: 'optimization',
+      message: 'КАСКО продлён автоматически — сэкономьте 3 200 ₽, выбрав тариф "Город"'
+    },
+    {
+      type: 'suggestion',
+      message: 'У вас ипотека в Сбере — оформите страхование жизни в Ингосстрахе со скидкой 20%'
+    },
+    {
+      type: 'suggestion',
+      message: 'Вы ездите 15 000 км/год — КАСКО дешевле на 18%'
+    }
+  ];
+
   // Функция для генерации градиента кольца
   const getDonutGradient = () => {
     if (selectedTransfer === 'Без перевода') {
@@ -229,12 +272,17 @@ const AnalyticsPage = () => {
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Аналитика
           </div>
-          <div className="w-10"></div> {/* Spacer for centering */}
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info className="w-6 h-6" />
+          </button>
         </div>
       </div>
 
       {/* Filter Buttons */}
-      <div className="px-2 min-[360px]:px-3 min-[375px]:px-4 pb-3 min-[360px]:pb-4 animate-slide-in-down relative z-50">
+      <div className="px-2 min-[360px]:px-3 min-[375px]:px-4 pb-3 min-[360px]:pb-4 relative z-50">
         <div className="flex gap-1 min-[360px]:gap-2 min-[375px]:gap-3">
           {/* Month Dropdown */}
           <div className="relative flex-1">
@@ -341,7 +389,7 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Donut Chart and Summary */}
-      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 animate-fade-in relative z-10">
+      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 relative z-10">
         <div className="relative flex justify-center">
           {/* Donut Chart */}
           <div className="relative w-[150px] h-[150px] min-[360px]:w-[170px] min-[360px]:h-[170px] min-[375px]:w-[187px] min-[375px]:h-[187px] flex items-center justify-center">
@@ -375,10 +423,12 @@ const AnalyticsPage = () => {
             <div className="text-gray-600 font-ibm text-xs min-[360px]:text-sm font-medium leading-[110%]">Операций</div>
           </div>
         </div>
+
       </div>
 
+
       {/* Expenses by Category */}
-      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 mt-2 min-[360px]:mt-3 animate-slide-in-down">
+      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 mt-2 min-[360px]:mt-3">
         <div className="text-black font-ibm text-base min-[360px]:text-lg font-medium leading-[110%] mb-3 min-[360px]:mb-4">Расходы по категориям</div>
         <div className="grid grid-cols-2 gap-3 min-[360px]:gap-4">
           {selectedTransfer === 'Переводы' && (
@@ -407,7 +457,7 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Operations Section */}
-      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 mt-2 min-[360px]:mt-3 animate-scale-in">
+      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 mt-2 min-[360px]:mt-3">
         <div className="flex items-center justify-between mb-3 min-[360px]:mb-4">
           <div className="text-black font-ibm text-base min-[360px]:text-lg font-medium leading-[110%]">Операции</div>
           <div className="text-gray-500 font-ibm text-xs min-[360px]:text-sm font-normal leading-[110%]">Посмотреть все</div>
@@ -420,7 +470,7 @@ const AnalyticsPage = () => {
           {selectedTransfer === 'Переводы' && recentTransfers.map((transfer, index) => {
             const formatted = formatTransfer(transfer);
             return (
-              <div key={transfer.id} className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+              <div key={transfer.id} className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
                 <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
                   <div className={`w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 ${formatted.iconBg} rounded-full flex items-center justify-center`}>
                     <span className="text-white font-bold text-xs min-[360px]:text-sm">{formatted.icon}</span>
@@ -458,10 +508,9 @@ const AnalyticsPage = () => {
 
           {/* Статический перевод */}
           {shouldShowOperation('static_transfer') && selectedTransfer === 'Переводы' && (
-          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-xs min-[360px]:text-sm">🔄</span>
               </div>
             </div>
             <div className="flex-1">
@@ -491,7 +540,7 @@ const AnalyticsPage = () => {
           
           {/* Магнит */}
           {shouldShowOperation('magnit') && (
-          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs min-[360px]:text-sm">M</span>
@@ -524,7 +573,7 @@ const AnalyticsPage = () => {
 
           {/* Яндекс.Такси */}
           {shouldShowOperation('yandex_taxi') && (
-          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-yellow-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs">Я</span>
@@ -557,7 +606,7 @@ const AnalyticsPage = () => {
 
           {/* Самокат */}
           {shouldShowOperation('samokat') && (
-          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-pink-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs min-[360px]:text-sm">S</span>
@@ -591,7 +640,7 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Subscriptions Section */}
-      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 mt-2 min-[360px]:mt-3 animate-slide-in-down">
+      <div className="px-3 min-[360px]:px-4 min-[375px]:px-5 pb-4 min-[360px]:pb-6 mt-2 min-[360px]:mt-3">
         <div className="flex items-center justify-between mb-3 min-[360px]:mb-4">
           <div className="text-black font-ibm text-base min-[360px]:text-lg font-medium leading-[110%]">Подписки</div>
           <div className="text-gray-500 font-ibm text-xs min-[360px]:text-sm font-normal leading-[110%]">Посмотреть все</div>
@@ -601,7 +650,7 @@ const AnalyticsPage = () => {
         <div className="space-y-2 min-[360px]:space-y-3">
           {/* Яндекс.Плюс */}
           {shouldShowOperation('yandex_plus') && (
-          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-pink-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs">Я+</span>
@@ -634,7 +683,7 @@ const AnalyticsPage = () => {
 
           {/* Кинотеатр okko */}
           {shouldShowOperation('okko') && (
-          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3 animate-slide-in-down">
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
               <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-purple-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xs">ok</span>
@@ -669,6 +718,15 @@ const AnalyticsPage = () => {
 
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   );
 };

@@ -5,7 +5,7 @@ const BottomNavigation = () => {
   
   const navItems = [
     { path: '/dashboard', label: 'Главный' },
-    { path: '/transfer', label: 'Платежи' },
+    { path: '/payments', label: 'Платежи' },
     { path: '/my-cards', label: 'Мультибанк' },
     { path: '/analytics', label: 'Аналитика' },
     { path: '/budget-planning', label: 'Цели' },

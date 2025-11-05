@@ -19,8 +19,31 @@
     <!-- Telegram Web App Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
+    <!-- Cache busting -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
     <!-- Telegram WebApp Auto-expand Script -->
     <script>
+      // Force cache refresh
+      const APP_VERSION = '__APP_VERSION__' || Date.now();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+      
+      // Clear cache on load
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) {
+            caches.delete(name);
+          }
+        });
+      }
       // Simple and direct Telegram WebApp expansion
       function expandTelegramWebApp() {
         if (window.Telegram && window.Telegram.WebApp) {
@@ -74,16 +97,16 @@
       });
     </script>
     
-    <!-- Inter Font -->
+    <!-- Inter Tight Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
       body {
         margin: 0;
         padding: 0;
-        font-family: 'Inter', system-ui, sans-serif;
+        font-family: 'Inter Tight', system-ui, sans-serif;
         background: var(--tg-theme-bg-color, #ffffff);
         color: var(--tg-theme-text-color, #000000);
         min-height: 100vh;
@@ -122,6 +145,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.jsx?v=__APP_VERSION__"></script>
   </body>
 </html>
