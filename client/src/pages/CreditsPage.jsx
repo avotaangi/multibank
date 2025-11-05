@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'react-query';
-import { ArrowLeft, CreditCard, FileText, CheckCircle, Clock, XCircle, Plus, Search, Info } from 'lucide-react';
+import { CreditCard, FileText, CheckCircle, Clock, XCircle, Plus, Search, Info } from 'lucide-react';
 import { creditProductsAPI, cashLoanApplicationsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import InfoPanel from '../components/InfoPanel';
@@ -335,12 +335,7 @@ const CreditsPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4 ">
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
+          <div className="w-10"></div>
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Кредиты
           </div>

@@ -1,12 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Car, Shield, Heart, FileText, Calendar, DollarSign, CreditCard, ChevronRight, X } from 'lucide-react';
+import { Car, Shield, Heart, FileText, Calendar, DollarSign, CreditCard, ChevronRight, X, Info } from 'lucide-react';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
+import InfoPanel from '../components/InfoPanel';
+import { usePageInfo } from '../hooks/usePageInfo';
 
 const InsuranceDetailsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const pageInfo = usePageInfo();
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const policy = location.state?.policy;
   const { bankBalances } = useBalanceStore();
   const { getAllCards } = useTestCardsStore();
@@ -223,16 +227,16 @@ const InsuranceDetailsPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
+          <div className="w-10"></div>
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Детали страховки
           </div>
-          <div className="w-10"></div>
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info className="w-6 h-6" />
+          </button>
         </div>
       </div>
 
@@ -526,6 +530,15 @@ const InsuranceDetailsPage = () => {
           )}
         </div>
       </div>
+
+      {/* Info Panel */}
+      <InfoPanel
+        isOpen={showInfoPanel}
+        onClose={() => setShowInfoPanel(false)}
+        title={pageInfo.title}
+        content={pageInfo.content}
+        color={pageInfo.color}
+      />
     </div>
   );
 };

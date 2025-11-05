@@ -120,9 +120,10 @@ const MyCardsPage = () => {
   return (
     <div className="min-h-screen bg-white" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
-      <div className="relative z-10 px-3 sm:px-6 pt-6 pb-4">
+      <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <div className="text-black font-ibm text-lg font-normal leading-[110%] text-center flex-1">
+          <div className="w-10"></div>
+          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Мои карты
           </div>
           <button
@@ -136,7 +137,7 @@ const MyCardsPage = () => {
 
 
       {/* Cards List - Always visible */}
-      <div className="relative z-10 px-3 sm:px-6 py-4 space-y-4">
+      <div className="px-5 py-2 space-y-4">
           {cards.map((card, index) => (
             <div
               key={card.id}

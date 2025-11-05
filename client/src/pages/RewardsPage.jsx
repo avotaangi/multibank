@@ -7,7 +7,7 @@ import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import InfoPanel from '../components/InfoPanel';
 import { usePageInfo } from '../hooks/usePageInfo';
-import { Gift, ArrowLeft, History, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Gift, History, CheckCircle, XCircle, Info } from 'lucide-react';
 
 // Helper function to generate UUID
 const generateUUID = () => {
@@ -107,12 +107,7 @@ const RewardsPage = () => {
       <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="bg-white px-5 pt-6 pb-4 ">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
+            <div className="w-10"></div>
             <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
               Бонусы
             </div>
@@ -149,12 +144,7 @@ const RewardsPage = () => {
       <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="bg-white px-5 pt-6 pb-4 ">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
+            <div className="w-10"></div>
             <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
               Бонусы
             </div>
@@ -187,12 +177,7 @@ const RewardsPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4 ">
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
+          <div className="w-10"></div>
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
             Бонусы
           </div>
