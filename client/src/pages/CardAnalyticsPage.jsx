@@ -615,13 +615,52 @@ const CardAnalyticsPage = () => {
                 // Создаем Blob и скачиваем файл
                 const blob = new Blob([statementText], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `Выписка_${cardInfo.bank}_${new Date().toISOString().split('T')[0]}.txt`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                const fileName = `Выписка_${cardInfo.bank}_${new Date().toISOString().split('T')[0]}.txt`;
+                
+                // Вспомогательная функция для скачивания файла
+                const downloadFile = (fileUrl, fileFileName) => {
+                  const link = document.createElement('a');
+                  link.href = fileUrl;
+                  link.download = fileFileName;
+                  link.style.display = 'none';
+                  document.body.appendChild(link);
+                  
+                  // Используем setTimeout для надежности на мобильных
+                  setTimeout(() => {
+                    link.click();
+                    setTimeout(() => {
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(fileUrl);
+                    }, 100);
+                  }, 0);
+                };
+                
+                // Проверяем, является ли устройство мобильным
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                
+                if (isMobile && isIOS && navigator.share) {
+                  // Для iOS используем Web Share API, если доступен
+                  const file = new File([blob], fileName, { type: 'text/plain' });
+                  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                      files: [file],
+                      title: fileName,
+                      text: 'Выписка по карте'
+                    }).catch(() => {
+                      // Fallback: используем download
+                      downloadFile(url, fileName);
+                    });
+                    // Освобождаем URL после share
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  } else {
+                    // Fallback: используем download
+                    downloadFile(url, fileName);
+                  }
+                } else {
+                  // Для Android, десктопа и других устройств используем download
+                  downloadFile(url, fileName);
+                }
               }}
               className="flex items-center space-x-2 px-4 py-2 text-white rounded-[27px] hover:opacity-90 transition-opacity font-ibm text-sm font-medium"
               style={{ backgroundColor: cards[currentCardIndex]?.color || '#3C82F6' }}
