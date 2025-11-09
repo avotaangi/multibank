@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from 'react-query';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
 import { useTelegramUser } from '../hooks/useTelegramUser';
+import { cardManagementAPI } from '../services/api';
 
 const BankCardStack = () => {
   const navigate = useNavigate();
@@ -26,7 +28,64 @@ const BankCardStack = () => {
     return `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`;
   };
 
-  const baseCards = [
+  // Функция для форматирования номера карты из API
+  const formatCardNumber = (encryptedPan) => {
+    if (!encryptedPan) return null;
+    try {
+      const decoded = atob(encryptedPan);
+      // Форматируем как XXXX **** **** XXXX
+      if (decoded.length >= 16) {
+        const first4 = decoded.substring(0, 4);
+        const last4 = decoded.substring(decoded.length - 4);
+        return `${first4} **** **** ${last4}`;
+      }
+      return decoded;
+    } catch (e) {
+      // Если не base64, пробуем использовать как есть
+      if (encryptedPan.length >= 16) {
+        const first4 = encryptedPan.substring(0, 4);
+        const last4 = encryptedPan.substring(encryptedPan.length - 4);
+        return `${first4} **** **** ${last4}`;
+      }
+      return encryptedPan;
+    }
+  };
+
+  // Загружаем credentials для всех карт из Open Banking API
+  const { data: vbankCredentials } = useQuery(
+    ['cardCredentials', 'vbank'],
+    () => cardManagementAPI.getCredentials('vbank'),
+    {
+      enabled: true,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 минут
+    }
+  );
+
+  const { data: abankCredentials } = useQuery(
+    ['cardCredentials', 'abank'],
+    () => cardManagementAPI.getCredentials('abank'),
+    {
+      enabled: true,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
+  const { data: sbankCredentials } = useQuery(
+    ['cardCredentials', 'sbank'],
+    () => cardManagementAPI.getCredentials('sbank'),
+    {
+      enabled: true,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
+  const baseCardsData = [
     {
       id: 'vbank',
       name: 'VBank',
@@ -98,6 +157,25 @@ const BankCardStack = () => {
       }
     }
   ];
+
+  // Обновляем baseCards с реальными номерами из API
+  const baseCards = useMemo(() => {
+    return baseCardsData.map((card) => {
+      let credentials = null;
+      if (card.id === 'vbank') credentials = vbankCredentials;
+      else if (card.id === 'abank') credentials = abankCredentials;
+      else if (card.id === 'sbank') credentials = sbankCredentials;
+      
+      const realCardNumber = credentials?.data?.encryptedPan 
+        ? formatCardNumber(credentials.data.encryptedPan)
+        : null;
+      
+      return {
+        ...card,
+        cardNumber: realCardNumber || card.cardNumber,
+      };
+    });
+  }, [baseCardsData, vbankCredentials, abankCredentials, sbankCredentials]);
 
   // Объединяем базовые карты с тестовыми
   const testCards = getAllCards();
