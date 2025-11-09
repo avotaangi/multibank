@@ -696,17 +696,17 @@ const CardAnalyticsPage = () => {
                 
                 // Вспомогательная функция для скачивания файла
                 const downloadFile = (fileUrl, fileFileName) => {
-                  const link = document.createElement('a');
+                const link = document.createElement('a');
                   link.href = fileUrl;
                   link.download = fileFileName;
                   link.style.display = 'none';
-                  document.body.appendChild(link);
+                document.body.appendChild(link);
                   
                   // Используем setTimeout для надежности на мобильных
                   setTimeout(() => {
-                    link.click();
+                link.click();
                     setTimeout(() => {
-                      document.body.removeChild(link);
+                document.body.removeChild(link);
                       URL.revokeObjectURL(fileUrl);
                     }, 100);
                   }, 0);

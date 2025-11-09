@@ -132,27 +132,27 @@ const MyCardsPage = () => {
         : null;
       
       return {
-        id: bank,
-        name: bank.toUpperCase(),
-        balance: balances[bank] || "—",
-        color:
-          bank === "vbank"
-            ? "#0055BC"
-            : bank === "abank"
-            ? "#EF3124"
-            : bank === "sbank"
-            ? "#00A859"
-            : "#333333",
-        logo:
-          bank === "vbank"
-            ? "VBank"
-            : bank === "abank"
-            ? "ABank"
-            : bank === "sbank"
-            ? "SBank"
-            : bank.toUpperCase(),
+    id: bank,
+    name: bank.toUpperCase(),
+    balance: balances[bank] || "—",
+    color:
+      bank === "vbank"
+        ? "#0055BC"
+        : bank === "abank"
+        ? "#EF3124"
+        : bank === "sbank"
+        ? "#00A859"
+        : "#333333",
+    logo:
+      bank === "vbank"
+        ? "VBank"
+        : bank === "abank"
+        ? "ABank"
+        : bank === "sbank"
+        ? "SBank"
+        : bank.toUpperCase(),
         cardNumber: realCardNumber || "**** **** **** 1234",
-        cardholderName: telegramUser.displayName || "Клиент",
+    cardholderName: telegramUser.displayName || "Клиент",
       };
     });
   }, [banks, balances, vbankCredentials, abankCredentials, sbankCredentials, telegramUser.displayName]);
