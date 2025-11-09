@@ -5,6 +5,7 @@ import axios from 'axios';
 import useAuthStore from '../stores/authStore';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
+import { bankingAPI } from '../services/api';
 
 import BankCardStack from '../components/BankCardStack';
 import InfoPanel from '../components/InfoPanel';
@@ -124,12 +125,13 @@ const DashboardPage = () => {
       setIsLoadingBanks(true);
       setBalanceFetchError(null);
       try {
-        const res = await axios.get(`${API_BASE}/${CLIENT_ID_ID}/bank_names`, {
-          // если знаешь, что потребуется кросс-домен — можешь добавить withCredentials: true
-        });
+        const res = await bankingAPI.getBanks();
         if (cancelled) return;
 
-        const names = Array.isArray(res.data) ? res.data : [];
+        // Извлекаем массив банков из ответа { banks: [...] }
+        const banks = res.data?.banks || res.data || [];
+        const names = banks.map(bank => bank.id || bank); // Извлекаем id банков
+        
         setAvailableBanks(names);
 
         // сразу подтянем балансы и пробросим в глобальный стор
