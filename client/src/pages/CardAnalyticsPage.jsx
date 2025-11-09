@@ -126,8 +126,65 @@ const CardAnalyticsPage = () => {
   const [cardStatus, setCardStatus] = useState('ACTIVE'); // ACTIVE, BLOCK, PERMANENTBLOCK
   const [pinData, setPinData] = useState({ pin: '', publicKeyId: '' });
   
-  // Define cards first
-  const cards = useMemo(() => [
+  // Функция для форматирования номера карты из API
+  const formatCardNumber = (encryptedPan) => {
+    if (!encryptedPan) return null;
+    try {
+      const decoded = atob(encryptedPan);
+      // Форматируем как XXXX **** **** XXXX
+      if (decoded.length >= 16) {
+        const first4 = decoded.substring(0, 4);
+        const last4 = decoded.substring(decoded.length - 4);
+        return `${first4} **** **** ${last4}`;
+      }
+      return decoded;
+    } catch (e) {
+      // Если не base64, пробуем использовать как есть
+      if (encryptedPan.length >= 16) {
+        const first4 = encryptedPan.substring(0, 4);
+        const last4 = encryptedPan.substring(encryptedPan.length - 4);
+        return `${first4} **** **** ${last4}`;
+      }
+      return encryptedPan;
+    }
+  };
+  
+  // Загружаем credentials для всех карт при монтировании
+  const { data: vbankCredentials } = useQuery(
+    ['cardCredentials', 'vbank'],
+    () => cardManagementAPI.getCredentials('vbank'),
+    {
+      enabled: true,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 минут
+    }
+  );
+  
+  const { data: abankCredentials } = useQuery(
+    ['cardCredentials', 'abank'],
+    () => cardManagementAPI.getCredentials('abank'),
+    {
+      enabled: true,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+  
+  const { data: sbankCredentials } = useQuery(
+    ['cardCredentials', 'sbank'],
+    () => cardManagementAPI.getCredentials('sbank'),
+    {
+      enabled: true,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+  
+  // Define cards base data
+  const cardsBase = useMemo(() => [
     {
       id: 'vbank',
       name: 'VBank',
@@ -202,13 +259,33 @@ const CardAnalyticsPage = () => {
     }
   ], [getFormattedBalance]);
   
+  // Обновляем cards с реальными номерами из API
+  const cards = useMemo(() => {
+    return cardsBase.map((card) => {
+      let credentials = null;
+      if (card.id === 'vbank') credentials = vbankCredentials;
+      else if (card.id === 'abank') credentials = abankCredentials;
+      else if (card.id === 'sbank') credentials = sbankCredentials;
+      
+      const realCardNumber = credentials?.data?.encryptedPan 
+        ? formatCardNumber(credentials.data.encryptedPan)
+        : null;
+      
+      return {
+        ...card,
+        cardNumber: realCardNumber || card.cardNumber,
+        realCredentials: credentials?.data || null
+      };
+    });
+  }, [cardsBase, vbankCredentials, abankCredentials, sbankCredentials]);
+  
   // Get publicId from current card
   const publicId = useMemo(() => {
     const currentCard = cards[currentCardIndex];
     return currentCard?.id || cardId;
   }, [currentCardIndex, cardId, cards]);
   
-  // Fetch card credentials
+  // Fetch card credentials для текущей карты (используется для отображения реквизитов)
   const { data: cardCredentials, isLoading: isLoadingCredentials, refetch: refetchCredentials } = useQuery(
     ['cardCredentials', publicId],
     () => cardManagementAPI.getCredentials(publicId),

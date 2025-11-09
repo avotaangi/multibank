@@ -1,10 +1,12 @@
 import axios from "axios";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Info } from "lucide-react";
+import { useQuery } from "react-query";
 import { useTelegramUser } from "../hooks/useTelegramUser";
 import InfoPanel from "../components/InfoPanel";
 import { usePageInfo } from "../hooks/usePageInfo";
+import { cardManagementAPI } from "../services/api";
 
 // 🔗 Укажи публичный адрес своего FastAPI (через cloudflared/ngrok)
 const API_BASE = import.meta.env.VITE_API_BASE; // 🔗 твой FastAPI endpoint
@@ -58,32 +60,102 @@ const MyCardsPage = () => {
     fetchBalances();
   }, [banks]);
 
+  // Функция для форматирования номера карты из API
+  const formatCardNumber = (encryptedPan) => {
+    if (!encryptedPan) return null;
+    try {
+      const decoded = atob(encryptedPan);
+      // Форматируем как XXXX **** **** XXXX
+      if (decoded.length >= 16) {
+        const first4 = decoded.substring(0, 4);
+        const last4 = decoded.substring(decoded.length - 4);
+        return `${first4} **** **** ${last4}`;
+      }
+      return decoded;
+    } catch (e) {
+      // Если не base64, пробуем использовать как есть
+      if (encryptedPan.length >= 16) {
+        const first4 = encryptedPan.substring(0, 4);
+        const last4 = encryptedPan.substring(encryptedPan.length - 4);
+        return `${first4} **** **** ${last4}`;
+      }
+      return encryptedPan;
+    }
+  };
+
+  // Загружаем credentials для каждого банка отдельно
+  const { data: vbankCredentials } = useQuery(
+    ['cardCredentials', 'vbank'],
+    () => cardManagementAPI.getCredentials('vbank'),
+    {
+      enabled: banks.includes('vbank'),
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
+  const { data: abankCredentials } = useQuery(
+    ['cardCredentials', 'abank'],
+    () => cardManagementAPI.getCredentials('abank'),
+    {
+      enabled: banks.includes('abank'),
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
+  const { data: sbankCredentials } = useQuery(
+    ['cardCredentials', 'sbank'],
+    () => cardManagementAPI.getCredentials('sbank'),
+    {
+      enabled: banks.includes('sbank'),
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
   if (loading) return <div className="p-6 text-center">Загрузка данных...</div>;
 
-  // 🏦 Генерация карточек
-  const cards = banks.map((bank) => ({
-    id: bank,
-    name: bank.toUpperCase(),
-    balance: balances[bank] || "—",
-    color:
-      bank === "vbank"
-        ? "#0055BC"
-        : bank === "abank"
-        ? "#EF3124"
-        : bank === "sbank"
-        ? "#00A859"
-        : "#333333",
-    logo:
-      bank === "vbank"
-        ? "VBank"
-        : bank === "abank"
-        ? "ABank"
-        : bank === "sbank"
-        ? "SBank"
-        : bank.toUpperCase(),
-    cardNumber: "**** **** **** 1234",
-    cardholderName: telegramUser.displayName || "Клиент",
-  }));
+  // 🏦 Генерация карточек с реальными данными из API
+  const cards = useMemo(() => {
+    return banks.map((bank) => {
+      let credentials = null;
+      if (bank === 'vbank') credentials = vbankCredentials;
+      else if (bank === 'abank') credentials = abankCredentials;
+      else if (bank === 'sbank') credentials = sbankCredentials;
+      
+      const realCardNumber = credentials?.data?.encryptedPan 
+        ? formatCardNumber(credentials.data.encryptedPan)
+        : null;
+      
+      return {
+        id: bank,
+        name: bank.toUpperCase(),
+        balance: balances[bank] || "—",
+        color:
+          bank === "vbank"
+            ? "#0055BC"
+            : bank === "abank"
+            ? "#EF3124"
+            : bank === "sbank"
+            ? "#00A859"
+            : "#333333",
+        logo:
+          bank === "vbank"
+            ? "VBank"
+            : bank === "abank"
+            ? "ABank"
+            : bank === "sbank"
+            ? "SBank"
+            : bank.toUpperCase(),
+        cardNumber: realCardNumber || "**** **** **** 1234",
+        cardholderName: telegramUser.displayName || "Клиент",
+      };
+    });
+  }, [banks, balances, vbankCredentials, abankCredentials, sbankCredentials, telegramUser.displayName]);
 
   const handleCardClick = (card) => {
     navigate(`/card-analytics/${card.id}`);
