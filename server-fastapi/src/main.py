@@ -18,6 +18,9 @@ async def lifespan(app: FastAPI):
     # Сборник функций для работы с API и БД
     session = ClientSession()
     bank_helper = BankHelper(db=db, session=session)
+    for user in range(1,10):
+        for bank in ["vbank", "abank"]:
+            await bank_helper.add_new_account(bank, user)
 
     yield                                 # приложение работает
 
