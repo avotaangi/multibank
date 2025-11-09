@@ -11,9 +11,12 @@ export default defineConfig({
       '127.0.0.1',
       'nonacquiescing-ungovernmentally-paz.ngrok-free.app',
       '.ngrok-free.app',
+      '.ngrok-free.dev',
       '.ngrok.io',
       'multibank-dev.loca.lt',
-      '.loca.lt'
+      '.loca.lt',
+      'leaseless-stephnie-amiably.ngrok-free.dev',
+      ".cloudpub.ru"
     ],
     headers: {
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
