@@ -1,56 +1,63 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
 import useAuthStore from '../stores/authStore';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
+
 import BankCardStack from '../components/BankCardStack';
 import InfoPanel from '../components/InfoPanel';
 import InsuranceCard from '../components/InsuranceCard';
+
 import { usePageInfo } from '../hooks/usePageInfo';
 import { useTelegramUser } from '../hooks/useTelegramUser';
 import { useAndroidAdaptation } from '../hooks/useAndroidAdaptation';
+
 import AndroidTestPanel from '../components/AndroidTestPanel';
 import { Info, ChevronRight } from 'lucide-react';
 
+// =========================
+// ENV / API
+// =========================
+const API_BASE = import.meta.env.VITE_API_BASE;
+const CLIENT_ID_ID = import.meta.env.VITE_CLIENT_ID_ID; 
+
+// =========================
+// Утилиты
+// =========================
+function parseAmount(numLike) {
+  // сервер отдаёт строку вида "92086.46" -> число
+  if (numLike == null) return 0;
+  const n = Number(numLike);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatRub(valueNumber) {
+  return valueNumber.toLocaleString('ru-RU', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }) + ' ₽';
+}
+
 const DashboardPage = () => {
   const { user } = useAuthStore();
-  const { getFormattedBalance, bankBalances } = useBalanceStore();
+  const { bankBalances, getFormattedBalance } = useBalanceStore();
   const { addTestCard } = useTestCardsStore();
+
   const navigate = useNavigate();
   const telegramUser = useTelegramUser();
   const pageInfo = usePageInfo();
+  const { styles, classes } = useAndroidAdaptation();
+
   const [showInfoPanel, setShowInfoPanel] = useState(false);
 
-  // Вычисляем общий бюджет динамически с реактивным обновлением
-  const totalBudget = useMemo(() => {
-    const total = Object.values(bankBalances).reduce((sum, balance) => sum + balance, 0);
-    return `${total.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
-  }, [bankBalances]);
+  // Состояние реальных банков/балансов (из API)
+  const [availableBanks, setAvailableBanks] = useState([]);   // ['vbank', 'abank', ...] — с API
+  const [isLoadingBanks, setIsLoadingBanks] = useState(true);
+  const [balanceFetchError, setBalanceFetchError] = useState(null);
 
-  // Данные о страховых полисах
-  const insurancePolicies = useMemo(() => [
-    {
-      id: 'osago-1',
-      type: 'OSAGO',
-      company: 'Ингосстрах',
-      policyNumber: 'ОСА-1234567890',
-      expiryDate: '2026-06-15',
-      insuredAmount: 500000,
-      nextPaymentDate: '2025-06-15',
-      monthlyPayment: 4500
-    },
-    {
-      id: 'dms-1',
-      type: 'DMS',
-      company: 'ВСК',
-      policyNumber: 'ДМС-9876543210',
-      expiryDate: '2025-12-31',
-      insuredAmount: 300000,
-      remainingVisits: 3,
-      monthlyPayment: 3500
-    }
-  ], []);
-
+  // Модалка добавления банка (твой прежний UX полностью сохранён)
   const [showAddBankModal, setShowAddBankModal] = useState(false);
   const [showRequestedBanks, setShowRequestedBanks] = useState(false);
   const [requestedBanks, setRequestedBanks] = useState([]);
@@ -61,40 +68,151 @@ const DashboardPage = () => {
     cvv: ''
   });
 
-  // Банки, которые уже используются в приложении
-  const usedBanks = [
-    { id: 'vbank', name: 'VBank', color: 'bg-blue-500' },
-    { id: 'abank', name: 'ABank', color: 'bg-red-500' },
-    { id: 'sbank', name: 'SBank', color: 'bg-green-500' }
-  ];
-
-  // Банки, которые можно добавить
-  const availableBanks = [
-    { id: 'sberbank', name: 'Сбербанк', color: 'bg-green-500' },
-    { id: 'gazprombank', name: 'Газпромбанк', color: 'bg-orange-500' },
-    { id: 'raiffeisen', name: 'Райффайзенбанк', color: 'bg-purple-500' },
-    { id: 'rosbank', name: 'Росбанк', color: 'bg-indigo-500' }
-  ];
-
-  const handleAddBank = () => {
-    setShowAddBankModal(true);
+    // 🎨 Цвета и человекочитаемые имена для всех банков
+  const allBanksMap = {
+    vbank:  { name: 'VBank',        color: 'bg-blue-500'  },
+    abank:  { name: 'ABank',        color: 'bg-red-500'   },
+    sbank:  { name: 'SBank',        color: 'bg-green-500' },
+    sberbank: { name: 'Сбербанк',   color: 'bg-green-600' },
+    gazprombank: { name: 'Газпромбанк', color: 'bg-orange-500' },
+    raiffeisen: { name: 'Райффайзенбанк', color: 'bg-purple-500' },
+    rosbank: { name: 'Росбанк', color: 'bg-indigo-500' }
   };
+
+  // Банки, которые уже используются в приложении (визуальный блок в модалке — без изменений)
+  // const usedBanks = [
+  //   { id: 'vbank', name: 'VBank', color: 'bg-blue-500' },
+  //   { id: 'abank', name: 'ABank', color: 'bg-red-500' },
+  //   { id: 'sbank', name: 'SBank', color: 'bg-green-500' }
+  // ];
+  // ✅ Банки, которые уже подключены (из availableBanks)
+  const usedBanks = useMemo(() => {
+    return availableBanks.map(id => ({
+      id,
+      name: allBanksMap[id]?.name || id.toUpperCase(),
+      color: allBanksMap[id]?.color || 'bg-gray-400'
+    }));
+  }, [availableBanks]);
+
+  // Банки, доступные “для подключения” (визуальный блок в модалке — без изменений)
+  // const selectableBanks = [
+  //   { id: 'sberbank', name: 'Сбербанк', color: 'bg-green-500' },
+  //   { id: 'gazprombank', name: 'Газпромбанк', color: 'bg-orange-500' },
+  //   { id: 'raiffeisen', name: 'Райффайзенбанк', color: 'bg-purple-500' },
+  //   { id: 'rosbank', name: 'Росбанк', color: 'bg-indigo-500' }
+  // ];
+    // 💡 Банки, доступные для подключения (все, кроме тех, что уже есть в availableBanks)
+  const selectableBanks = useMemo(() => {
+    return Object.entries(allBanksMap)
+      .filter(([id]) => !availableBanks.includes(id))
+      .map(([id, info]) => ({
+        id,
+        ...info
+      }));
+  }, [availableBanks]);
+
+
+
+
+  // =========================
+  // Загрузка списка банков
+  // =========================
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBanks() {
+      setIsLoadingBanks(true);
+      setBalanceFetchError(null);
+      try {
+        const res = await axios.get(`${API_BASE}/${CLIENT_ID_ID}/bank_names`, {
+          // если знаешь, что потребуется кросс-домен — можешь добавить withCredentials: true
+        });
+        if (cancelled) return;
+
+        const names = Array.isArray(res.data) ? res.data : [];
+        setAvailableBanks(names);
+
+        // сразу подтянем балансы и пробросим в глобальный стор
+        await hydrateBalances(names);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('❌ Ошибка загрузки списка банков:', err);
+        setBalanceFetchError('Не удалось получить список банков.');
+        setAvailableBanks([]); // пустой список
+      } finally {
+        if (!cancelled) setIsLoadingBanks(false);
+      }
+    }
+
+    loadBanks();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // =========================
+  // Подтянуть балансы и положить в store
+  // =========================
+  const hydrateBalances = async (bankList) => {
+    if (!Array.isArray(bankList) || bankList.length === 0) return;
+
+    const { setAllBalances } = useBalanceStore.getState();
+
+    try {
+      const requests = bankList.map((bank) =>
+        axios
+          .get(`${API_BASE}/available_balance/${bank}/${CLIENT_ID_ID}`)
+          .then((r) => ({ bank, ok: true, data: r.data }))
+          .catch((e) => ({ bank, ok: false, error: e }))
+      );
+
+      const results = await Promise.all(requests);
+      const balances = {};
+
+      results.forEach(({ bank, ok, data, error }) => {
+        if (!ok) {
+          console.warn(`⚠️ Баланс ${bank} не получен:`, error?.message || error);
+          balances[bank] = 0;
+          return;
+        }
+        const numeric = parseAmount(data?.balance ?? data);
+        balances[bank] = numeric;
+      });
+
+      // ✅ Устанавливаем всё одним вызовом
+      setAllBalances(balances);
+    } catch (e) {
+      console.error('❌ Ошибка при сборе балансов:', e);
+      setBalanceFetchError('Не удалось получить балансы банков.');
+    }
+  };
+
+
+
+  // =========================
+  // Итоговый бюджет (из глобального стора — чтобы всё, вкл. BankCardStack, было согласовано)
+  // =========================
+  // const totalBudget = useMemo(() => {
+  //   const total = Object.values(bankBalances).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0);
+  //   return formatRub(total);
+  // }, [bankBalances]);
+
+  const { getTotalBalance } = useBalanceStore();
+  const totalBudget = getTotalBalance();
+
+  // =========================
+  // Обработчики модалки "Добавить банк"
+  // (без изменений визуала и поведения)
+  // =========================
+  const handleAddBank = () => setShowAddBankModal(true);
 
   const handleCloseModal = () => {
     setShowAddBankModal(false);
-    setNewBankData({
-      bank: '',
-      cardNumber: '',
-      expiryDate: '',
-      cvv: ''
-    });
+    setNewBankData({ bank: '', cardNumber: '', expiryDate: '', cvv: '' });
   };
 
   const handleCancelRequest = (bankId) => {
-    setRequestedBanks(prev => prev.filter(bank => bank.id !== bankId));
-    if (requestedBanks.length === 1) {
-      setShowRequestedBanks(false);
-    }
+    setRequestedBanks(prev => prev.filter(b => b.id !== bankId));
+    if (requestedBanks.length === 1) setShowRequestedBanks(false);
   };
 
   const handleBankSelect = (bankId) => {
@@ -103,86 +221,73 @@ const DashboardPage = () => {
 
   const handleInputChange = (field, value) => {
     if (field === 'expiryDate') {
-      // Валидация для срока действия - только цифры, максимум 4 символа
       const formatted = value.replace(/\D/g, '').slice(0, 4);
-      if (formatted.length <= 4) {
-        setNewBankData(prev => ({ ...prev, [field]: formatted }));
-      }
+      setNewBankData(prev => ({ ...prev, [field]: formatted }));
     } else if (field === 'cvv') {
-      // Валидация для CVV - только цифры, максимум 3 символа
       const formatted = value.replace(/\D/g, '').slice(0, 3);
-      if (formatted.length <= 3) {
-        setNewBankData(prev => ({ ...prev, [field]: formatted }));
-      }
+      setNewBankData(prev => ({ ...prev, [field]: formatted }));
     } else {
       setNewBankData(prev => ({ ...prev, [field]: value }));
     }
   };
 
   const handleCardNumberChange = (value) => {
-    // Только цифры и пробелы каждые 4 цифры
     const formatted = value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ');
-    if (formatted.length <= 19) { // 16 цифр + 3 пробела
+    if (formatted.length <= 19) {
       setNewBankData(prev => ({ ...prev, cardNumber: formatted }));
     }
   };
 
   const handleConfirmWithBank = () => {
-    if (newBankData.bank) {
-      const selectedBank = availableBanks.find(bank => bank.id === newBankData.bank);
-      if (selectedBank) {
-        setRequestedBanks(prev => [...prev, selectedBank]);
-        setShowRequestedBanks(true);
-      }
-      handleCloseModal();
+    if (!newBankData.bank) return;
+    const selected = selectableBanks.find(b => b.id === newBankData.bank);
+    if (selected) {
+      setRequestedBanks(prev => [...prev, selected]);
+      setShowRequestedBanks(true);
     }
+    handleCloseModal();
   };
 
   const handleConfirmWithoutBank = () => {
-    if (newBankData.bank && newBankData.cardNumber && newBankData.expiryDate && newBankData.cvv) {
-      // Создаем тестовую карту
-      const testCard = {
-        id: `test-card-${Date.now()}`,
-        name: availableBanks.find(bank => bank.id === newBankData.bank)?.name || 'Тестовая карта',
-        bankId: newBankData.bank,
-        cardNumber: newBankData.cardNumber,
-        balance: 10000, // Начальный баланс 10,000 ₽
-        isTest: true
-      };
-      
-      // Добавляем баланс в глобальный стор
-      const { updateBalance } = useBalanceStore.getState();
-      updateBalance(newBankData.bank, 10000, 'set');
-      
-      addTestCard(testCard);
-      handleCloseModal();
-    }
+    if (!(newBankData.bank && newBankData.cardNumber && newBankData.expiryDate && newBankData.cvv)) return;
+
+    const selected = selectableBanks.find(b => b.id === newBankData.bank);
+    const testCard = {
+      id: `test-card-${Date.now()}`,
+      name: selected?.name || 'Тестовая карта',
+      bankId: newBankData.bank,
+      cardNumber: newBankData.cardNumber,
+      balance: 10000,
+      isTest: true,
+    };
+
+    const { updateBalance } = useBalanceStore.getState();
+    updateBalance(newBankData.bank, 10000, 'set');
+
+    addTestCard(testCard);
+    handleCloseModal();
   };
 
-
-
-
-
-  const { styles, classes } = useAndroidAdaptation();
-  
+  // =========================
+  // Рендер
+  // =========================
   return (
-    <div 
+    <div
       className={`min-h-screen bg-white relative overflow-hidden ${classes.container}`}
       style={styles.container}
     >
-
       {/* Top Header with Profile */}
       <div className="relative z-10 bg-gray-100 px-5 pt-6 pb-4 rounded-[40px] ">
         <div className="flex items-center justify-between">
-          <div 
+          <div
             className="flex items-center space-x-4 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => navigate('/rewards')}
           >
             <div className="relative rounded-full">
               <div className="w-14 h-14 bg-gray-300 rounded-full flex items-center justify-center">
-                 <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                 </svg>
+                <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               </div>
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white shadow-lg"></div>
             </div>
@@ -195,6 +300,7 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
+
           <div className="relative flex items-center space-x-2">
             <button
               onClick={() => setShowInfoPanel(true)}
@@ -212,8 +318,13 @@ const DashboardPage = () => {
           Общий бюджет
         </div>
         <div className="text-black font-ibm text-3xl font-medium leading-[110%] tracking-[-0.02em]">
-          {totalBudget}
+          {/* показываем лоадер, если банки ещё грузятся */}
+          {isLoadingBanks ? 'Загрузка…' : totalBudget}
         </div>
+        {/* Ошибку покажем строкой ниже, если была */}
+        {!isLoadingBanks && balanceFetchError && (
+          <div className="text-red-500 text-xs mt-1">{balanceFetchError}</div>
+        )}
       </div>
 
       {/* Bank Cards Stack */}
@@ -223,7 +334,7 @@ const DashboardPage = () => {
 
       {/* Add Bank Button */}
       <div className="relative z-10 text-center py-2 ">
-        <button 
+        <button
           onClick={handleAddBank}
           className="w-full h-12 bg-white rounded-2xl flex items-center justify-center text-gray-700 font-ibm text-sm font-medium hover:bg-gray-50 transition-colors"
         >
@@ -263,7 +374,7 @@ const DashboardPage = () => {
       {/* Quick Action Buttons */}
       <div className="relative z-10 px-5 py-2 ">
         <div className="grid grid-cols-3 gap-2 mb-2">
-          <button 
+          <button
             onClick={() => navigate('/transfer')}
             className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center p-1"
           >
@@ -277,8 +388,8 @@ const DashboardPage = () => {
               <div>банками</div>
             </div>
           </button>
-          
-          <button 
+
+          <button
             onClick={() => navigate('/payments')}
             className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center"
           >
@@ -292,8 +403,8 @@ const DashboardPage = () => {
               <div>платежи</div>
             </div>
           </button>
-          
-          <button 
+
+          <button
             onClick={() => navigate('/budget-planning')}
             className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center"
           >
@@ -308,10 +419,10 @@ const DashboardPage = () => {
             </div>
           </button>
         </div>
-        
+
         {/* Transfer by Account & Leads Buttons */}
         <div className="grid grid-cols-2 gap-2">
-          <button 
+          <button
             onClick={() => navigate('/transfer-by-account')}
             className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center"
           >
@@ -325,8 +436,8 @@ const DashboardPage = () => {
               <div>номеру счета</div>
             </div>
           </button>
-          
-          <button 
+
+          <button
             onClick={() => navigate('/security')}
             className="h-28 bg-gray-100 rounded-2xl flex flex-col items-center justify-center"
           >
@@ -350,9 +461,30 @@ const DashboardPage = () => {
               Страхование
             </div>
           </div>
-          
+
           <div className="space-y-2 mb-3">
-            {insurancePolicies.map((policy) => (
+            {[
+              {
+                id: 'osago-1',
+                type: 'OSAGO',
+                company: 'Ингосстрах',
+                policyNumber: 'ОСА-1234567890',
+                expiryDate: '2026-06-15',
+                insuredAmount: 500000,
+                nextPaymentDate: '2025-06-15',
+                monthlyPayment: 4500
+              },
+              {
+                id: 'dms-1',
+                type: 'DMS',
+                company: 'ВСК',
+                policyNumber: 'ДМС-9876543210',
+                expiryDate: '2025-12-31',
+                insuredAmount: 300000,
+                remainingVisits: 3,
+                monthlyPayment: 3500
+              }
+            ].map((policy) => (
               <InsuranceCard
                 key={policy.id}
                 policy={policy}
@@ -373,7 +505,7 @@ const DashboardPage = () => {
 
       {/* Analytics Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <button 
+        <button
           onClick={() => navigate('/analytics')}
           className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
         >
@@ -387,31 +519,31 @@ const DashboardPage = () => {
               </svg>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             {/* Income */}
             <div className="flex items-center justify-between">
               <div className="flex-1 mr-4">
-                <div className="h-4 bg-green-400 rounded-full" style={{width: '80%'}}></div>
+                <div className="h-4 bg-green-400 rounded-full" style={{ width: '80%' }}></div>
               </div>
               <div className="flex items-center space-x-2">
                 <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M7 14l5-5 5 5z"/>
+                  <path d="M7 14l5-5 5 5z" />
                 </svg>
                 <div className="text-black font-ibm font-medium text-sm leading-[110%]">
                   120 473 ₽
                 </div>
               </div>
             </div>
-            
+
             {/* Expenses */}
             <div className="flex items-center justify-between">
               <div className="flex-1 mr-4">
-                <div className="h-4 bg-red-500 rounded-full" style={{width: '50%'}}></div>
+                <div className="h-4 bg-red-500 rounded-full" style={{ width: '50%' }}></div>
               </div>
               <div className="flex items-center space-x-2">
                 <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M7 10l5 5 5-5z"/>
+                  <path d="M7 10l5 5 5-5z" />
                 </svg>
                 <div className="text-black font-ibm font-medium text-sm leading-[110%]">
                   54 986 ₽
@@ -424,7 +556,7 @@ const DashboardPage = () => {
 
       {/* Deposits Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <button 
+        <button
           onClick={() => navigate('/deposits')}
           className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
         >
@@ -438,31 +570,31 @@ const DashboardPage = () => {
               </svg>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             {/* Deposit 1 */}
             <div className="flex items-center justify-between">
               <div className="flex-1 mr-4">
-                <div className="h-4 bg-green-400 rounded-full" style={{width: '75%'}}></div>
+                <div className="h-4 bg-green-400 rounded-full" style={{ width: '75%' }}></div>
               </div>
               <div className="flex items-center space-x-2">
                 <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M7 14l5-5 5 5z"/>
+                  <path d="M7 14l5-5 5 5z" />
                 </svg>
                 <div className="text-black font-ibm font-medium text-sm leading-[110%]">
                   100 000,00 ₽
                 </div>
               </div>
             </div>
-            
+
             {/* Deposit 2 */}
             <div className="flex items-center justify-between">
               <div className="flex-1 mr-4">
-                <div className="h-4 bg-red-500 rounded-full" style={{width: '45%'}}></div>
+                <div className="h-4 bg-red-500 rounded-full" style={{ width: '45%' }}></div>
               </div>
               <div className="flex items-center space-x-2">
                 <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M7 10l5 5 5-5z"/>
+                  <path d="M7 10l5 5 5-5z" />
                 </svg>
                 <div className="text-black font-ibm font-medium text-sm leading-[110%]">
                   55 000,00 ₽
@@ -475,7 +607,7 @@ const DashboardPage = () => {
 
       {/* Credits Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <button 
+        <button
           onClick={() => navigate('/credits')}
           className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
         >
@@ -489,14 +621,14 @@ const DashboardPage = () => {
               </svg>
             </div>
           </div>
-          
+
           <div className="mb-4">
             <div className="text-black font-ibm font-normal text-sm leading-[110%] mb-3 text-left">
               Осталось до погашения кредита
             </div>
             <div className="flex items-center justify-between">
               <div className="flex-1 mr-4">
-                <div className="h-4 bg-yellow-500 rounded-full" style={{width: '65%'}}></div>
+                <div className="h-4 bg-yellow-500 rounded-full" style={{ width: '65%' }}></div>
               </div>
               <div className="text-black font-ibm font-medium text-sm leading-[110%]">
                 80 000,00 ₽
@@ -527,7 +659,6 @@ const DashboardPage = () => {
         </div>
       </div>
 
-
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
 
@@ -537,7 +668,7 @@ const DashboardPage = () => {
           <div className="bg-white rounded-3xl p-4 sm:p-6 w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-ibm font-semibold text-gray-900">Добавить банк</h2>
-              <button 
+              <button
                 onClick={handleCloseModal}
                 className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"
               >
@@ -572,7 +703,7 @@ const DashboardPage = () => {
             <div className="mb-4">
               <label className="block text-sm font-ibm font-medium text-gray-700 mb-2">Доступные для подключения</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {availableBanks.map((bank) => (
+                {selectableBanks.map((bank) => (
                   <button
                     key={bank.id}
                     onClick={() => handleBankSelect(bank.id)}
@@ -591,6 +722,42 @@ const DashboardPage = () => {
               </div>
             </div>
 
+            {/* Поля ввода карты (визуально и по логике — как у тебя)
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Номер карты</label>
+                <input
+                  type="text"
+                  value={newBankData.cardNumber}
+                  onChange={(e) => handleCardNumberChange(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="0000 0000 0000 0000"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Срок (MMYY)</label>
+                  <input
+                    type="text"
+                    value={newBankData.expiryDate}
+                    onChange={(e) => handleInputChange('expiryDate', e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="MMYY"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">CVV</label>
+                  <input
+                    type="password"
+                    value={newBankData.cvv}
+                    onChange={(e) => handleInputChange('cvv', e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="CVV"
+                  />
+                </div>
+              </div>
+            </div> */}
 
             {/* Action Button */}
             <div className="mt-4">

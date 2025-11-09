@@ -1,79 +1,86 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 const useBalanceStore = create((set, get) => ({
-  bankBalances: {
-    vbank: 10000,
-    abank: 30000,
-    sbank: 20000
-  },
+  // 🏦 Изначально пусто, всё приходит с API
+  bankBalances: {},
 
-  // Обновить баланс карты
-  updateBalance: (bankId, amount, operation = 'subtract') => {
+  // 🔹 Установить баланс одного банка
+  setBalance: (bankId, amount) => {
     set((state) => ({
       bankBalances: {
         ...state.bankBalances,
-        [bankId]: operation === 'subtract' 
-          ? state.bankBalances[bankId] - amount 
-          : state.bankBalances[bankId] + amount
-      }
+        [bankId]: amount,
+      },
     }));
   },
 
-  // Перевести деньги между картами
-  transferMoney: (fromBankId, toBankId, amount) => {
+  // 🔹 Массово установить все балансы (используется при загрузке с API)
+  setAllBalances: (balances) => {
+    set({ bankBalances: balances });
+  },
+
+  // 🔹 Обновить баланс (операция add/subtract)
+  updateBalance: (bankId, amount, operation = "set") => {
     set((state) => {
-      const newBalances = { ...state.bankBalances };
-      
-      console.log('🔄 Transfer Money:', {
-        fromBankId,
-        toBankId,
-        amount,
-        beforeBalances: { ...state.bankBalances }
-      });
-      
-      // Списываем с карты отправителя
-      if (fromBankId !== 'other') {
-        newBalances[fromBankId] -= amount;
-        console.log(`✅ Списали с ${fromBankId}: ${amount}, новый баланс: ${newBalances[fromBankId]}`);
-      }
-      
-      // Зачисляем на карту получателя только если это карта пользователя
-      if (toBankId !== 'other' && newBalances.hasOwnProperty(toBankId)) {
-        newBalances[toBankId] += amount;
-        console.log(`✅ Зачислили на ${toBankId}: ${amount}, новый баланс: ${newBalances[toBankId]}`);
-      } else if (toBankId !== 'other') {
-        console.log(`❌ Карта ${toBankId} не найдена в балансах пользователя`);
-      } else {
-        console.log(`❌ Внешний перевод - деньги не зачисляются`);
-      }
-      
-      console.log('After transfer balances:', newBalances);
-      
-      return { bankBalances: newBalances };
+      const current = state.bankBalances[bankId] || 0;
+      const newAmount =
+        operation === "subtract"
+          ? current - amount
+          : operation === "add"
+          ? current + amount
+          : amount;
+      return {
+        bankBalances: { ...state.bankBalances, [bankId]: newAmount },
+      };
     });
   },
 
-  // Получить баланс карты
+  // 🔹 Перевести деньги между картами
+  transferMoney: (fromBankId, toBankId, amount) => {
+    set((state) => {
+      const balances = { ...state.bankBalances };
+
+      if (balances[fromBankId] !== undefined) {
+        balances[fromBankId] = Math.max(0, balances[fromBankId] - amount);
+      }
+      if (balances[toBankId] !== undefined) {
+        balances[toBankId] = balances[toBankId] + amount;
+      }
+
+      console.log("💸 Transfer completed:", {
+        fromBankId,
+        toBankId,
+        amount,
+        newBalances: balances,
+      });
+
+      return { bankBalances: balances };
+    });
+  },
+
+  // 🔹 Получить баланс одной карты
   getBalance: (bankId) => {
     return get().bankBalances[bankId] || 0;
   },
 
-  // Получить отформатированный баланс
+  // 🔹 Получить отформатированный баланс
   getFormattedBalance: (bankId) => {
-    const balance = get().bankBalances[bankId] || 0;
-    return `${balance.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
+    const balance = get().bankBalances?.[bankId] ?? 0;
+    return `${Number(balance).toLocaleString("ru-RU", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ₽`;
   },
 
-  // Сбросить балансы к начальным значениям
-  resetBalances: () => {
-    set({
-      bankBalances: {
-        vbank: 10000,
-        abank: 30000,
-        sbank: 20000
-      }
-    });
-  }
+  // 🔹 Получить сумму всех балансов (для “Общий бюджет”)
+  getTotalBalance: () => {
+    const balances = Object.values(get().bankBalances);
+    const total = balances.reduce((sum, b) => sum + (b || 0), 0);
+    return `${total.toLocaleString("ru-RU", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ₽`;
+  },
 }));
 
 export default useBalanceStore;
