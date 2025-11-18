@@ -1,0 +1,102 @@
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: multibank-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: multibank
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - multibank-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: multibank-server
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/multibank?authSource=admin
+      WEBAPP_URL: ${WEBAPP_URL:-http://localhost:5173}
+      CLIENT_ID: ${CLIENT_ID:-}
+      CLIENT_SECRET: ${CLIENT_SECRET:-}
+      BASE_URL: ${BASE_URL:-open.bankingapi.ru}
+      CLIENT_ID_ID: ${CLIENT_ID_ID:-1}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - multibank-network
+    volumes:
+      - ./server/src:/app/src
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend (React/Vite)
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_BASE:-http://localhost:8000}
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
+        VITE_CLIENT_ID_ID: ${CLIENT_ID_ID:-1}
+        VITE_TELEGRAM_BOT_USERNAME: ${VITE_TELEGRAM_BOT_USERNAME:-multibank_bot}
+        VITE_TELEGRAM_WEBAPP_URL: ${VITE_TELEGRAM_WEBAPP_URL:-http://localhost:5173}
+    container_name: multibank-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+    networks:
+      - multibank-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Telegram Bot (Python/aiogram)
+  telegram-bot:
+    build:
+      context: ./telegram-bot
+      dockerfile: Dockerfile
+    container_name: multibank-telegram-bot
+    restart: unless-stopped
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-multibank_bot}
+      API_URL: http://server:8000
+      WEBAPP_URL: ${WEBAPP_URL:-http://localhost:5173}
+    depends_on:
+      - server
+    networks:
+      - multibank-network
+    volumes:
+      - ./telegram-bot/src:/app/src
+
+volumes:
+  mongodb_data:
+
+networks:
+  multibank-network:
+    driver: bridge

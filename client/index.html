@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>MultiBank - Telegram Web App</title>
+    <meta name="description" content="MultiBank - Secure banking in Telegram" />
+    
+    <!-- Telegram WebApp specific meta tags -->
+    <meta name="telegram-web-app" content="true" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Telegram WebApp specific settings -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Cache busting -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <!-- Telegram WebApp Auto-expand Script -->
+    <script>
+      // Force cache refresh
+      const APP_VERSION = '__APP_VERSION__' || Date.now();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+      
+      // Clear cache on load
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+      // Simple and direct Telegram WebApp expansion
+      function expandTelegramWebApp() {
+        if (window.Telegram && window.Telegram.WebApp) {
+          const webApp = window.Telegram.WebApp;
+          console.log('Telegram WebApp found, expanding...');
+          
+          // Initialize WebApp
+          webApp.ready();
+          webApp.enableClosingConfirmation();
+          
+          // Force expand immediately
+          webApp.expand();
+          
+          return true;
+        } else {
+          console.log('Telegram WebApp not found');
+          return false;
+        }
+      }
+      
+      // Try to expand immediately when script loads
+      if (window.Telegram && window.Telegram.WebApp) {
+        console.log('Script loaded, Telegram WebApp available, expanding immediately...');
+        const webApp = window.Telegram.WebApp;
+        webApp.ready();
+        webApp.enableClosingConfirmation();
+        webApp.expand();
+      }
+      
+      // Try with simple delays
+      setTimeout(expandTelegramWebApp, 100);
+      setTimeout(expandTelegramWebApp, 500);
+      setTimeout(expandTelegramWebApp, 1000);
+      setTimeout(expandTelegramWebApp, 2000);
+      
+      // Try on window load
+      window.addEventListener('load', function() {
+        console.log('Window loaded, trying to expand...');
+        expandTelegramWebApp();
+      });
+      
+      // Try on DOM ready
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM ready, trying to expand...');
+        expandTelegramWebApp();
+        
+        // Add Telegram WebApp class to body
+        if (window.Telegram && window.Telegram.WebApp) {
+          document.body.classList.add('telegram-webapp');
+        }
+      });
+    </script>
+    
+    <!-- Inter Tight Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter Tight', system-ui, sans-serif;
+        background: var(--tg-theme-bg-color, #ffffff);
+        color: var(--tg-theme-text-color, #000000);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+      
+      html, body, #root {
+        min-height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+      }
+      
+      /* Telegram Web App theme variables */
+      :root {
+        --tg-theme-bg-color: #ffffff;
+        --tg-theme-text-color: #000000;
+        --tg-theme-hint-color: #999999;
+        --tg-theme-link-color: #0088cc;
+        --tg-theme-button-color: #0088cc;
+        --tg-theme-button-text-color: #ffffff;
+        --tg-theme-secondary-bg-color: #f1f1f1;
+      }
+      
+      /* Dark theme support */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --tg-theme-bg-color: #17212b;
+          --tg-theme-text-color: #ffffff;
+          --tg-theme-hint-color: #708499;
+          --tg-theme-secondary-bg-color: #232e3c;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx?v=__APP_VERSION__"></script>
+  </body>
+</html>

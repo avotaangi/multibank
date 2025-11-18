@@ -1,0 +1,659 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Telegram WebApp styles */
+.tg-viewport {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+  overflow-x: hidden;
+  width: 100%;
+  overflow-y: auto;
+}
+
+
+/* Telegram WebApp fullscreen styles */
+.tg-fullscreen {
+  height: 100vh;
+  height: 100dvh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+/* Hide scrollbars in Telegram WebApp */
+.tg-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.tg-viewport {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Ensure proper scrolling */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for Telegram WebApp scrolling */
+body {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* Android WebApp specific styles - только для Android */
+.android-webapp {
+  /* Дополнительные отступы только для Android */
+  padding-top: env(safe-area-inset-top, 24px);
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+.android-webapp-header {
+  /* Отступы для заголовков только на Android */
+  padding-top: env(safe-area-inset-top, 24px);
+}
+
+.android-webapp-bottom {
+  /* Отступы для нижней навигации только на Android */
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+  padding-top: 12px;
+}
+
+/* iOS WebApp - использует стандартные env() без дополнительных классов */
+
+/* Улучшенная поддержка Android WebView */
+@supports (padding: max(0px)) {
+  .android-webapp {
+    padding-top: max(env(safe-area-inset-top), 24px);
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
+  }
+  
+  .android-webapp-header {
+    padding-top: max(env(safe-area-inset-top), 24px);
+  }
+  
+  .android-webapp-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
+  }
+}
+
+/* Force fullscreen for Telegram WebApp */
+@supports (height: 100dvh) {
+  html, body, #root {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+}
+
+/* Telegram WebApp specific fullscreen */
+.telegram-webapp {
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+/* Force fullscreen for Telegram WebApp */
+@supports (height: 100dvh) {
+  .telegram-webapp {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+  }
+}
+
+/* Telegram WebApp viewport fix */
+@supports (padding: env(safe-area-inset-top)) {
+  .telegram-webapp {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  body {
+    @apply bg-white text-gray-900;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  /* Page transition animations */
+  .page-enter {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  
+  .page-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 500ms ease-in-out, transform 500ms ease-in-out;
+  }
+  
+  .page-exit {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  .page-exit-active {
+    opacity: 0;
+    transform: translateX(-100%);
+    transition: opacity 500ms ease-in-out, transform 500ms ease-in-out;
+  }
+  
+  /* Card stack transition */
+  .card-stack-transition {
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Smooth navigation */
+  .smooth-transition {
+    transition: all 0.5s ease-in-out;
+  }
+  
+  /* Card stack to list transition */
+  .card-stack-to-list {
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Card entrance animation */
+  .card-entrance {
+    animation: cardEntrance 0.7s ease-out forwards;
+  }
+  
+  @keyframes cardEntrance {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  
+  /* Card collection animation - собирание карт из разлетевшихся позиций */
+  .card-collection {
+    animation: cardCollection 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  
+  @keyframes cardCollection {
+    from {
+      opacity: 0;
+      transform: translateX(var(--start-x, 0)) translateY(var(--start-y, 0)) scale(var(--start-scale, 1)) rotate(var(--start-rotate, 0deg));
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) translateY(0) scale(1) rotate(0deg);
+    }
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background;
+  }
+  
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+  
+  .btn-outline {
+    @apply btn border border-input hover:bg-accent hover:text-accent-foreground;
+  }
+  
+  .btn-ghost {
+    @apply btn hover:bg-accent hover:text-accent-foreground;
+  }
+  
+  .btn-sm {
+    @apply h-9 px-3 rounded-md;
+  }
+  
+  .btn-md {
+    @apply h-10 py-2 px-4;
+  }
+  
+  .btn-lg {
+    @apply h-11 px-8 rounded-md;
+  }
+  
+  .card {
+    @apply rounded-lg border border-gray-200 bg-white text-gray-900 shadow-sm;
+  }
+  
+  .input {
+    @apply flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .label {
+    @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+}
+
+/* Telegram Web App specific styles */
+.tg-viewport {
+  min-height: 100vh;
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #000000);
+}
+
+.tg-button {
+  background: var(--tg-theme-button-color, #0088cc);
+  color: var(--tg-theme-button-text-color, #ffffff);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tg-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.tg-button:active {
+  transform: translateY(0);
+}
+
+.tg-card {
+  background: var(--tg-theme-secondary-bg-color, #f1f1f1);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 8px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tg-text {
+  color: var(--tg-theme-text-color, #000000);
+}
+
+.tg-hint {
+  color: var(--tg-theme-hint-color, #999999);
+}
+
+.tg-link {
+  color: var(--tg-theme-link-color, #0088cc);
+  text-decoration: none;
+}
+
+.tg-link:hover {
+  text-decoration: underline;
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.7s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Donut chart entrance animation */
+@keyframes donutEntrance {
+  0% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+.animate-donut-entrance {
+  animation: donutEntrance 3.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Analytics page animations */
+@keyframes slideInDown {
+  0% {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-down {
+  animation: slideInDown 1.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-slide-in-down:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.animate-slide-in-down:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.animate-slide-in-down:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.animate-slide-in-down:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.animate-slide-in-down:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.animate-slide-in-down:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+.animate-slide-in-down:nth-child(7) {
+  animation-delay: 0.35s;
+}
+
+.animate-slide-in-down:nth-child(8) {
+  animation-delay: 0.4s;
+}
+
+.animate-slide-in-down:nth-child(9) {
+  animation-delay: 0.45s;
+}
+
+.animate-slide-in-down:nth-child(10) {
+  animation-delay: 0.5s;
+}
+
+.animate-slide-in-down:nth-child(11) {
+  animation-delay: 0.55s;
+}
+
+.animate-slide-in-down:nth-child(12) {
+  animation-delay: 0.6s;
+}
+
+.animate-fade-in {
+  animation: slideInDown 1.6s ease-out forwards;
+  animation-delay: 0.1s;
+  opacity: 0;
+}
+
+.animate-scale-in {
+  animation: slideInDown 1.6s ease-out forwards;
+  animation-delay: 0.15s;
+  opacity: 0;
+}
+
+/* Slower animations for MyCardsPage */
+.animate-slide-in-down-slow {
+  animation: slideInDown 1.2s ease-out forwards;
+  opacity: 0;
+}
+
+/* Very slow animations for DepositsPage */
+.animate-slide-in-down-very-slow {
+  animation: slideInDown 2.0s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-very-slow {
+  animation: fadeIn 1.5s ease-out forwards;
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+.animate-slide-in-up-very-slow {
+  animation: slideUp 1.8s ease-out forwards;
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+.animate-slide-in-down-slow:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.animate-slide-in-down-slow:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.animate-slide-in-down-slow:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.animate-slide-in-down-slow:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.animate-slide-in-down-slow:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+.animate-slide-in-down-slow:nth-child(6) {
+  animation-delay: 0.6s;
+}
+
+.animate-slide-in-down-slow:nth-child(7) {
+  animation-delay: 0.7s;
+}
+
+.animate-slide-in-down-slow:nth-child(8) {
+  animation-delay: 0.8s;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--tg-theme-secondary-bg-color, #f1f1f1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--tg-theme-hint-color, #999999);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tg-theme-text-color, #000000);
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+/* Prevent horizontal scroll */
+.no-horizontal-scroll {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Prevent horizontal scroll for all elements */
+* {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Beautiful scroll indicators */
+.scroll-indicator {
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(to bottom, 
+    rgba(156, 163, 175, 0.6) 0%, 
+    rgba(156, 163, 175, 0.3) 50%, 
+    transparent 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.scroll-indicator:hover::after {
+  opacity: 1;
+}
+
+/* Welcome Banner Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUpDelay {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUpDelay2 {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay {
+  animation: fadeInUpDelay 0.8s ease-out forwards;
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+.animate-fade-in-up-delay-2 {
+  animation: fadeInUpDelay2 0.8s ease-out forwards;
+  animation-delay: 0.6s;
+  opacity: 0;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
