@@ -117,3 +117,5 @@ __pycache__/
 
 # ZIP archives (build artifacts)
 *.zip
+
+test.py

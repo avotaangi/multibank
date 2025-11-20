@@ -9,6 +9,7 @@ from schemas import TransferRequest
 from database import db
 from typing import Optional, Dict, Any
 from datetime import datetime
+from texts import TRANSACTION_KEYWORDS
 load_dotenv()
 
 # Импортируем db для использования в эндпоинтах
@@ -68,7 +69,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 
 @app.get("/")
@@ -692,13 +692,14 @@ async def get_account_transactions(
     limit: int = Query(default=50, ge=1, le=500),
     from_booking_date_time: Optional[str] = Query(None),
     to_booking_date_time: Optional[str] = Query(None),
+    analytics: bool = Query(default=False),
     consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
 ):
     """Получить историю транзакций по счету"""
     try:
         if not session or not banking_client or not bank_helper:
             raise HTTPException(status_code=503, detail="Service not initialized")
-        
+
         # Получаем consent для банка
         if client_id:
             client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
@@ -706,7 +707,7 @@ async def get_account_transactions(
             consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
         else:
             consent = None
-        
+
         headers = {
             "X-Requesting-Bank": banking_client.team_id
         }
@@ -714,7 +715,7 @@ async def get_account_transactions(
             headers["X-Consent-Id"] = consent
         if consent_id:
             headers["X-Consent-Id"] = consent_id
-        
+
         params = {
             "page": page,
             "limit": limit
@@ -725,7 +726,7 @@ async def get_account_transactions(
             params["to_booking_date_time"] = to_booking_date_time
         if client_id:
             params["client_id"] = client_id
-        
+
         transactions = await banking_client.request(
             session,
             bank,
@@ -734,12 +735,60 @@ async def get_account_transactions(
             params=params,
             headers=headers
         )
-        return transactions
+
+        # !!!!!!!!!!!!!! Analytics !!!!!!!!!!!!!!!!
+        if analytics and transactions.get("meta", None).get("totalRecords", None):
+            processed = {
+                "Received": {"total": 0.0, "other": 0.0},
+                "Issued": {"total": 0.0, "other": 0.0}
+            }
+            # Добавляем категории из словаря
+            for key in TRANSACTION_KEYWORDS["ReceivedCreditTransfer"].keys():
+                processed["Received"][key] = 0.0
+            for key in TRANSACTION_KEYWORDS["IssuedDebitTransfer"].keys():
+                processed["Issued"][key] = 0.0
+
+            for tx in transactions.get("data").get("transaction"):
+                info = tx.get("transactionInformation", "")
+                amount = float(tx.get("amount", {}).get("amount", 0))
+                tx_type = tx.get("bankTransactionCode", {}).get("code", "")  # тип операции
+
+                # Определяем набор категорий
+                if tx_type in ["ReceivedCreditTransfer", "02"]:
+                    category_dict = TRANSACTION_KEYWORDS["ReceivedCreditTransfer"]
+                    root = "Received"
+                elif tx_type in ["IssuedDebitTransfer", "01"]:
+                    category_dict = TRANSACTION_KEYWORDS["IssuedDebitTransfer"]
+                    root = "Issued"
+                else:
+                    continue  # игнорируем неизвестные типы
+
+                info_lower = info.lower()
+
+                # Поиск категории
+                detected_category = "other" # Если не найдется - other
+                found = False
+
+                # * Поиск категорий
+                for cat, keywords in category_dict.items():
+                    for kw in keywords:
+                        if (kw.lower() in info_lower) or (info_lower in kw.lower()):
+                            detected_category = cat
+                            found = True
+                            break
+                    if found:
+                        break
+                # Записываем сумму
+                processed[root]["total"] += amount
+                processed[root][detected_category] += amount
+            return processed
+        else:
+            return transactions
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 
 # global_users
 @app.get("/api/get_global_users")
@@ -747,7 +796,6 @@ async def get_global_users() -> dict:
     global_users = await bank_helper.get_global_users()
 
     return global_users
-
 
 
 # Перевод
@@ -765,4 +813,3 @@ async def make_transfer(payload: TransferRequest):
     transfer = await bank_helper.make_transfer(client_id_id, to_client_id_id, from_bank, to_bank, amount)
 
     return transfer
-
