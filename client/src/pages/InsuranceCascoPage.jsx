@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Car, Info, CheckCircle } from 'lucide-react';
 import InfoPanel from '../components/InfoPanel';
+import PremiumBlock from '../components/PremiumBlock';
 import { usePageInfo } from '../hooks/usePageInfo';
 
 const InsuranceCascoPage = () => {
@@ -97,6 +98,7 @@ const InsuranceCascoPage = () => {
         </div>
       </div>
 
+      <PremiumBlock featureName="Оформление страховки">
       {/* Main Content */}
       <div className="px-5 pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -298,6 +300,7 @@ const InsuranceCascoPage = () => {
           </button>
         </form>
       </div>
+      </PremiumBlock>
 
       {/* Info Panel */}
       <InfoPanel

@@ -143,13 +143,13 @@ const TransactionsPage = () => {
                     <p className="font-medium text-gray-900 capitalize">{transaction.type}</p>
                     <p className="text-sm text-gray-500">{transaction.description}</p>
                     <p className="text-xs text-gray-400">
-                      {new Date(transaction.createdAt).toLocaleDateString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {(() => {
+                        const date = new Date(transaction.createdAt);
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const year = date.getFullYear();
+                        return `${day}.${month}.${year}`;
+                      })()}
                     </p>
                   </div>
                 </div>

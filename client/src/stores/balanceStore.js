@@ -3,6 +3,9 @@ import { create } from "zustand";
 const useBalanceStore = create((set, get) => ({
   // 🏦 Изначально пусто, всё приходит с API
   bankBalances: {},
+  
+  // 💰 Виртуальная карта VBank (накопительный счет) - синхронизируется со страницей планирования
+  virtualCardBalance: 0,
 
   // 🔹 Установить баланс одного банка
   setBalance: (bankId, amount) => {
@@ -72,7 +75,7 @@ const useBalanceStore = create((set, get) => ({
     })} ₽`;
   },
 
-  // 🔹 Получить сумму всех балансов (для “Общий бюджет”)
+  // 🔹 Получить сумму всех балансов (для "Общий бюджет")
   getTotalBalance: () => {
     const balances = Object.values(get().bankBalances);
     const total = balances.reduce((sum, b) => sum + (b || 0), 0);
@@ -80,6 +83,30 @@ const useBalanceStore = create((set, get) => ({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })} ₽`;
+  },
+  
+  // 🔹 Установить баланс виртуальной карты VBank
+  setVirtualCardBalance: (amount) => {
+    set({ virtualCardBalance: amount });
+  },
+  
+  // 🔹 Обновить баланс виртуальной карты VBank
+  updateVirtualCardBalance: (amount, operation = "set") => {
+    set((state) => {
+      const current = state.virtualCardBalance || 0;
+      const newAmount =
+        operation === "subtract"
+          ? current - amount
+          : operation === "add"
+          ? current + amount
+          : amount;
+      return { virtualCardBalance: newAmount };
+    });
+  },
+  
+  // 🔹 Получить баланс виртуальной карты VBank
+  getVirtualCardBalance: () => {
+    return get().virtualCardBalance || 0;
   },
 }));
 

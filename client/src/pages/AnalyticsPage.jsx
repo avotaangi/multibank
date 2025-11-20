@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useTestCardsStore from '../stores/testCardsStore';
 import useTransfersStore from '../stores/transfersStore';
 import InfoPanel from '../components/InfoPanel';
+import PremiumBlock from '../components/PremiumBlock';
 import { usePageInfo } from '../hooks/usePageInfo';
+import { useScrollToTop } from '../hooks/useScrollToTop';
 import { Info } from 'lucide-react';
 
 const AnalyticsPage = () => {
@@ -12,6 +14,9 @@ const AnalyticsPage = () => {
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const { getAllCards } = useTestCardsStore();
   const { getAllTransfers } = useTransfersStore();
+  
+  // Прокрутка наверх при монтировании
+  useScrollToTop();
   
   // Получаем все последние переводы
   const allTransfers = getAllTransfers();
@@ -147,6 +152,7 @@ const AnalyticsPage = () => {
       'samokat': 'sbank',    // Самокат - SBank
       'yandex_plus': 'abank', // Яндекс.Плюс - ABank
       'okko': 'vbank',         // Кинотеатр okko - VBank
+      'vbank_plus': 'vbank',   // VBank+ - VBank
       'static_transfer': 'abank' // Статический перевод - ABank
     };
     return cardMapping[operationType];
@@ -176,6 +182,7 @@ const AnalyticsPage = () => {
       { type: 'samokat', amount: 1150 },
       { type: 'yandex_plus', amount: 399 },
       { type: 'okko', amount: 199 },
+      { type: 'vbank_plus', amount: 299 },
       { type: 'static_transfer', amount: 1500 }
     ];
     
@@ -281,6 +288,7 @@ const AnalyticsPage = () => {
         </div>
       </div>
 
+      <PremiumBlock featureName="Аналитика по всем банкам">
       {/* Filter Buttons */}
       <div className="px-2 min-[360px]:px-3 min-[375px]:px-4 pb-3 min-[360px]:pb-4 relative z-50">
         <div className="flex gap-1 min-[360px]:gap-2 min-[375px]:gap-3">
@@ -713,11 +721,46 @@ const AnalyticsPage = () => {
             <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 199 ₽</div>
           </div>
           )}
+
+          {/* VBank+ */}
+          {shouldShowOperation('vbank_plus') && (
+          <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
+            <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
+              <div className="w-6 h-6 min-[360px]:w-8 min-[360px]:h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xs">V+</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center">
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">VBank+</div>
+                <div className="ml-2">
+                  <div 
+                    className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #0055BC 0%, #0055BCCC 100%)'
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">В</span>
+                      </div>
+                    </div>
+                    <div className="text-white text-xs font-medium">3568</div>
+                  </div>
+                </div>
+              </div>
+              <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">Подписки</div>
+            </div>
+            <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 299 ₽</div>
+          </div>
+          )}
         </div>
       </div>
 
       {/* Bottom padding for mobile */}
       <div className="h-20"></div>
+
+      </PremiumBlock>
 
       {/* Info Panel */}
       <InfoPanel

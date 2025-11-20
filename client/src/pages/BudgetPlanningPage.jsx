@@ -3,14 +3,44 @@ import { useNavigate } from 'react-router-dom';
 import useBalanceStore from '../stores/balanceStore';
 import { getTelegramWebApp } from '../utils/telegram';
 import InfoPanel from '../components/InfoPanel';
+import PremiumBlock from '../components/PremiumBlock';
 import { usePageInfo } from '../hooks/usePageInfo';
+import { useScrollToTop } from '../hooks/useScrollToTop';
 import { Info } from 'lucide-react';
+import axios from 'axios';
 
 const BudgetPlanningPage = () => {
   const navigate = useNavigate();
-  const { bankBalances } = useBalanceStore();
+  const { bankBalances, transferMoney, virtualCardBalance, setVirtualCardBalance, updateVirtualCardBalance } = useBalanceStore();
   const pageInfo = usePageInfo();
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  
+  // Прокрутка наверх при монтировании
+  useScrollToTop();
+  const [showTopUpVirtualCardModal, setShowTopUpVirtualCardModal] = useState(false);
+  const [selectedSourceCard, setSelectedSourceCard] = useState(null);
+  const [topUpVirtualAmount, setTopUpVirtualAmount] = useState('');
+  const [topUpVirtualError, setTopUpVirtualError] = useState('');
+  const [topUpVirtualLoading, setTopUpVirtualLoading] = useState(false);
+  const [connectedBanks, setConnectedBanks] = useState([]);
+  
+  const API_BASE = import.meta.env.VITE_API_BASE;
+  const CLIENT_ID_ID = import.meta.env.VITE_CLIENT_ID_ID;
+  
+  // Загружаем список подключенных банков из API
+  useEffect(() => {
+    const fetchConnectedBanks = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/${CLIENT_ID_ID}/bank_names`);
+        setConnectedBanks(res.data || []);
+        console.log('✅ Подключенные банки:', res.data);
+      } catch (err) {
+        console.error('❌ Ошибка при загрузке списка банков:', err);
+        setConnectedBanks([]);
+      }
+    };
+    fetchConnectedBanks();
+  }, [API_BASE, CLIENT_ID_ID]);
   const [showLifestyleTip, setShowLifestyleTip] = useState(false);
   const [showDreamTip, setShowDreamTip] = useState(false);
   const [showGoalsTip, setShowGoalsTip] = useState(false);
@@ -22,9 +52,6 @@ const BudgetPlanningPage = () => {
   const [selectedJointGoal, setSelectedJointGoal] = useState(null);
   const [editJointGoalData, setEditJointGoalData] = useState({ name: '', targetAmount: '', targetDate: '' });
   const [topUpJointAmount, setTopUpJointAmount] = useState('');
-  const [showAddAutopayModal, setShowAddAutopayModal] = useState(false);
-  const [showAutopayConfirmModal, setShowAutopayConfirmModal] = useState(false);
-  const [autopayToToggle, setAutopayToToggle] = useState(null);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
@@ -95,37 +122,6 @@ const BudgetPlanningPage = () => {
     targetDate: '',
     description: ''
   });
-  const [autopays, setAutopays] = useState([
-    {
-      id: 1,
-      name: 'ЖКХ - УК "Дом"',
-      category: 'ЖКХ',
-      amount: 8500,
-      frequency: 'monthly',
-      nextDate: '2024-02-15',
-      card: 'VBank',
-      status: 'active'
-    },
-    {
-      id: 2,
-      name: 'Кредит - Сбербанк',
-      category: 'Кредиты',
-      amount: 25000,
-      frequency: 'monthly',
-      nextDate: '2024-02-20',
-      card: 'ABank',
-      status: 'active'
-    }
-  ]);
-  const [newAutopayData, setNewAutopayData] = useState({
-    name: '',
-    category: 'ЖКХ',
-    amount: '',
-    frequency: 'monthly',
-    card: '',
-    recipient: '',
-    notifications: true
-  });
   const [copiedGoalId, setCopiedGoalId] = useState(null);
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [selectedGoalParticipants, setSelectedGoalParticipants] = useState(null);
@@ -150,7 +146,7 @@ const BudgetPlanningPage = () => {
   // Бюджет на планирование - отдельное поле
   const planningBudget = "110 000 ₽";
   
-  // Данные для кольцевой диаграммы - динамически вычисляемые на основе реальных данных
+  // Данные для кольцевой диаграммы - показываем распределение средств на накопительном счету
   const budgetData = useMemo(() => {
     const lifestyleTotal = lifestylePlans.reduce((sum, plan) => sum + (plan.currentAmount || 0), 0);
     const dreamTotal = dreamPlans.reduce((sum, plan) => sum + (plan.currentAmount || 0), 0);
@@ -162,20 +158,16 @@ const BudgetPlanningPage = () => {
     const goalsTargetTotal = goalsPlans.reduce((sum, plan) => sum + (plan.targetAmount || 0), 0);
     const jointTargetTotal = jointGoals.reduce((sum, goal) => sum + (goal.targetAmount || 0), 0);
     
-    // Сумма ежемесячных автоплатежей
-    const autopayMonthlyTotal = autopays
-      .filter(autopay => autopay.status === 'active' && autopay.frequency === 'monthly')
-      .reduce((sum, autopay) => sum + (autopay.amount || 0), 0);
-    
+    // Распределение средств на накопительном счету по категориям
     return [
       { name: "Планы", amount: lifestyleTotal + dreamTotal, targetAmount: lifestyleTargetTotal + dreamTargetTotal, color: "#3C82F6" },
       { name: "Цели", amount: goalsTotal, targetAmount: goalsTargetTotal, color: "#EF4444" },
-      { name: "Совместные цели", amount: jointTotal, targetAmount: jointTargetTotal, color: "#F59E0C" },
-      { name: "Автоплатежи", amount: autopayMonthlyTotal, targetAmount: autopayMonthlyTotal, color: "#844FD9" }
+      { name: "Совместные цели", amount: jointTotal, targetAmount: jointTargetTotal, color: "#F59E0C" }
     ];
-  }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals, autopays]);
+  }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals]);
   
-  const totalAmount = budgetData.reduce((sum, item) => sum + item.amount, 0);
+  // Общая сумма на накопительном счету (баланс виртуальной карты)
+  const totalAmount = virtualCardBalance;
   
   const formatCurrency = (value) => `${Math.round(value).toLocaleString('ru-RU')} ₽`;
   
@@ -195,7 +187,7 @@ const BudgetPlanningPage = () => {
     }
   };
   
-  // Сколько уже накоплено по всем планам/категориям
+  // Сколько уже накоплено по всем планам/категориям (используется для отображения распределения)
   const accumulatedSaved = useMemo(() => {
     const sumLifestyle = lifestylePlans.reduce((s, p) => s + (p.currentAmount || 0), 0);
     const sumDream = dreamPlans.reduce((s, p) => s + (p.currentAmount || 0), 0);
@@ -223,18 +215,34 @@ const BudgetPlanningPage = () => {
   
   // Создаем conic-gradient на основе процентного соотношения
   const getConicGradient = () => {
-    let currentAngle = 0;
-    const gradients = budgetData.map(item => {
-      const percentage = (item.amount / totalAmount) * 100;
-      const angle = (percentage / 100) * 360;
-      const startAngle = currentAngle;
-      const endAngle = currentAngle + angle;
-      currentAngle += angle;
-      
-      return `${item.color} ${startAngle}deg ${endAngle}deg`;
-    }).join(', ');
+    if (totalAmount === 0) {
+      // Если на счету нет средств, показываем серый круг
+      return 'conic-gradient(from 0deg, #E5E7EB 0deg 360deg)';
+    }
     
-    return `conic-gradient(from 0deg, ${gradients})`;
+    let currentAngle = 0;
+    const gradients = budgetData
+      .filter(item => item.amount > 0) // Показываем только категории с ненулевыми суммами
+      .map(item => {
+        const percentage = (item.amount / totalAmount) * 100;
+        const angle = (percentage / 100) * 360;
+        const startAngle = currentAngle;
+        const endAngle = currentAngle + angle;
+        currentAngle += angle;
+        
+        return `${item.color} ${startAngle}deg ${endAngle}deg`;
+      }).join(', ');
+    
+    // Если есть нераспределенные средства, добавляем серый сегмент
+    const distributedAmount = budgetData.reduce((sum, item) => sum + item.amount, 0);
+    const undistributedAmount = totalAmount - distributedAmount;
+    if (undistributedAmount > 0 && gradients) {
+      const undistributedPercentage = (undistributedAmount / totalAmount) * 100;
+      const undistributedAngle = (undistributedPercentage / 100) * 360;
+      return `conic-gradient(from 0deg, ${gradients}, #E5E7EB ${currentAngle}deg ${currentAngle + undistributedAngle}deg)`;
+    }
+    
+    return gradients ? `conic-gradient(from 0deg, ${gradients})` : 'conic-gradient(from 0deg, #E5E7EB 0deg 360deg)';
   };
 
 
@@ -371,63 +379,6 @@ const BudgetPlanningPage = () => {
     }
   };
 
-  // Autopay Functions
-  const handleAddAutopay = () => {
-    setShowAddAutopayModal(true);
-  };
-
-  const handleCloseAddAutopayModal = () => {
-    setShowAddAutopayModal(false);
-    setNewAutopayData({
-      name: '',
-      category: 'ЖКХ',
-      amount: '',
-      frequency: 'monthly',
-      card: '',
-      recipient: '',
-      notifications: true
-    });
-  };
-
-  const handleCreateAutopay = () => {
-    if (newAutopayData.name && newAutopayData.amount && newAutopayData.card) {
-      const newAutopay = {
-        id: Date.now(),
-        name: newAutopayData.name,
-        category: newAutopayData.category,
-        amount: parseInt(newAutopayData.amount),
-        frequency: newAutopayData.frequency,
-        nextDate: '2024-03-15', // Примерная дата
-        card: newAutopayData.card,
-        status: 'active'
-      };
-      setAutopays([...autopays, newAutopay]);
-      handleCloseAddAutopayModal();
-    }
-  };
-
-  const handleToggleAutopay = (autopayId) => {
-    const autopay = autopays.find(a => a.id === autopayId);
-    setAutopayToToggle(autopay);
-    setShowAutopayConfirmModal(true);
-  };
-
-  const handleConfirmToggleAutopay = () => {
-    if (autopayToToggle) {
-      setAutopays(prev => prev.map(autopay => 
-        autopay.id === autopayToToggle.id 
-          ? { ...autopay, status: autopay.status === 'active' ? 'paused' : 'active' }
-          : autopay
-      ));
-    }
-    setShowAutopayConfirmModal(false);
-    setAutopayToToggle(null);
-  };
-
-  const handleCancelToggleAutopay = () => {
-    setShowAutopayConfirmModal(false);
-    setAutopayToToggle(null);
-  };
 
   // Referral link helpers
   const appBaseUrl = useMemo(() => {
@@ -530,12 +481,12 @@ const BudgetPlanningPage = () => {
 
   // Функция для форматирования даты
   const formatDate = (dateString) => {
+    if (!dateString) return 'Не указано';
     const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
   };
 
   const handleTopUpAmountChange = (e) => {
@@ -558,58 +509,171 @@ const BudgetPlanningPage = () => {
     return amount > 0 && amount <= maxAmount;
   };
 
-  const handleTopUpSubmit = () => {
+  const handleTopUpSubmit = async () => {
     if (!selectedPlan || !selectedCard || !isTopUpAmountValid()) return;
     
     const amount = parseInt(topUpAmount);
     
-    // Обновляем план в соответствующем состоянии
-    if (selectedPlan.category === 'lifestyle') {
-      setLifestylePlans(prev => 
-        prev.map(plan => {
-          if (plan.id === selectedPlan.id) {
-            const updatedPlan = { ...plan, currentAmount: plan.currentAmount + amount };
-            // Проверяем завершение плана
-            setTimeout(() => checkPlanCompletion(updatedPlan, 'lifestyle'), 100);
-            return updatedPlan;
-          }
-          return plan;
-        })
-      );
-    } else if (selectedPlan.category === 'dream') {
-      setDreamPlans(prev => 
-        prev.map(plan => {
-          if (plan.id === selectedPlan.id) {
-            const updatedPlan = { ...plan, currentAmount: plan.currentAmount + amount };
-            // Проверяем завершение плана
-            setTimeout(() => checkPlanCompletion(updatedPlan, 'dream'), 100);
-            return updatedPlan;
-          }
-          return plan;
-        })
-      );
-    } else {
-      // Для пользовательских категорий
-      setCategoryPlans(prev => {
-        const categoryId = selectedPlan.category;
-        return {
-          ...prev,
-          [categoryId]: prev[categoryId]?.map(plan => {
+    // Переводим средства с выбранной карты на виртуальную карту через API
+    try {
+      await axios.post(`${API_BASE}/payments/make_transfer/`, {
+        user_id_id: CLIENT_ID_ID,
+        to_user_id_id: CLIENT_ID_ID,
+        from_bank: selectedCard.id === 1 ? 'vbank' : selectedCard.id === 2 ? 'abank' : 'sbank',
+        to_bank: 'vbank_savings',
+        amount: amount,
+      });
+      
+      // Обновляем балансы локально
+      const fromBankId = selectedCard.id === 1 ? 'vbank' : selectedCard.id === 2 ? 'abank' : 'sbank';
+      transferMoney(fromBankId, 'vbank_savings', amount);
+      
+      // Увеличиваем баланс виртуальной карты (средства пополняют счет)
+      updateVirtualCardBalance(amount, 'add');
+      
+      // Обновляем план в соответствующем состоянии (средства распределяются по плану)
+      if (selectedPlan.category === 'lifestyle') {
+        setLifestylePlans(prev => 
+          prev.map(plan => {
             if (plan.id === selectedPlan.id) {
               const updatedPlan = { ...plan, currentAmount: plan.currentAmount + amount };
               // Проверяем завершение плана
-              setTimeout(() => checkPlanCompletion(updatedPlan, categoryId), 100);
+              setTimeout(() => checkPlanCompletion(updatedPlan, 'lifestyle'), 100);
               return updatedPlan;
             }
             return plan;
-          }) || []
-        };
-      });
+          })
+        );
+      } else if (selectedPlan.category === 'dream') {
+        setDreamPlans(prev => 
+          prev.map(plan => {
+            if (plan.id === selectedPlan.id) {
+              const updatedPlan = { ...plan, currentAmount: plan.currentAmount + amount };
+              // Проверяем завершение плана
+              setTimeout(() => checkPlanCompletion(updatedPlan, 'dream'), 100);
+              return updatedPlan;
+            }
+            return plan;
+          })
+        );
+      } else {
+        // Для пользовательских категорий
+        setCategoryPlans(prev => {
+          const categoryId = selectedPlan.category;
+          return {
+            ...prev,
+            [categoryId]: prev[categoryId]?.map(plan => {
+              if (plan.id === selectedPlan.id) {
+                const updatedPlan = { ...plan, currentAmount: plan.currentAmount + amount };
+                // Проверяем завершение плана
+                setTimeout(() => checkPlanCompletion(updatedPlan, categoryId), 100);
+                return updatedPlan;
+              }
+              return plan;
+            }) || []
+          };
+        });
+      }
+    } catch (err) {
+      console.error('Ошибка при пополнении плана:', err);
+      // Можно показать ошибку пользователю
     }
     
     // Закрываем модальное окно
     handleCloseTopUpModal();
   };
+
+  // Функции для работы с виртуальной картой VBank
+  const handleTopUpVirtualCard = () => {
+    setShowTopUpVirtualCardModal(true);
+    setTopUpVirtualError('');
+    setTopUpVirtualAmount('');
+    setSelectedSourceCard(null);
+  };
+
+  const handleCloseTopUpVirtualCardModal = () => {
+    setShowTopUpVirtualCardModal(false);
+    setTopUpVirtualError('');
+    setTopUpVirtualAmount('');
+    setSelectedSourceCard(null);
+  };
+
+  const handleTopUpVirtualCardSubmit = async () => {
+    setTopUpVirtualError('');
+    
+    if (!selectedSourceCard) {
+      setTopUpVirtualError('Выберите карту для пополнения');
+      return;
+    }
+    
+    if (!topUpVirtualAmount || parseFloat(topUpVirtualAmount) <= 0) {
+      setTopUpVirtualError('Введите корректную сумму');
+      return;
+    }
+    
+    const amount = parseFloat(topUpVirtualAmount);
+    const availableBalance = bankBalances?.[selectedSourceCard] || 0;
+    
+    if (amount > availableBalance) {
+      setTopUpVirtualError('Недостаточно средств на карте');
+      return;
+    }
+    
+    try {
+      setTopUpVirtualLoading(true);
+      
+      // Переводим средства через API
+      await axios.post(`${API_BASE}/payments/make_transfer/`, {
+        user_id_id: CLIENT_ID_ID,
+        to_user_id_id: CLIENT_ID_ID,
+        from_bank: selectedSourceCard,
+        to_bank: 'vbank_savings', // Виртуальная карта накопительного счета
+        amount: amount,
+      });
+      
+      // Обновляем балансы локально
+      transferMoney(selectedSourceCard, 'vbank_savings', amount);
+      
+      // Обновляем баланс виртуальной карты
+      updateVirtualCardBalance(amount, 'add');
+      
+      // Закрываем модальное окно
+      handleCloseTopUpVirtualCardModal();
+    } catch (err) {
+      console.error('Ошибка при пополнении виртуальной карты:', err);
+      setTopUpVirtualError('Ошибка при пополнении карты. Попробуйте еще раз.');
+    } finally {
+      setTopUpVirtualLoading(false);
+    }
+  };
+
+  // Получаем доступные карты для пополнения только из подключенных через API банков
+  const availableCards = useMemo(() => {
+    const cards = [];
+    
+    // Показываем только те карты, которые подключены через API
+    connectedBanks.forEach((bank) => {
+      const bankId = bank.toLowerCase();
+      const balance = bankBalances?.[bankId] || 0;
+      
+      // Маппинг названий банков
+      const bankNames = {
+        'vbank': 'VBank',
+        'abank': 'ABank',
+        'sbank': 'SBank'
+      };
+      
+      const bankName = bankNames[bankId] || bank.toUpperCase();
+      
+      cards.push({ 
+        id: bankId, 
+        name: bankName, 
+        balance: balance 
+      });
+    });
+    
+    return cards;
+  }, [connectedBanks, bankBalances]);
 
   // Функции для редактирования планов
   const handleEditPlan = (plan, category) => {
@@ -823,8 +887,41 @@ const BudgetPlanningPage = () => {
         </div>
       </div>
 
+      <PremiumBlock featureName="AI-планирование бюджета">
       {/* Main Content */}
       <div className="px-0">
+        {/* Virtual Card VBank - Накопительный счет */}
+        <div className="px-4 mb-4">
+          <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#0055BC' }}>
+            <div className="p-4" style={{ backgroundColor: '#0055BC' }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-white font-ibm text-lg font-medium leading-[110%]">VBank</div>
+                    <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%]">Накопительный счет</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-white font-ibm text-2xl font-semibold leading-[110%]">
+                    {formatCurrency(virtualCardBalance)}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleTopUpVirtualCard}
+                className="w-full bg-white text-[#0055BC] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors mt-3"
+              >
+                Пополнить
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Budget Overview Section */}
         <div className="flex items-center justify-between mb-8 px-4">
           {/* Donut Chart */}
@@ -842,36 +939,50 @@ const BudgetPlanningPage = () => {
           {/* Text Information */}
           <div className="flex-1 pl-6">
             <div className="text-black font-ibm text-sm font-normal leading-[110%] mb-2">
-              Бюджет на планирование
+              На накопительном счету
             </div>
             <div className="text-black font-ibm text-2xl font-medium leading-[110%] mb-2 whitespace-nowrap">
-              {formatCurrency(accumulatedSaved)}
+              {formatCurrency(totalAmount)}
             </div>
             <div className="text-black font-ibm text-sm font-normal leading-[110%]">
-              из {formatCurrency(totalTargetAmount)}
+              Распределено: {formatCurrency(accumulatedSaved)}
             </div>
         </div>
       </div>
 
         {/* Budget Categories */}
         <div className="space-y-4 mb-4 px-4">
-          {budgetData.map((item, index) => (
-            <div key={index} className="flex items-center justify-between">
+          {budgetData
+            .filter(item => item.amount > 0) // Показываем только категории с ненулевыми суммами
+            .map((item, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div 
+                    className="w-6 h-6 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
+                  ></div>
+                  <span className="text-black font-ibm text-base font-normal leading-[110%]">{item.name}</span>
+                </div>
+                <span className="text-black font-ibm text-xs min-[360px]:text-sm font-normal leading-[110%] whitespace-nowrap">
+                  `${Math.round(item.amount).toLocaleString('ru-RU')} ₽ из ${Math.round(item.targetAmount || 0).toLocaleString('ru-RU')} ₽`
+                </span>
+              </div>
+            ))}
+          {/* Нераспределенные средства */}
+          {totalAmount > accumulatedSaved && (
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div 
                   className="w-6 h-6 rounded-full flex-shrink-0" 
-                  style={{ backgroundColor: item.color }}
+                  style={{ backgroundColor: '#E5E7EB' }}
                 ></div>
-                <span className="text-black font-ibm text-base font-normal leading-[110%]">{item.name}</span>
+                <span className="text-black font-ibm text-base font-normal leading-[110%]">Нераспределено</span>
               </div>
               <span className="text-black font-ibm text-xs min-[360px]:text-sm font-normal leading-[110%] whitespace-nowrap">
-                {item.name === "Автоплатежи" 
-                  ? `${Math.round(item.amount).toLocaleString('ru-RU')} ₽`
-                  : `${Math.round(item.amount).toLocaleString('ru-RU')} ₽ из ${Math.round(item.targetAmount || 0).toLocaleString('ru-RU')} ₽`
-                }
+                {formatCurrency(totalAmount - accumulatedSaved)}
               </span>
             </div>
-          ))}
+          )}
         </div>
 
         {/* My Planning Categories Container */}
@@ -1423,81 +1534,6 @@ const BudgetPlanningPage = () => {
         </div>
       </div>
 
-      {/* Autopay Section */}
-      <div className="rounded-[27px] border border-gray-200 mb-8 overflow-hidden" style={{ backgroundColor: '#844FD9' }}>
-        {/* New Autopay Section - unified background */}
-        <div className="p-4">
-          <div className="flex items-center mb-3">
-            <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </div>
-            <div className="text-white font-ibm text-lg font-medium leading-[110%]">
-              Автоплатежи
-            </div>
-          </div>
-          <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
-            Настройте автоматические платежи для регулярных трат
-          </div>
-          <button
-            onClick={handleAddAutopay}
-            className="bg-white text-[#844FD9] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
-          >
-            Создать автоплатеж
-          </button>
-          <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
-        </div>
-
-        {/* Autopay List */}
-        <div className="space-y-3 px-4 pb-4 pt-0">
-          {autopays.map((autopay) => (
-            <div key={autopay.id} className="bg-white rounded-2xl p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getBankColor(autopay.card)}`}>
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                      {autopay.name}
-                    </div>
-                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                      {autopay.category} • {autopay.card}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                    {autopay.amount.toLocaleString()} ₽
-                  </div>
-                  <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                    {autopay.frequency === 'monthly' ? 'Ежемесячно' : 'Ежеквартально'}
-                  </div>
-                </div>
-              </div>
-                
-              <div className="flex items-center justify-between">
-                <div className="text-gray-600 font-ibm text-sm">
-                  Следующий платёж: {autopay.nextDate}
-                </div>
-                <button
-                  onClick={() => handleToggleAutopay(autopay.id)}
-                  className={`px-3 py-1 rounded-lg font-ibm text-sm font-medium transition-colors ${
-                    autopay.status === 'active' 
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {autopay.status === 'active' ? 'Активен' : 'Приостановлен'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Add Plan Modal */}
       {showAddPlanModal && (
@@ -1559,21 +1595,29 @@ const BudgetPlanningPage = () => {
                 <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
                   Категория
                 </label>
-                <select
-                  name="category"
-                  value={newPlanData.category}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
-                >
-                  <option value="">Выберите категорию</option>
-                  <option value="lifestyle">Образ жизни</option>
-                  <option value="dream">Мечта</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    name="category"
+                    value={newPlanData.category}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-red-500 transition-all appearance-none cursor-pointer pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '12px'
+                    }}
+                  >
+                    <option value="" className="bg-white py-2">Выберите категорию</option>
+                    <option value="lifestyle" className="bg-white py-2">Образ жизни</option>
+                    <option value="dream" className="bg-white py-2">Мечта</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id} className="bg-white py-2">
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -1635,22 +1679,30 @@ const BudgetPlanningPage = () => {
                 <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
                   Цвет
                 </label>
-                <select
-                  name="color"
-                  value={newCategoryData.color}
-                  onChange={handleCategoryInputChange}
-                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
-                >
-                  <option value="">Выберите цвет</option>
-                  <option value="#3C82F6">Синий</option>
-                  <option value="#EF4444">Красный</option>
-                  <option value="#F59E0C">Оранжевый</option>
-                  <option value="#10B981">Зеленый</option>
-                  <option value="#8B5CF6">Фиолетовый</option>
-                  <option value="#F43F5E">Розовый</option>
-                  <option value="#06B6D4">Голубой</option>
-                  <option value="#84CC16">Лайм</option>
-                </select>
+                <div className="relative">
+                  <select
+                    name="color"
+                    value={newCategoryData.color}
+                    onChange={handleCategoryInputChange}
+                    className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-red-500 transition-all appearance-none cursor-pointer pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '12px'
+                    }}
+                  >
+                    <option value="" className="bg-white py-2">Выберите цвет</option>
+                    <option value="#3C82F6" className="bg-white py-2">Синий</option>
+                    <option value="#EF4444" className="bg-white py-2">Красный</option>
+                    <option value="#F59E0C" className="bg-white py-2">Оранжевый</option>
+                    <option value="#10B981" className="bg-white py-2">Зеленый</option>
+                    <option value="#8B5CF6" className="bg-white py-2">Фиолетовый</option>
+                    <option value="#F43F5E" className="bg-white py-2">Розовый</option>
+                    <option value="#06B6D4" className="bg-white py-2">Голубой</option>
+                    <option value="#84CC16" className="bg-white py-2">Лайм</option>
+                  </select>
+                </div>
         </div>
       </div>
 
@@ -1939,22 +1991,30 @@ const BudgetPlanningPage = () => {
                 <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
                   Цвет
                 </label>
-                <select
-                  name="color"
-                  value={editCategoryData.color}
-                  onChange={handleEditCategoryInputChange}
-                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
-                >
-                  <option value="">Выберите цвет</option>
-                  <option value="#3C82F6">Синий</option>
-                  <option value="#EF4444">Красный</option>
-                  <option value="#F59E0C">Оранжевый</option>
-                  <option value="#10B981">Зеленый</option>
-                  <option value="#8B5CF6">Фиолетовый</option>
-                  <option value="#F43F5E">Розовый</option>
-                  <option value="#06B6D4">Голубой</option>
-                  <option value="#84CC16">Лайм</option>
-                </select>
+                <div className="relative">
+                  <select
+                    name="color"
+                    value={editCategoryData.color}
+                    onChange={handleEditCategoryInputChange}
+                    className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-red-500 transition-all appearance-none cursor-pointer pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '12px'
+                    }}
+                  >
+                    <option value="" className="bg-white py-2">Выберите цвет</option>
+                    <option value="#3C82F6" className="bg-white py-2">Синий</option>
+                    <option value="#EF4444" className="bg-white py-2">Красный</option>
+                    <option value="#F59E0C" className="bg-white py-2">Оранжевый</option>
+                    <option value="#10B981" className="bg-white py-2">Зеленый</option>
+                    <option value="#8B5CF6" className="bg-white py-2">Фиолетовый</option>
+                    <option value="#F43F5E" className="bg-white py-2">Розовый</option>
+                    <option value="#06B6D4" className="bg-white py-2">Голубой</option>
+                    <option value="#84CC16" className="bg-white py-2">Лайм</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -2629,16 +2689,16 @@ const BudgetPlanningPage = () => {
     </div>
   )}
 
-      {/* Add Autopay Modal */}
-      {showAddAutopayModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
+      {/* Top Up Virtual Card Modal */}
+      {showTopUpVirtualCardModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
-                Создать автоплатёж
+                Пополнить накопительный счет VBank
               </h2>
               <button 
-                onClick={handleCloseAddAutopayModal}
+                onClick={handleCloseTopUpVirtualCardModal}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2647,192 +2707,109 @@ const BudgetPlanningPage = () => {
               </button>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); handleCreateAutopay(); }} className="space-y-4">
+            <div className="mb-4">
+              <div className="bg-blue-50 rounded-2xl p-3 mb-3">
+                <h3 className="text-black font-ibm text-lg font-medium mb-2">VBank Накопительный счет</h3>
+                <div className="text-gray-600 font-ibm text-base">
+                  Текущий баланс: {formatCurrency(virtualCardBalance)}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {/* Amount Input */}
               <div>
-                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
-                  Название платежа
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-1.5">
+                  Сумма пополнения (₽)
                 </label>
                 <input
-                  type="text"
-                  value={newAutopayData.name}
-                  onChange={(e) => setNewAutopayData({...newAutopayData, name: e.target.value})}
-                  placeholder="Например: ЖКХ - УК Дом"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
-                  Категория
-                </label>
-                <select
-                  value={newAutopayData.category}
-                  onChange={(e) => setNewAutopayData({...newAutopayData, category: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="ЖКХ">ЖКХ</option>
-                  <option value="Кредиты">Кредиты</option>
-                  <option value="Прочие">Прочие регулярные платежи</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
-                  Сумма (₽)
-                </label>
-                <input
-                  type="text"
-                  value={newAutopayData.amount}
+                  type="number"
+                  value={topUpVirtualAmount}
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (value === '' || /^\d+$/.test(value)) {
-                      setNewAutopayData({...newAutopayData, amount: value});
+                    if (value === '' || /^\d+\.?\d*$/.test(value)) {
+                      setTopUpVirtualAmount(value);
+                      setTopUpVirtualError('');
                     }
                   }}
-                  placeholder="8500"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
+                  placeholder="Введите сумму"
+                  className={`w-full px-3 py-2.5 border-0 rounded-xl text-black font-ibm text-sm focus:outline-none focus:ring-2 transition-all ${
+                    topUpVirtualError 
+                      ? 'bg-red-50 focus:ring-red-500 border border-red-200' 
+                      : 'bg-gray-100 focus:ring-blue-500'
+                  }`}
                 />
+                {topUpVirtualError && (
+                  <div className="text-red-500 font-ibm text-xs mt-1">
+                    {topUpVirtualError}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
-                  Периодичность
-                </label>
-                <select
-                  value={newAutopayData.frequency}
-                  onChange={(e) => setNewAutopayData({...newAutopayData, frequency: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="monthly">Ежемесячно</option>
-                  <option value="quarterly">Ежеквартально</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
-                  Карта для списания
-                </label>
-                <select
-                  value={newAutopayData.card}
-                  onChange={(e) => setNewAutopayData({...newAutopayData, card: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Выберите карту</option>
-                  <option value="VBank">VBank</option>
-                  <option value="ABank">ABank</option>
-                  <option value="SBank">SBank</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
-                  Получатель
-                </label>
-                <input
-                  type="text"
-                  value={newAutopayData.recipient}
-                  onChange={(e) => setNewAutopayData({...newAutopayData, recipient: e.target.value})}
-                  placeholder="ИНН, ЕЛС или реквизиты"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="notifications"
-                  checked={newAutopayData.notifications}
-                  onChange={(e) => setNewAutopayData({...newAutopayData, notifications: e.target.checked})}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="notifications" className="text-gray-700 font-ibm text-sm">
-                  Уведомления за 1-2 дня до списания
-                </label>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={handleCloseAddAutopayModal}
-                  className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 px-4 bg-blue-500 text-white rounded-xl font-ibm text-base font-medium hover:bg-blue-600 transition-colors"
-                >
-                  Создать
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Autopay Toggle Confirmation Modal */}
-      {showAutopayConfirmModal && autopayToToggle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
-                {autopayToToggle.status === 'active' ? 'Приостановить автоплатёж?' : 'Активировать автоплатёж?'}
-              </h2>
-              <button 
-                onClick={handleCancelToggleAutopay}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="mb-6">
-              <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                <div className="text-black font-ibm text-lg font-medium leading-[110%] mb-2">
-                  {autopayToToggle.name}
-                </div>
-                <div className="text-gray-600 font-ibm text-sm leading-[110%] mb-2">
-                  {autopayToToggle.category} • {autopayToToggle.card}
-                </div>
-                <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                  {autopayToToggle.amount.toLocaleString()} ₽
-                </div>
-              </div>
+              <h4 className="text-black font-ibm text-sm font-medium">Выберите карту для пополнения:</h4>
               
-              <div className="text-gray-700 font-ibm text-sm leading-[110%]">
-                {autopayToToggle.status === 'active' 
-                  ? 'Автоплатёж будет приостановлен и не будет выполняться до повторной активации.'
-                  : 'Автоплатёж будет активирован и начнёт выполняться согласно расписанию.'
-                }
+              {/* Bank Cards */}
+              <div className="space-y-2">
+                {availableCards.map((card) => (
+                  <div 
+                    key={card.id}
+                    onClick={() => setSelectedSourceCard(card.id)}
+                    className={`rounded-2xl p-4 cursor-pointer transition-colors ${
+                      selectedSourceCard === card.id
+                        ? `${getBankColor(card.name)} bg-opacity-20 border-2 ${getBankColor(card.name)}` 
+                        : 'bg-gray-100 hover:bg-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-full ${getBankColor(card.name)}`}></div>
+                        <div>
+                          <div className="text-black font-ibm text-base font-medium">{card.name}</div>
+                          <div className="text-gray-600 font-ibm text-sm">Доступно: {formatCurrency(card.balance)}</div>
+                        </div>
+                      </div>
+                      {selectedSourceCard === card.id && (
+                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {availableCards.length === 0 && (
+                  <div className="text-gray-500 font-ibm text-sm text-center py-4">
+                    Нет доступных карт для пополнения
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex space-x-3">
+            {/* Buttons */}
+            <div className="flex space-x-3 mt-4">
               <button
-                onClick={handleCancelToggleAutopay}
-                className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-50 transition-colors"
+                onClick={handleCloseTopUpVirtualCardModal}
+                className="flex-1 px-4 py-3 bg-gray-100 border-0 rounded-2xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-200 transition-all"
               >
                 Отмена
               </button>
               <button
-                onClick={handleConfirmToggleAutopay}
-                className={`flex-1 py-3 px-4 rounded-xl font-ibm text-base font-medium transition-colors ${
-                  autopayToToggle.status === 'active'
-                    ? 'bg-orange-500 text-white hover:bg-orange-600'
-                    : 'bg-green-500 text-white hover:bg-green-600'
+                onClick={handleTopUpVirtualCardSubmit}
+                disabled={!selectedSourceCard || !topUpVirtualAmount || parseFloat(topUpVirtualAmount) <= 0 || topUpVirtualLoading}
+                className={`flex-1 px-4 py-3 border-0 rounded-2xl text-white font-ibm text-base font-medium transition-all ${
+                  selectedSourceCard && topUpVirtualAmount && parseFloat(topUpVirtualAmount) > 0 && !topUpVirtualLoading
+                    ? 'bg-blue-500 hover:bg-blue-600 cursor-pointer' 
+                    : 'bg-gray-300 cursor-not-allowed'
                 }`}
               >
-                {autopayToToggle.status === 'active' ? 'Приостановить' : 'Активировать'}
+                {topUpVirtualLoading ? 'Пополнение...' : 'Пополнить'}
               </button>
             </div>
           </div>
         </div>
       )}
+      </PremiumBlock>
 
       {/* Info Panel */}
       <InfoPanel

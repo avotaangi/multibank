@@ -1,15 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useQuery } from 'react-query';
 
 import useAuthStore from '../stores/authStore';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
-import { bankingAPI } from '../services/api';
+import { bankingAPI, transactionAPI } from '../services/api';
+import { useScrollToTop } from '../hooks/useScrollToTop';
 
 import BankCardStack from '../components/BankCardStack';
 import InfoPanel from '../components/InfoPanel';
 import InsuranceCard from '../components/InsuranceCard';
+import PremiumBlock from '../components/PremiumBlock';
 
 import { usePageInfo } from '../hooks/usePageInfo';
 import { useTelegramUser } from '../hooks/useTelegramUser';
@@ -17,6 +20,7 @@ import { useAndroidAdaptation } from '../hooks/useAndroidAdaptation';
 
 import AndroidTestPanel from '../components/AndroidTestPanel';
 import { Info, ChevronRight } from 'lucide-react';
+import { getDepositsData } from '../data/depositsData';
 
 // =========================
 // ENV / API
@@ -49,7 +53,7 @@ const DashboardPage = () => {
     return id;
   };
   const CLIENT_ID_ID = normalizeId(getClientIdId());
-  const { bankBalances, getFormattedBalance } = useBalanceStore();
+  const { bankBalances, getFormattedBalance, virtualCardBalance } = useBalanceStore();
   const { addTestCard } = useTestCardsStore();
 
   const navigate = useNavigate();
@@ -58,6 +62,322 @@ const DashboardPage = () => {
   const { styles, classes } = useAndroidAdaptation();
 
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  
+  // Данные о вкладах (из общего источника, синхронизированы с виртуальной картой VBank)
+  const deposits = useMemo(() => getDepositsData(virtualCardBalance), [virtualCardBalance]);
+  
+  // Прокрутка наверх при монтировании
+  useScrollToTop();
+  
+  // Получаем текущий месяц для фильтрации транзакций
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
+  const monthStart = new Date(currentYear, currentMonth - 1, 1).toISOString();
+  const monthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59).toISOString();
+  
+  // Загружаем транзакции за текущий месяц
+  const { data: transactionsData } = useQuery(
+    ['transactions', 'monthly', currentMonth, currentYear],
+    () => transactionAPI.getTransactions({
+      startDate: monthStart,
+      endDate: monthEnd,
+      limit: 1000 // Получаем все транзакции за месяц
+    }),
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 60000, // 1 минута
+    }
+  );
+  
+  // Вычисляем доходы и расходы из транзакций
+  const analyticsData = useMemo(() => {
+    const transactions = transactionsData?.data?.transactions || [];
+    
+    let income = 0; // Доходы (deposit)
+    let expenses = 0; // Расходы (withdrawal)
+    
+    transactions.forEach(transaction => {
+      if (transaction.status === 'completed') {
+        const amount = transaction.amount / 100; // Конвертируем из копеек
+        
+        if (transaction.type === 'deposit') {
+          income += amount;
+        } else if (transaction.type === 'withdrawal' || transaction.type === 'payment') {
+          expenses += amount;
+        }
+      }
+    });
+    
+    return {
+      income: Math.round(income),
+      expenses: Math.round(expenses),
+      isLoading: !transactionsData
+    };
+  }, [transactionsData]);
+  
+  // Вычисляем процент изменения (заглушка, можно улучшить)
+  const incomeChange = '+15%'; // Можно вычислить на основе предыдущего месяца
+  const expensesChange = '-8%'; // Можно вычислить на основе предыдущего месяца
+  
+  // Функция форматирования даты в формат дд.мм.гггг
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Не указано';
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
+  
+  // Автоплатежи
+  const [autopays, setAutopays] = useState([
+    {
+      id: 1,
+      name: 'ЖКХ - УК "Дом"',
+      category: 'ЖКХ',
+      amount: 8500,
+      frequency: 'monthly',
+      nextDate: '2025-12-01',
+      card: 'VBank',
+      status: 'active'
+    },
+    {
+      id: 2,
+      name: 'Кредит - Сбербанк',
+      category: 'Кредиты',
+      amount: 25000,
+      frequency: 'monthly',
+      nextDate: '2025-12-05',
+      card: 'ABank',
+      status: 'active'
+    },
+    {
+      id: 3,
+      name: 'Подписка VBank+',
+      category: 'Прочие',
+      amount: 299,
+      frequency: 'monthly',
+      nextDate: '2025-12-01',
+      card: 'VBank',
+      status: 'active'
+    }
+  ]);
+  
+  const [showAddAutopayModal, setShowAddAutopayModal] = useState(false);
+  const [showAutopayConfirmModal, setShowAutopayConfirmModal] = useState(false);
+  const [autopayToToggle, setAutopayToToggle] = useState(null);
+  const [editingAutopay, setEditingAutopay] = useState(null);
+  const [newAutopayData, setNewAutopayData] = useState({
+    name: '',
+    category: 'ЖКХ',
+    amount: '',
+    frequency: 'monthly',
+    card: '',
+    recipient: '',
+    notifications: true
+  });
+  
+  // Функция для получения цвета банка
+  const getBankColor = (bankName) => {
+    switch (bankName) {
+      case 'ABank':
+        return 'bg-red-600';
+      case 'VBank':
+        return 'bg-blue-600';
+      case 'SBank':
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+  
+  // Функции для работы с автоплатежами
+  const handleAddAutopay = () => {
+    setShowAddAutopayModal(true);
+  };
+
+  const handleCloseAddAutopayModal = () => {
+    setShowAddAutopayModal(false);
+    setEditingAutopay(null);
+    setNewAutopayData({
+      name: '',
+      category: 'ЖКХ',
+      amount: '',
+      frequency: 'monthly',
+      card: '',
+      recipient: '',
+      notifications: true
+    });
+  };
+
+  const handleCreateAutopay = () => {
+    if (newAutopayData.name && newAutopayData.amount && newAutopayData.card) {
+      if (editingAutopay) {
+        // Редактирование существующего автоплатежа
+        setAutopays(prev => {
+          const updated = prev.map(ap => 
+            ap.id === editingAutopay.id 
+              ? {
+                  ...ap,
+                  name: newAutopayData.name,
+                  category: newAutopayData.category,
+                  amount: parseInt(newAutopayData.amount),
+                  frequency: newAutopayData.frequency,
+                  card: newAutopayData.card,
+                  recipient: newAutopayData.recipient
+                }
+              : ap
+          );
+          // Сохраняем в localStorage
+          localStorage.setItem('autopays', JSON.stringify(updated));
+          return updated;
+        });
+      } else {
+        // Создание нового автоплатежа
+        const newAutopay = {
+          id: Date.now(),
+          name: newAutopayData.name,
+          category: newAutopayData.category,
+          amount: parseInt(newAutopayData.amount),
+          frequency: newAutopayData.frequency,
+          nextDate: '2025-12-01', // Дата после 30 ноября 2025
+          card: newAutopayData.card,
+          status: 'active'
+        };
+        const updated = [...autopays, newAutopay];
+        setAutopays(updated);
+        // Сохраняем в localStorage
+        localStorage.setItem('autopays', JSON.stringify(updated));
+      }
+      handleCloseAddAutopayModal();
+    }
+  };
+
+  const handleEditAutopay = (autopay) => {
+    setEditingAutopay(autopay);
+    setNewAutopayData({
+      name: autopay.name,
+      category: autopay.category,
+      amount: autopay.amount.toString(),
+      frequency: autopay.frequency,
+      card: autopay.card,
+      recipient: autopay.recipient || '',
+      notifications: autopay.notifications !== false
+    });
+    setShowAddAutopayModal(true);
+  };
+
+  const handleDeleteAutopay = (autopayId) => {
+    setAutopays(prev => {
+      const updated = prev.filter(ap => ap.id !== autopayId);
+      // Сохраняем в localStorage
+      localStorage.setItem('autopays', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleToggleAutopay = (autopayId) => {
+    const autopay = autopays.find(a => a.id === autopayId);
+    setAutopayToToggle(autopay);
+    setShowAutopayConfirmModal(true);
+  };
+
+  const handleConfirmToggleAutopay = () => {
+    if (autopayToToggle) {
+      setAutopays(prev => {
+        const updated = prev.map(autopay => 
+          autopay.id === autopayToToggle.id 
+            ? { ...autopay, status: autopay.status === 'active' ? 'paused' : 'active' }
+            : autopay
+        );
+        // Сохраняем в localStorage
+        localStorage.setItem('autopays', JSON.stringify(updated));
+        return updated;
+      });
+    }
+    setShowAutopayConfirmModal(false);
+    setAutopayToToggle(null);
+  };
+
+  const handleCancelToggleAutopay = () => {
+    setShowAutopayConfirmModal(false);
+    setAutopayToToggle(null);
+  };
+
+  // Загружаем автоплатежи из localStorage и обновляем даты при монтировании
+  useEffect(() => {
+    const savedAutopays = localStorage.getItem('autopays');
+    if (savedAutopays) {
+      try {
+        const autopaysArray = JSON.parse(savedAutopays);
+        const updatedAutopays = autopaysArray.map(autopay => {
+          // Если дата раньше или равна 30 ноября 2025, обновляем на 1 декабря 2025
+          if (autopay.nextDate) {
+            const currentDate = new Date(autopay.nextDate);
+            const cutoffDate = new Date('2025-11-30');
+            if (currentDate <= cutoffDate) {
+              return {
+                ...autopay,
+                nextDate: '2025-12-01'
+              };
+            }
+          } else {
+            // Если дата не указана, устанавливаем 1 декабря 2025
+            return {
+              ...autopay,
+              nextDate: '2025-12-01'
+            };
+          }
+          return autopay;
+        });
+        localStorage.setItem('autopays', JSON.stringify(updatedAutopays));
+        
+        // Загружаем обновленные автоплатежи в состояние
+        if (updatedAutopays.length > 0) {
+          setAutopays(updatedAutopays);
+        }
+      } catch (e) {
+        console.error('Ошибка при загрузке/обновлении автоплатежей:', e);
+      }
+    } else {
+      // Если в localStorage нет автоплатежей, сохраняем начальные данные
+      const initialAutopays = [
+        {
+          id: 1,
+          name: 'ЖКХ - УК "Дом"',
+          category: 'ЖКХ',
+          amount: 8500,
+          frequency: 'monthly',
+          nextDate: '2025-12-01',
+          card: 'VBank',
+          status: 'active'
+        },
+        {
+          id: 2,
+          name: 'Кредит - Сбербанк',
+          category: 'Кредиты',
+          amount: 25000,
+          frequency: 'monthly',
+          nextDate: '2025-12-05',
+          card: 'ABank',
+          status: 'active'
+        },
+        {
+          id: 3,
+          name: 'Подписка VBank+',
+          category: 'Прочие',
+          amount: 299,
+          frequency: 'monthly',
+          nextDate: '2025-12-01',
+          card: 'VBank',
+          status: 'active'
+        }
+      ];
+      localStorage.setItem('autopays', JSON.stringify(initialAutopays));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Состояние реальных банков/балансов (из API)
   const [availableBanks, setAvailableBanks] = useState([]);   // ['vbank', 'abank', ...] — с API
@@ -80,7 +400,6 @@ const DashboardPage = () => {
     vbank:  { name: 'VBank',        color: 'bg-blue-500'  },
     abank:  { name: 'ABank',        color: 'bg-red-500'   },
     sbank:  { name: 'SBank',        color: 'bg-green-500' },
-    sberbank: { name: 'Сбербанк',   color: 'bg-green-600' },
     gazprombank: { name: 'Газпромбанк', color: 'bg-orange-500' },
     raiffeisen: { name: 'Райффайзенбанк', color: 'bg-purple-500' },
     rosbank: { name: 'Росбанк', color: 'bg-indigo-500' }
@@ -292,11 +611,19 @@ const DashboardPage = () => {
             onClick={() => navigate('/rewards')}
           >
             <div className="relative rounded-full">
-              <div className="w-14 h-14 bg-gray-300 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
+              {telegramUser.photoUrl ? (
+                <img 
+                  src={telegramUser.photoUrl} 
+                  alt={telegramUser.displayName}
+                  className="w-14 h-14 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-14 h-14 bg-gray-300 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+              )}
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white shadow-lg"></div>
             </div>
             <div>
@@ -462,15 +789,38 @@ const DashboardPage = () => {
       </div>
 
       {/* Insurance Section */}
+      <PremiumBlock featureName="Агрегация страховок">
       <div className="relative z-10 px-5 py-2 ">
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-black font-ibm font-medium text-base leading-[110%]">
-              Страхование
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#10B981' }}>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                  Страхование
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/insurance-details')}
+                className="text-white text-opacity-80 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
+            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+              Управляйте всеми страховыми полисами в одном месте
+            </div>
+            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
           </div>
 
-          <div className="space-y-2 mb-3">
+          {/* Insurance List */}
+          <div className="space-y-3 px-4 pb-4 pt-0">
             {[
               {
                 id: 'osago-1',
@@ -493,157 +843,412 @@ const DashboardPage = () => {
                 monthlyPayment: 3500
               }
             ].map((policy) => (
-              <InsuranceCard
-                key={policy.id}
-                policy={policy}
+              <div 
+                key={policy.id} 
+                className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => navigate(`/insurance-details/${policy.id}`, { state: { policy } })}
-              />
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-100">
+                      {policy.type === 'OSAGO' || policy.type === 'CASCO' ? (
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                        {policy.type === 'OSAGO' ? 'ОСАГО' : policy.type === 'DMS' ? 'ДМС' : policy.type}
+                      </div>
+                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                        {policy.company} • {policy.policyNumber}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                      {policy.monthlyPayment?.toLocaleString('ru-RU')} ₽
+                    </div>
+                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      Ежемесячно
+                    </div>
+                  </div>
+                </div>
+                  
+                <div className="flex items-center justify-between">
+                  <div className="text-gray-600 font-ibm text-sm">
+                    {policy.nextPaymentDate ? `Следующий платёж: ${formatDate(policy.nextPaymentDate)}` : `Действует до: ${formatDate(policy.expiryDate)}`}
+                  </div>
+                  <div className="px-3 py-1 rounded-lg font-ibm text-sm font-medium bg-green-100 text-green-700">
+                    Активен
+                  </div>
+                </div>
+              </div>
             ))}
+            
+            <button
+              onClick={() => navigate('/insurance-casco')}
+              className="w-full bg-white rounded-2xl p-4 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+            >
+              <span className="text-gray-700 font-ibm text-sm font-medium">Оформить КАСКО</span>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </button>
           </div>
-
-          <button
-            onClick={() => navigate('/insurance-casco')}
-            className="w-full bg-gray-50 rounded-xl py-3 px-4 text-gray-700 font-ibm text-sm font-medium hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
-          >
-            <span>Оформить КАСКО</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
       </div>
+      </PremiumBlock>
 
       {/* Analytics Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <button
-          onClick={() => navigate('/analytics')}
-          className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-              Аналитика | Октябрь
-            </div>
-            <div className="text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Income */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <div className="h-4 bg-green-400 rounded-full" style={{ width: '80%' }}></div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M7 14l5-5 5 5z" />
-                </svg>
-                <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-                  120 473 ₽
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#F59E0C' }}>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                  Аналитика
                 </div>
               </div>
-            </div>
-
-            {/* Expenses */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <div className="h-4 bg-red-500 rounded-full" style={{ width: '50%' }}></div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M7 10l5 5 5-5z" />
+              <button
+                onClick={() => navigate('/analytics')}
+                className="text-white text-opacity-80 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-                  54 986 ₽
-                </div>
-              </div>
+              </button>
             </div>
+            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+              Отслеживайте доходы и расходы по всем банкам
+            </div>
+            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
           </div>
-        </button>
+
+          {/* Analytics Data */}
+          <div className="space-y-3 px-4 pb-4 pt-0">
+            {analyticsData.isLoading ? (
+              <div className="bg-white rounded-2xl p-4 border border-gray-200 text-center">
+                <div className="text-gray-500 font-ibm text-sm">Загрузка данных...</div>
+              </div>
+            ) : (
+              <>
+                <div className="bg-white rounded-2xl p-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-green-100">
+                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M7 14l5-5 5 5z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                          Доходы
+                        </div>
+                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                          {currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                        {analyticsData.income.toLocaleString('ru-RU')} ₽
+                      </div>
+                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                        {incomeChange}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="h-2 bg-green-500 rounded-full" 
+                      style={{ 
+                        width: `${Math.min((analyticsData.income / Math.max(analyticsData.income + analyticsData.expenses, 1)) * 100, 100)}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-red-100">
+                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M7 10l5 5 5-5z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                          Расходы
+                        </div>
+                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                          {currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                        {analyticsData.expenses.toLocaleString('ru-RU')} ₽
+                      </div>
+                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                        {expensesChange}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="h-2 bg-red-500 rounded-full" 
+                      style={{ 
+                        width: `${Math.min((analyticsData.expenses / Math.max(analyticsData.income + analyticsData.expenses, 1)) * 100, 100)}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Deposits Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <button
-          onClick={() => navigate('/deposits')}
-          className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-              Вклады
-            </div>
-            <div className="text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Deposit 1 */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <div className="h-4 bg-green-400 rounded-full" style={{ width: '75%' }}></div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M7 14l5-5 5 5z" />
-                </svg>
-                <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-                  100 000,00 ₽
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#EC4899' }}>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                  Вклады
                 </div>
               </div>
-            </div>
-
-            {/* Deposit 2 */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <div className="h-4 bg-red-500 rounded-full" style={{ width: '45%' }}></div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M7 10l5 5 5-5z" />
+              <button
+                onClick={() => navigate('/deposits')}
+                className="text-white text-opacity-80 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-                  55 000,00 ₽
+              </button>
+            </div>
+            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+              Накопительные счета и депозиты
+            </div>
+            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+          </div>
+
+          {/* Deposits List */}
+          <div className="space-y-3 px-4 pb-4 pt-0">
+            {deposits.map((deposit) => {
+              return (
+                <div key={deposit.id} className="bg-white rounded-2xl p-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                          {deposit.name}
+                        </div>
+                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                          Ставка {deposit.rate}% годовых
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                        {deposit.amount.toLocaleString('ru-RU')} ₽
+                      </div>
+                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                        {deposit.status === 'active' ? 'Активен' : 'Неактивен'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {deposits.length === 0 && (
+              <div className="bg-white rounded-2xl p-4 border border-gray-200 text-center">
+                <div className="text-gray-500 font-ibm text-sm">
+                  Нет активных вкладов
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        </button>
+        </div>
       </div>
 
       {/* Credits Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <button
-          onClick={() => navigate('/credits')}
-          className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-              Кредиты
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#EF4444' }}>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                  Кредиты
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/credits')}
+                className="text-white text-opacity-80 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
-            <div className="text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+              Управляйте кредитами и отслеживайте погашение
             </div>
+            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
           </div>
 
-          <div className="mb-4">
-            <div className="text-black font-ibm font-normal text-sm leading-[110%] mb-3 text-left">
-              Осталось до погашения кредита
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <div className="h-4 bg-yellow-500 rounded-full" style={{ width: '65%' }}></div>
+          {/* Credits Data */}
+          <div className="space-y-3 px-4 pb-4 pt-0">
+            <div className="bg-white rounded-2xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-yellow-100">
+                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                      Потребительский кредит
+                    </div>
+                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      Осталось до погашения
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                    80 000 ₽
+                  </div>
+                  <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                    Активен
+                  </div>
+                </div>
               </div>
-              <div className="text-black font-ibm font-medium text-sm leading-[110%]">
-                80 000,00 ₽
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="h-2 bg-yellow-500 rounded-full" style={{ width: '65%' }}></div>
               </div>
             </div>
           </div>
-        </button>
+        </div>
+      </div>
+
+      {/* Autopays Section */}
+      <div className="relative z-10 px-5 py-2 ">
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#844FD9' }}>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                  Автоплатежи
+                </div>
+              </div>
+            </div>
+            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+              Настройте автоматические платежи для регулярных трат
+            </div>
+            <button
+              onClick={handleAddAutopay}
+              className="bg-white text-[#844FD9] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+            >
+              Создать автоплатеж
+            </button>
+            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+          </div>
+
+          {/* Autopay List */}
+          <div className="space-y-3 px-4 pb-4 pt-0">
+            {autopays.map((autopay) => (
+              <div 
+                key={autopay.id} 
+                className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => navigate(`/autopay-details/${autopay.id}`, { state: { autopay } })}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getBankColor(autopay.card)}`}>
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                        {autopay.name}
+                      </div>
+                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                        {autopay.category} • {autopay.card}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                      {autopay.amount.toLocaleString('ru-RU')} ₽
+                    </div>
+                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      {autopay.frequency === 'monthly' ? 'Ежемесячно' : 'Ежеквартально'}
+                    </div>
+                  </div>
+                </div>
+                  
+                <div className="flex items-center justify-between">
+                  <div className="text-gray-600 font-ibm text-sm">
+                    Следующий платёж: {formatDate(autopay.nextDate)}
+                  </div>
+                  <div 
+                    className="flex items-center space-x-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleAutopay(autopay.id);
+                      }}
+                      className={`px-3 py-1 rounded-lg font-ibm text-sm font-medium transition-colors ${
+                        autopay.status === 'active' 
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {autopay.status === 'active' ? 'Активен' : 'Приостановлен'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {autopays.length === 0 && (
+              <div className="bg-white rounded-2xl p-4 border border-gray-200 text-center">
+                <div className="text-gray-500 font-ibm text-sm">
+                  Нет автоплатежей
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Digital Ruble Section */}
@@ -782,6 +1387,235 @@ const DashboardPage = () => {
 
       {/* Android Test Panel - только в development и если включен через localStorage */}
       {import.meta.env.DEV && typeof window !== 'undefined' && localStorage.getItem('showTestPanel') === 'true' && <AndroidTestPanel />}
+
+      {/* Add/Edit Autopay Modal */}
+      {showAddAutopayModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+                {editingAutopay ? 'Редактировать автоплатёж' : 'Создать автоплатёж'}
+              </h2>
+              <button 
+                onClick={handleCloseAddAutopayModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleCreateAutopay(); }} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Название платежа
+                </label>
+                <input
+                  type="text"
+                  value={newAutopayData.name}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, name: e.target.value})}
+                  placeholder="Например: ЖКХ - УК Дом"
+                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Категория
+                </label>
+                <div className="relative">
+                  <select
+                    value={newAutopayData.category}
+                    onChange={(e) => setNewAutopayData({...newAutopayData, category: e.target.value})}
+                    className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-[#844FD9] transition-all appearance-none cursor-pointer pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '12px'
+                    }}
+                  >
+                    <option value="ЖКХ" className="bg-white py-2">ЖКХ</option>
+                    <option value="Кредиты" className="bg-white py-2">Кредиты</option>
+                    <option value="Прочие" className="bg-white py-2">Прочие регулярные платежи</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Сумма (₽)
+                </label>
+                <input
+                  type="text"
+                  value={newAutopayData.amount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setNewAutopayData({...newAutopayData, amount: value});
+                    }
+                  }}
+                  placeholder="8500"
+                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Периодичность
+                </label>
+                <div className="relative">
+                  <select
+                    value={newAutopayData.frequency}
+                    onChange={(e) => setNewAutopayData({...newAutopayData, frequency: e.target.value})}
+                    className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-[#844FD9] transition-all appearance-none cursor-pointer pr-10"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '12px'
+                    }}
+                  >
+                    <option value="monthly" className="bg-white py-2">Ежемесячно</option>
+                    <option value="quarterly" className="bg-white py-2">Ежеквартально</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Карта для списания
+                </label>
+                <div className="relative">
+                  <select
+                    value={newAutopayData.card}
+                    onChange={(e) => setNewAutopayData({...newAutopayData, card: e.target.value})}
+                    className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-[#844FD9] transition-all appearance-none cursor-pointer pr-10"
+                    required
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      backgroundSize: '12px'
+                    }}
+                  >
+                    <option value="" className="bg-white py-2">Выберите карту</option>
+                    <option value="VBank" className="bg-white py-2">VBank</option>
+                    <option value="ABank" className="bg-white py-2">ABank</option>
+                    <option value="SBank" className="bg-white py-2">SBank</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-ibm text-sm font-medium mb-2">
+                  Получатель
+                </label>
+                <input
+                  type="text"
+                  value={newAutopayData.recipient}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, recipient: e.target.value})}
+                  placeholder="ИНН, ЕЛС или реквизиты"
+                  className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-black font-ibm text-base focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                />
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="notifications"
+                  checked={newAutopayData.notifications}
+                  onChange={(e) => setNewAutopayData({...newAutopayData, notifications: e.target.checked})}
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                />
+                <label htmlFor="notifications" className="text-gray-700 font-ibm text-sm">
+                  Уведомления за 1-2 дня до списания
+                </label>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseAddAutopayModal}
+                  className="flex-1 py-3 px-4 bg-gray-100 border-0 rounded-2xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-200 transition-all"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-4 bg-[#844FD9] text-white rounded-2xl font-ibm text-base font-medium hover:opacity-90 transition-all"
+                >
+                  {editingAutopay ? 'Сохранить' : 'Создать'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Autopay Toggle Confirmation Modal */}
+      {showAutopayConfirmModal && autopayToToggle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
+                {autopayToToggle.status === 'active' ? 'Приостановить автоплатёж?' : 'Активировать автоплатёж?'}
+              </h2>
+              <button 
+                onClick={handleCancelToggleAutopay}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <div className="text-black font-ibm text-lg font-medium leading-[110%] mb-2">
+                  {autopayToToggle.name}
+                </div>
+                <div className="text-gray-600 font-ibm text-sm leading-[110%] mb-2">
+                  {autopayToToggle.category} • {autopayToToggle.card}
+                </div>
+                <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                  {autopayToToggle.amount.toLocaleString('ru-RU')} ₽
+                </div>
+              </div>
+              
+              <div className="text-gray-700 font-ibm text-sm leading-[110%]">
+                {autopayToToggle.status === 'active' 
+                  ? 'Автоплатёж будет приостановлен и не будет выполняться до повторной активации.'
+                  : 'Автоплатёж будет активирован и начнёт выполняться согласно расписанию.'
+                }
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancelToggleAutopay}
+                className="flex-1 py-3 px-4 bg-gray-100 border-0 rounded-2xl text-gray-700 font-ibm text-base font-medium hover:bg-gray-200 transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleConfirmToggleAutopay}
+                className={`flex-1 py-3 px-4 rounded-2xl font-ibm text-base font-medium transition-all ${
+                  autopayToToggle.status === 'active'
+                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                    : 'bg-green-500 text-white hover:bg-green-600'
+                }`}
+              >
+                {autopayToToggle.status === 'active' ? 'Приостановить' : 'Активировать'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info Panel */}
       <InfoPanel

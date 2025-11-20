@@ -70,14 +70,25 @@ const SecurityPage = () => {
   const [showPin, setShowPin] = useState(false);
 
   const formatDate = (date) => {
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+    if (!date) return 'Не указано';
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}.${month}.${year}`;
   };
+  
+  const formatDateWithTime = (date) => {
+    if (!date) return 'Не указано';
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  };
+  
 
   const handleLogoutSession = (sessionId) => {
     // В реальности здесь будет API запрос

@@ -18,7 +18,7 @@ export const useTelegramUser = () => {
       const firstName = user.first_name || 'Пользователь';
       const lastName = user.last_name || '';
       const username = user.username || '';
-      const photoUrl = '';
+      const photoUrl = user.photo_url || ''; // Получаем фото из Telegram
       
       // Формируем отображаемое имя
       let displayName = firstName;
@@ -49,6 +49,10 @@ export const useTelegramUser = () => {
           photoUrl
         });
       });
+      
+      console.log('Telegram user info:', { firstName, lastName, username, displayName, photoUrl });
+    } else {
+      console.log('Telegram user info not available, using default');
     }
   }, []);
 

@@ -1,15 +1,92 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 
 const BottomNavigation = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   
   const navItems = [
     { path: '/dashboard', label: 'Главный' },
-    { path: '/payments', label: 'Платежи' },
+    { path: '/transfer-by-account', label: 'Платежи' },
     { path: '/my-cards', label: 'Мультибанк' },
     { path: '/analytics', label: 'Аналитика' },
     { path: '/budget-planning', label: 'Цели' },
   ]
+
+  // Агрессивная функция прокрутки наверх
+  const scrollToTop = () => {
+    try {
+      // Прокрутка window
+      window.scrollTo(0, 0)
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'instant'
+      })
+      
+      // Прокрутка documentElement
+      if (document.documentElement) {
+        document.documentElement.scrollTop = 0
+        document.documentElement.scrollIntoView({ behavior: 'instant', block: 'start' })
+      }
+      
+      // Прокрутка body
+      if (document.body) {
+        document.body.scrollTop = 0
+        document.body.scrollIntoView({ behavior: 'instant', block: 'start' })
+      }
+      
+      // Прокрутка всех контейнеров
+      const allElements = document.querySelectorAll('*')
+      allElements.forEach(element => {
+        if (element.scrollTop !== undefined && element.scrollTop > 0) {
+          element.scrollTop = 0
+        }
+      })
+      
+      // Прокрутка основного контейнера
+      const mainContainer = document.querySelector('main, [class*="min-h-screen"]')
+      if (mainContainer && mainContainer.scrollTop !== undefined) {
+        mainContainer.scrollTop = 0
+      }
+    } catch (e) {
+      console.log('Scroll error:', e)
+    }
+  }
+
+  const handleNavClick = (e, path) => {
+    // Если уже на этой странице, просто прокручиваем наверх
+    if (location.pathname === path) {
+      e.preventDefault()
+      scrollToTop()
+      // Дополнительные попытки
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToTop()
+        })
+      })
+      setTimeout(scrollToTop, 0)
+      setTimeout(scrollToTop, 50)
+      setTimeout(scrollToTop, 100)
+      setTimeout(scrollToTop, 200)
+      return
+    }
+    
+    // Прокручиваем наверх при переходе
+    scrollToTop()
+    
+    // Дополнительные попытки с разными задержками
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollToTop()
+      })
+    })
+    setTimeout(scrollToTop, 0)
+    setTimeout(scrollToTop, 10)
+    setTimeout(scrollToTop, 50)
+    setTimeout(scrollToTop, 100)
+    setTimeout(scrollToTop, 200)
+    setTimeout(scrollToTop, 300)
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white px-1 py-3 z-50">
@@ -18,6 +95,7 @@ const BottomNavigation = () => {
           <NavLink
             key={path}
             to={path}
+            onClick={(e) => handleNavClick(e, path)}
             className={({ isActive }) => {
               // Стандартная логика для всех вкладок
               return `flex flex-col items-center py-2 px-0.5 rounded-lg transition-colors flex-1 ${

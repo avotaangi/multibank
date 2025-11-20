@@ -3,6 +3,7 @@ import useAuthStore from './stores/authStore'
 import { useEffect, useState } from 'react'
 import { getTelegramWebApp } from './utils/telegram'
 import { useTelegramButtons } from './hooks/useTelegramButtons'
+import { useScrollToTop } from './hooks/useScrollToTop'
 
 // Components
 import Layout from './components/Layout'
@@ -33,15 +34,15 @@ import LeadsPage from './pages/LeadsPage'
 import SecurityPage from './pages/SecurityPage'
 import InsuranceDetailsPage from './pages/InsuranceDetailsPage'
 import InsuranceCascoPage from './pages/InsuranceCascoPage'
+import AutopayDetailsPage from './pages/AutopayDetailsPage'
+import VBankPlusPage from './pages/VBankPlusPage'
+import VBankPlusDetailsPage from './pages/VBankPlusDetailsPage'
+import PasswordPage from './pages/PasswordPage'
+import YourBankPage from './pages/YourBankPage'
 
 // Component to scroll to top on route change
 function ScrollToTop() {
-  const { pathname } = useLocation()
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
-
+  useScrollToTop()
   return null
 }
 
@@ -78,6 +79,10 @@ function App() {
 
   // Проверяем, нужно ли показывать экран входа с паролем
   const shouldShowPasswordAuth = !isAuthenticated && !isLoading
+  const location = useLocation()
+  const isPasswordPage = location.pathname === '/password'
+  const isYourBankPage = location.pathname === '/your-bank'
+  const isVBankPlusPage = location.pathname.startsWith('/vbank-plus')
 
   if (isLoading) {
     return (
@@ -90,9 +95,9 @@ function App() {
     )
   }
 
-  // Показываем экран входа с паролем
-  if (shouldShowPasswordAuth) {
-    return <PasswordAuth onAuthenticated={() => setAuthenticated(true)} />
+  // Показываем страницу "Ваш банк" только если не аутентифицирован и не на других страницах
+  if (shouldShowPasswordAuth && !isPasswordPage && !isVBankPlusPage) {
+    return <YourBankPage />
   }
 
   return (
@@ -104,6 +109,10 @@ function App() {
           path="/login" 
           element={!user ? <LoginPage /> : <Navigate to="/dashboard" replace />} 
         />
+        <Route path="/vbank-plus" element={<VBankPlusPage />} />
+        <Route path="/vbank-plus/details" element={<VBankPlusDetailsPage />} />
+        <Route path="/password" element={<PasswordPage />} />
+        <Route path="/your-bank" element={<YourBankPage />} />
         
         {/* Protected routes - temporarily disabled for testing */}
             <Route 
@@ -133,6 +142,7 @@ function App() {
               <Route path="security" element={<SecurityPage />} />
               <Route path="insurance-details/:policyId" element={<InsuranceDetailsPage />} />
               <Route path="insurance-casco" element={<InsuranceCascoPage />} />
+              <Route path="autopay-details/:autopayId" element={<AutopayDetailsPage />} />
             </Route>
         
         {/* Catch all route */}
