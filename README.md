@@ -22,11 +22,9 @@
 - **React Query** - работа с API
 
 ### Backend
-- **Node.js** - серверная платформа
-- **Express** - веб-фреймворк
 - **FastAPI** - Python API сервер
 - **MongoDB** - база данных
-- **Mongoose** - ODM для MongoDB
+- **Motor** - асинхронный драйвер для MongoDB
 - **JWT** - аутентификация
 
 ### Telegram
@@ -53,7 +51,7 @@ JWT_SECRET=your-super-secret-jwt-key-here
 JWT_EXPIRES_IN=7d
 
 # API Configuration
-VITE_API_URL=http://localhost:3001/api
+VITE_API_URL=http://localhost:8000
 VITE_TELEGRAM_BOT_USERNAME=multibank_bot
 VITE_TELEGRAM_WEBAPP_URL=http://localhost:5173
 
@@ -73,8 +71,7 @@ docker-compose up -d
 
 Эта команда запустит все сервисы в фоновом режиме:
 - **MongoDB** на порту 27017
-- **Backend (Node.js)** на порту 3001
-- **FastAPI** на порту 8000
+- **FastAPI Backend** на порту 8000
 - **Frontend (React)** на порту 5173
 - **Telegram Bot**
 
@@ -116,12 +113,7 @@ docker-compose down -v
 - **Доступ**: `mongodb://admin:password123@localhost:27017/multibank?authSource=admin`
 - **Данные**: Сохраняются в volume `mongodb_data`
 
-### Backend (Node.js)
-- **Порт**: 3001
-- **API**: http://localhost:3001/api
-- **Health Check**: http://localhost:3001/api/health
-
-### FastAPI
+### FastAPI Backend
 - **Порт**: 8000
 - **API**: http://localhost:8000
 - **Документация**: http://localhost:8000/docs
@@ -139,30 +131,21 @@ docker-compose down -v
 ### 1. Установка зависимостей
 
 ```bash
-# Backend (Node.js)
-cd server && npm install
+# FastAPI Backend (Python)
+cd server
+pip install -r requirements.txt
 
 # Frontend
 cd ../client && npm install
 
-# Telegram Bot
-cd ../telegram-bot && npm install
-
-# FastAPI (Python)
-cd ../server-fastapi
+# Telegram Bot (Python)
+cd ../telegram-bot
 pip install -r requirements.txt
 ```
 
 ### 2. Настройка переменных окружения
 
-Скопируйте примеры и заполните:
-
-```bash
-cp server/env.example server/.env
-cp client/env.example client/.env
-cp telegram-bot/env.example telegram-bot/.env
-cp server-fastapi/env.example server-fastapi/.env
-```
+Создайте файлы `.env` в соответствующих директориях и заполните переменные окружения согласно документации в разделе "Переменные окружения".
 
 ### 3. Запуск MongoDB
 
@@ -177,17 +160,14 @@ docker run -d -p 27017:27017 --name mongodb mongo:7.0
 ### 4. Запуск сервисов
 
 ```bash
-# Терминал 1: Backend
-cd server && npm start
+# Терминал 1: FastAPI Backend
+cd server/src && uvicorn main:app --reload --port 8000
 
 # Терминал 2: Frontend
 cd client && npm run dev
 
 # Терминал 3: Telegram Bot
-cd telegram-bot && npm start
-
-# Терминал 4: FastAPI
-cd server-fastapi/src && uvicorn main:app --reload --port 8000
+cd telegram-bot && python src/main.py
 ```
 
 ## 📁 Структура проекта
@@ -201,18 +181,16 @@ multibank/
 │   │   ├── stores/        # Zustand stores
 │   │   └── services/      # API сервисы
 │   └── dist/              # Собранное приложение
-├── server/                # Node.js backend
+├── server/                # FastAPI backend
 │   ├── src/
-│   │   ├── routes/        # API маршруты
-│   │   ├── models/        # MongoDB модели
-│   │   └── middleware/    # Express middleware
-├── server-fastapi/        # FastAPI backend
-│   └── src/
-│       ├── bankAPI/       # Банковские API
-│       └── main.py        # Точка входа
-├── telegram-bot/          # Telegram бот
-├── docker-compose.yml     # Docker конфигурация
-└── requirements.txt       # Python зависимости
+│   │   ├── bankAPI/       # Банковские API
+│   │   └── main.py        # Точка входа
+│   └── requirements.txt   # Python зависимости
+├── telegram-bot/          # Telegram бот (Python)
+│   ├── src/
+│   │   └── main.py        # Точка входа
+│   └── requirements.txt   # Python зависимости
+└── docker-compose.yml     # Docker конфигурация
 ```
 
 ## 🔧 Основные API Endpoints
@@ -266,10 +244,7 @@ docker-compose logs -f [service-name]
 
 ### Проверка здоровья сервисов
 ```bash
-# Backend
-curl http://localhost:3001/api/health
-
-# FastAPI
+# FastAPI Backend
 curl http://localhost:8000/health
 ```
 
