@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import useBalanceStore from '../stores/balanceStore';
@@ -7,7 +7,7 @@ import { useTelegramUser } from '../hooks/useTelegramUser';
 import { cardManagementAPI } from '../services/api';
 import useAuthStore from '../stores/authStore';
 
-const BankCardStack = () => {
+const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
   console.log('🚀 [BankCardStack] Компонент загружен');
   
   const navigate = useNavigate();
@@ -353,7 +353,7 @@ const BankCardStack = () => {
       })(),
       color: '#00A859',
       logo: 'SBank',
-      cardNumber: '6352 **** **** 9837',
+      cardNumber: '6352 **** **** 3923',
       analytics: {
         income: '67 890 ₽',
         expenses: '28 340 ₽',
@@ -464,6 +464,28 @@ const BankCardStack = () => {
   // Объединяем базовые карты с тестовыми
   const testCards = getAllCards();
   const cards = [...baseCards, ...testCards];
+
+  // Определяем, загружаются ли карты для банков, которые есть в availableBanks
+  // Если availableBanks пустой, проверяем все банки
+  const isCardsLoading = useMemo(() => {
+    if (availableBanks.length === 0) {
+      // Если список банков еще не загружен, проверяем все
+      return vbankLoading || abankLoading || sbankLoading;
+    }
+    // Проверяем только те банки, которые есть в availableBanks
+    let loading = false;
+    if (availableBanks.includes('vbank')) loading = loading || vbankLoading;
+    if (availableBanks.includes('abank')) loading = loading || abankLoading;
+    if (availableBanks.includes('sbank')) loading = loading || sbankLoading;
+    return loading;
+  }, [vbankLoading, abankLoading, sbankLoading, availableBanks]);
+  
+  // Уведомляем родительский компонент об изменении состояния загрузки
+  useEffect(() => {
+    if (onLoadingChange) {
+      onLoadingChange(isCardsLoading);
+    }
+  }, [isCardsLoading, onLoadingChange]);
 
   const handleStart = (e) => {
     e.preventDefault();

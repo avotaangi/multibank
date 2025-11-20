@@ -538,9 +538,74 @@ class BankHelper:
             if resp.status != 200:
                 error_text = await resp.text()
                 print(f"❌ Ошибка при получении accounts из {bank_name}: {resp.status} - {error_text}")
-                # Если ошибка 403 CONSENT_REQUIRED, это означает, что согласие еще не одобрено
+                # Если ошибка 403 CONSENT_REQUIRED, пытаемся пересоздать согласие
                 if resp.status == 403 and "CONSENT_REQUIRED" in error_text:
-                    raise ValueError(f"❌ Согласие для {bank_name} требует ручного одобрения. Пока согласие не одобрено, данные недоступны.")
+                    print(f"🔄 Получена ошибка CONSENT_REQUIRED для {bank_name}, пытаюсь пересоздать согласие...")
+                    # Удаляем старое согласие из БД
+                    await db.users.update_one(
+                        {f"{bank_name}.client_id_id": client_id_id},
+                        {"$set": {f"{bank_name}.$.consent": None}}
+                    )
+                    # Пытаемся создать новое согласие
+                    try:
+                        new_consent_result = await self.make_and_get_account_consent(bank_name, access_token, client_id_id)
+                        if isinstance(new_consent_result, dict):
+                            if new_consent_result.get("status") == "pending":
+                                raise ValueError(f"❌ Согласие для {bank_name} требует ручного одобрения. Пока согласие не одобрено, данные недоступны.")
+                            new_consent = new_consent_result.get("consent_id")
+                        else:
+                            new_consent = new_consent_result
+                        
+                        if new_consent:
+                            # Обновляем consent в БД
+                            await db.users.update_one(
+                                {f"{bank_name}.client_id_id": client_id_id},
+                                {"$set": {f"{bank_name}.$.consent": new_consent}}
+                            )
+                            print(f"✅ Новое согласие создано для {bank_name}, повторяю запрос...")
+                            # Повторяем запрос с новым согласием
+                            async with self._session.get(
+                                url=f"https://{bank_name}.{self.base_url}/accounts",
+                                headers={
+                                    "Authorization": f"Bearer {access_token}",
+                                    "X-Requesting-Bank": self.client_id,  
+                                    "X-Consent-Id": new_consent               
+                                },
+                                params={
+                                    "client_id": f"{self.client_id}-{client_id_id}"
+                                },
+                                timeout=15
+                            ) as retry_resp:
+                                if retry_resp.status != 200:
+                                    retry_error_text = await retry_resp.text()
+                                    raise ValueError(f"❌ Ошибка при повторном получении accounts из {bank_name}: {retry_resp.status} - {retry_error_text}")
+                                result = await retry_resp.json()
+                                # Обработка разных форматов ответа
+                                if "data" in result:
+                                    if "account" in result["data"]:
+                                        accounts = result["data"]["account"]
+                                    elif "accounts" in result["data"]:
+                                        accounts = result["data"]["accounts"]
+                                    else:
+                                        accounts = result["data"]
+                                else:
+                                    accounts = result.get("accounts", result.get("account", []))
+                                
+                                if not accounts or len(accounts) == 0:
+                                    raise ValueError(f"❌ Нет счетов для клиента {client_id_id} в банке {bank_name}")
+                                
+                                account_id = accounts[0].get("accountId") or accounts[0].get("account_id") or accounts[0].get("id")
+                                if not account_id:
+                                    raise ValueError(f"❌ Не удалось извлечь account_id из ответа: {accounts[0]}")
+                                return account_id
+                        else:
+                            raise ValueError(f"❌ Согласие для {bank_name} требует ручного одобрения. Пока согласие не одобрено, данные недоступны.")
+                    except ValueError as ve:
+                        # Если это уже ValueError о pending согласии, пробрасываем дальше
+                        raise
+                    except Exception as e:
+                        print(f"❌ Ошибка при пересоздании согласия для {bank_name}: {e}")
+                        raise ValueError(f"❌ Согласие для {bank_name} требует ручного одобрения. Пока согласие не одобрено, данные недоступны.")
                 raise ValueError(f"❌ Ошибка при получении accounts из {bank_name}: {resp.status} - {error_text}")
             result = await resp.json()
             # Обработка разных форматов ответа
@@ -623,6 +688,58 @@ class BankHelper:
             if resp.status != 200:
                 error_text = await resp.text()
                 print(f"❌ Ошибка при получении балансов из {bank_name}: {resp.status} - {error_text}")
+                # Если ошибка 403 CONSENT_REQUIRED, пытаемся пересоздать согласие
+                if resp.status == 403 and "CONSENT_REQUIRED" in error_text:
+                    print(f"🔄 Получена ошибка CONSENT_REQUIRED для {bank_name} при получении балансов, пытаюсь пересоздать согласие...")
+                    db = self.db
+                    # Удаляем старое согласие из БД
+                    await db.users.update_one(
+                        {f"{bank_name}.client_id_id": client_id_id},
+                        {"$set": {f"{bank_name}.$.consent": None}}
+                    )
+                    # Пытаемся создать новое согласие
+                    try:
+                        new_consent_result = await self.make_and_get_account_consent(bank_name, access_token, client_id_id)
+                        if isinstance(new_consent_result, dict):
+                            if new_consent_result.get("status") == "pending":
+                                raise ValueError(f"❌ Согласие для {bank_name} требует ручного одобрения")
+                            new_consent = new_consent_result.get("consent_id")
+                        else:
+                            new_consent = new_consent_result
+                        
+                        if new_consent:
+                            # Обновляем consent в БД
+                            await db.users.update_one(
+                                {f"{bank_name}.client_id_id": client_id_id},
+                                {"$set": {f"{bank_name}.$.consent": new_consent}}
+                            )
+                            print(f"✅ Новое согласие создано для {bank_name}, повторяю запрос балансов...")
+                            # Получаем account_id заново (может измениться)
+                            new_account_id = await self.get_account_id(bank_name, access_token, new_consent, client_id_id)
+                            # Повторяем запрос балансов с новым согласием
+                            async with self._session.get(
+                                url=f"https://{bank_name}.{self.base_url}/accounts/{new_account_id}/balances",
+                                headers={
+                                    "Authorization": f"Bearer {access_token}",
+                                    "X-Requesting-Bank": self.client_id,  
+                                    "X-Consent-Id": new_consent               
+                                },
+                                timeout=15
+                            ) as retry_resp:
+                                if retry_resp.status != 200:
+                                    retry_error_text = await retry_resp.text()
+                                    raise ValueError(f"❌ Ошибка при повторном получении балансов из {bank_name}: {retry_resp.status} - {retry_error_text}")
+                                result = await retry_resp.json()
+                                print(f"✅ Получены балансы из банка '{bank_name}' для клиента '{client_id_id}' (после пересоздания согласия)")
+                                return result
+                        else:
+                            raise ValueError(f"❌ Согласие для {bank_name} требует ручного одобрения")
+                    except ValueError as ve:
+                        # Если это уже ValueError о pending согласии, пробрасываем дальше
+                        raise
+                    except Exception as e:
+                        print(f"❌ Ошибка при пересоздании согласия для {bank_name}: {e}")
+                        raise ValueError(f"❌ Согласие для {bank_name} требует ручного одобрения")
                 raise ValueError(f"❌ Ошибка при получении балансов из {bank_name}: {resp.status} - {error_text}")
             
             result = await resp.json()

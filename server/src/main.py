@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     # Сборник функций для работы с API и БД
     session = ClientSession()
     bank_helper = BankHelper(db=db, session=session)
-    banking_client = BankingClient()
+    banking_client = BankingClient(db=db)
 
     yield                                 # приложение работает
 
@@ -1157,6 +1157,23 @@ async def get_cards(
             # Если ошибка 403 CONSENT_REQUIRED с ReadCards, пересоздаем согласие
             error_str = str(e)
             if "403" in error_str and "ReadCards" in error_str:
+                # Проверяем, есть ли уже pending согласие в БД
+                user = await db_instance.users.find_one(
+                    {f"{bank}.client_id_id": client_id_id},
+                    {f"{bank}.$": 1}
+                )
+                
+                # Если есть pending согласие (есть request_id, но нет consent), не создаем новое
+                if user and bank in user and user[bank]:
+                    record = user[bank][0]
+                    existing_request_id = record.get("request_id")
+                    existing_consent = record.get("consent")
+                    
+                    # Если есть request_id, но нет consent - значит согласие в pending
+                    if existing_request_id and not existing_consent:
+                        print(f"⚠️ Согласие для {bank} уже в статусе pending (request_id: {existing_request_id}), не создаю новое")
+                        return {"data": {"cards": []}, "meta": {"pending_consent": True, "request_id": existing_request_id}}
+                
                 print(f"⚠️ Согласие не содержит ReadCards, пересоздаю согласие для {bank}...")
                 try:
                     # Создаем новое согласие с ReadCards
@@ -1183,11 +1200,16 @@ async def get_cards(
                         new_consent_id = consent_result.get("consent_id") or consent_result.get("data", {}).get("consentId")
                         consent_status = consent_result.get("status") or consent_result.get("data", {}).get("status")
                         
-                        # Если статус pending, получаем request_id
+                        # Если статус pending, получаем request_id и сохраняем в БД
                         if consent_status == "pending":
                             request_id = consent_result.get("request_id") or consent_result.get("data", {}).get("requestId")
                             if request_id:
-                                print(f"⚠️ Согласие для {bank} находится в статусе pending (request_id: {request_id})")
+                                # Сохраняем request_id в БД, чтобы не создавать новое согласие повторно
+                                await db_instance.users.update_one(
+                                    {f"{bank}.client_id_id": client_id_id},
+                                    {"$set": {f"{bank}.$.request_id": request_id}}
+                                )
+                                print(f"⚠️ Согласие для {bank} находится в статусе pending (request_id: {request_id}), сохранено в БД")
                                 # Для pending согласий возвращаем пустой список карт
                                 return {"data": {"cards": []}, "meta": {"pending_consent": True, "request_id": request_id}}
                         

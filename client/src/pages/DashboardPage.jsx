@@ -13,6 +13,7 @@ import BankCardStack from '../components/BankCardStack';
 import InfoPanel from '../components/InfoPanel';
 import InsuranceCard from '../components/InsuranceCard';
 import PremiumBlock from '../components/PremiumBlock';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 import { usePageInfo } from '../hooks/usePageInfo';
 import { useTelegramUser } from '../hooks/useTelegramUser';
@@ -383,6 +384,7 @@ const DashboardPage = () => {
   const [availableBanks, setAvailableBanks] = useState([]);   // ['vbank', 'abank', ...] — с API
   const [isLoadingBanks, setIsLoadingBanks] = useState(true);
   const [balanceFetchError, setBalanceFetchError] = useState(null);
+  const [isCardsLoading, setIsCardsLoading] = useState(true);
 
   // Модалка добавления банка (твой прежний UX полностью сохранён)
   const [showAddBankModal, setShowAddBankModal] = useState(false);
@@ -596,8 +598,19 @@ const DashboardPage = () => {
   };
 
   // =========================
+  // Проверяем, загружаются ли все данные
+  // Показываем загрузку, пока загружаются банки, балансы или карты
+  const isDataLoading = isLoadingBanks || 
+                        isCardsLoading || 
+                        (availableBanks.length > 0 && Object.keys(bankBalances).length === 0 && !balanceFetchError);
+
   // Рендер
   // =========================
+  // Показываем окно загрузки, пока данные не загрузились
+  if (isDataLoading) {
+    return <LoadingOverlay message="Загрузка данных..." />;
+  }
+
   return (
     <div
       className={`min-h-screen bg-white relative overflow-hidden ${classes.container}`}
@@ -664,7 +677,7 @@ const DashboardPage = () => {
 
       {/* Bank Cards Stack */}
       <div className="relative z-10 py-1 ">
-        <BankCardStack />
+        <BankCardStack onLoadingChange={setIsCardsLoading} availableBanks={availableBanks} />
       </div>
 
       {/* Add Bank Button */}

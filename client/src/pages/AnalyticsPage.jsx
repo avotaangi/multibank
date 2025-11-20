@@ -120,7 +120,7 @@ const AnalyticsPage = () => {
       balance: '67 890 ₽',
       color: '#00A859',
       logo: 'SBank',
-      cardNumber: '6352 **** **** 9837',
+      cardNumber: '6352 **** **** 3923',
       analytics: {
         income: '67 890 ₽',
         expenses: '28 340 ₽',

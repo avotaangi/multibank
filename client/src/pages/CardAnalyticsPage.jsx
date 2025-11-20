@@ -257,7 +257,7 @@ const CardAnalyticsPage = () => {
       balance: getFormattedBalance('sbank'),
       color: '#00A859',
       logo: 'SBank',
-      cardNumber: '6352 **** **** 9837',
+      cardNumber: '6352 **** **** 3923',
       operations: [
         { name: 'Магнит', category: 'Продукты', amount: '- 78 ₽', icon: 'M', iconColor: 'bg-red-100', textColor: 'text-red-600' },
         { name: 'MTC', category: 'Мобильная связь', amount: '- 600 ₽', icon: 'MTC', iconColor: 'bg-red-100', textColor: 'text-red-600' },
@@ -863,7 +863,9 @@ const CardAnalyticsPage = () => {
                 {currentCard.id === 'unconfirmed' && (
                   <div className="text-white text-2xl font-bold font-ibm">{currentCard.logo}</div>
                 )}
-                <div className="text-white text-lg font-normal font-ibm">{currentCard.balance}</div>
+                <div className="text-white text-lg font-normal font-ibm">
+                  {currentCard.balance || '0,00 ₽'}
+                </div>
               </div>
               
               {/* Bottom section */}

@@ -1865,7 +1865,7 @@ const BudgetPlanningPage = () => {
               {/* Bank Cards */}
               <div className="space-y-2">
                 <div 
-                  onClick={() => handleSelectCard({ id: 1, name: 'VBank', number: '**** 1234', balance: bankBalances.vbank, color: 'bg-blue-500' })}
+                  onClick={() => handleSelectCard({ id: 1, name: 'VBank', number: '**** 3923', balance: bankBalances.vbank, color: 'bg-blue-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 1 
                       ? 'bg-blue-100 border-2 border-blue-500' 
@@ -1877,7 +1877,7 @@ const BudgetPlanningPage = () => {
                       <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
                       <div>
                         <div className="text-black font-ibm text-base font-medium">VBank</div>
-                        <div className="text-gray-600 font-ibm text-sm">**** 1234</div>
+                        <div className="text-gray-600 font-ibm text-sm">**** 3923</div>
                       </div>
                     </div>
                     <div className="text-black font-ibm text-base font-medium">{bankBalances.vbank.toLocaleString('ru-RU')} ₽</div>
@@ -2669,7 +2669,7 @@ const BudgetPlanningPage = () => {
                     </div>
                     <div className="text-left">
                       <div className="text-black font-ibm text-sm font-medium">VBank</div>
-                      <div className="text-gray-500 font-ibm text-xs">**** 1234</div>
+                      <div className="text-gray-500 font-ibm text-xs">**** 3923</div>
                     </div>
                   </div>
                   <div className="text-black font-ibm text-sm font-medium">

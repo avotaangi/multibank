@@ -8,6 +8,7 @@ import { usePageInfo } from "../hooks/usePageInfo";
 import { cardManagementAPI } from "../services/api";
 import axios from "axios";
 import useAuthStore from "../stores/authStore";
+import LoadingOverlay from "../components/LoadingOverlay";
 
 // Создаем axios instance с правильным baseURL
 const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -107,11 +108,22 @@ const MyCardsPage = () => {
           try {
             const res = await apiClient.get(`/available_balance/${bank}/${CLIENT_ID_ID}`);
             if (!cancelled && isMountedRef.current) {
-              results[bank] = res.data?.balance || "0 ₽";
+              // Парсим баланс - может быть строкой или числом
+              const balanceValue = res.data?.balance ?? res.data ?? 0;
+              // Если это строка с рублями, оставляем как есть, иначе конвертируем в число
+              if (typeof balanceValue === 'string' && balanceValue.includes('₽')) {
+                results[bank] = balanceValue;
+              } else {
+                // Конвертируем в число для последующего форматирования
+                const numValue = typeof balanceValue === 'string' 
+                  ? parseFloat(balanceValue.replace(/[^\d.,]/g, '').replace(',', '.')) || 0
+                  : Number(balanceValue) || 0;
+                results[bank] = numValue;
+              }
             }
           } catch (err) {
             if (!cancelled && isMountedRef.current) {
-              results[bank] = "0 ₽";
+              results[bank] = 0;
             }
           }
         }
@@ -309,10 +321,27 @@ const MyCardsPage = () => {
         }
       }
       
+      // Форматируем баланс красиво с рублями
+      const formatBalance = (balanceValue) => {
+        if (!balanceValue || balanceValue === "—") return "0,00 ₽";
+        // Если это строка с рублями, возвращаем как есть
+        if (typeof balanceValue === 'string' && balanceValue.includes('₽')) {
+          return balanceValue;
+        }
+        // Если это число или строка-число, форматируем
+        const numValue = typeof balanceValue === 'string' 
+          ? parseFloat(balanceValue.replace(/[^\d.,]/g, '').replace(',', '.')) || 0
+          : Number(balanceValue) || 0;
+        return `${numValue.toLocaleString('ru-RU', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} ₽`;
+      };
+
       return {
         id: bank,
         name: bank.toUpperCase(),
-        balance: balances[bank] || "—",
+        balance: formatBalance(balances[bank]),
         color:
           bank === "vbank"
             ? "#0055BC"
@@ -329,7 +358,7 @@ const MyCardsPage = () => {
             : bank === "sbank"
             ? "SBank"
             : bank.toUpperCase(),
-        cardNumber: realCardNumber || "**** **** **** 1234",
+        cardNumber: realCardNumber || "**** **** **** 3923",
         cardholderName: telegramUser.displayName || "Клиент",
       };
     });
@@ -340,7 +369,7 @@ const MyCardsPage = () => {
   };
 
   if (loading) {
-    return <div className="p-6 text-center">Загрузка данных...</div>;
+    return <LoadingOverlay message="Загрузка карт..." />;
   }
 
   return (
@@ -372,7 +401,7 @@ const MyCardsPage = () => {
             <div className="p-6 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <div className="text-white text-2xl font-bold">{card.logo}</div>
-                <div className="text-white text-lg">{card.balance}</div>
+                <div className="text-white text-lg font-normal font-ibm">{card.balance}</div>
               </div>
               <div>
                 <div className="text-white text-sm mb-1">{card.cardholderName}</div>
