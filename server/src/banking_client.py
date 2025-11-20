@@ -73,13 +73,19 @@ class BankingClient:
             **(headers or {})
         }
         
-        async with session.request(
-            method,
-            url,
-            params=params,
-            json=data,
-            headers=request_headers
-        ) as resp:
+        # Для DELETE запросов без данных не отправляем json
+        request_kwargs = {
+            "method": method,
+            "url": url,
+            "params": params,
+            "headers": request_headers
+        }
+        
+        # Отправляем json только если есть данные и это не GET запрос
+        if data is not None and method.upper() != "GET":
+            request_kwargs["json"] = data
+        
+        async with session.request(**request_kwargs) as resp:
             if resp.status >= 400:
                 error_text = await resp.text()
                 raise Exception(f"Error {method} {url}: {resp.status} - {error_text}")
