@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from 'react-query';
 import useBalanceStore from '../stores/balanceStore';
+import useAuthStore from '../stores/authStore';
 import { getTelegramWebApp } from '../utils/telegram';
 import InfoPanel from '../components/InfoPanel';
 import PremiumBlock from '../components/PremiumBlock';
@@ -8,6 +10,7 @@ import { usePageInfo } from '../hooks/usePageInfo';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import { Info } from 'lucide-react';
 import axios from 'axios';
+import { cardManagementAPI } from '../services/api';
 
 const BudgetPlanningPage = () => {
   const navigate = useNavigate();
@@ -19,13 +22,21 @@ const BudgetPlanningPage = () => {
   useScrollToTop();
   const [showTopUpVirtualCardModal, setShowTopUpVirtualCardModal] = useState(false);
   const [selectedSourceCard, setSelectedSourceCard] = useState(null);
+  const [selectedCardInfo, setSelectedCardInfo] = useState(null);
   const [topUpVirtualAmount, setTopUpVirtualAmount] = useState('');
   const [topUpVirtualError, setTopUpVirtualError] = useState('');
   const [topUpVirtualLoading, setTopUpVirtualLoading] = useState(false);
   const [connectedBanks, setConnectedBanks] = useState([]);
   
+  const getClientIdId = useAuthStore((state) => state.getClientIdId);
+  // Функция для нормализации id: если id === 0, возвращаем 1
+  const normalizeId = (id) => {
+    if (id === 0) return 1;
+    return id;
+  };
+  const CLIENT_ID_ID = normalizeId(getClientIdId());
+  
   const API_BASE = import.meta.env.VITE_API_BASE;
-  const CLIENT_ID_ID = import.meta.env.VITE_CLIENT_ID_ID;
   
   // Загружаем список подключенных банков из API
   useEffect(() => {
@@ -589,6 +600,7 @@ const BudgetPlanningPage = () => {
     setTopUpVirtualError('');
     setTopUpVirtualAmount('');
     setSelectedSourceCard(null);
+    setSelectedCardInfo(null);
   };
 
   const handleCloseTopUpVirtualCardModal = () => {
@@ -596,6 +608,7 @@ const BudgetPlanningPage = () => {
     setTopUpVirtualError('');
     setTopUpVirtualAmount('');
     setSelectedSourceCard(null);
+    setSelectedCardInfo(null);
   };
 
   const handleTopUpVirtualCardSubmit = async () => {
@@ -647,33 +660,93 @@ const BudgetPlanningPage = () => {
     }
   };
 
-  // Получаем доступные карты для пополнения только из подключенных через API банков
+  // Загружаем карты из бэкенда для всех подключенных банков
+  const { data: cardsData, isLoading: isLoadingCards } = useQuery(
+    ['cardsForTopUp', connectedBanks, CLIENT_ID_ID],
+    async () => {
+      if (!CLIENT_ID_ID || connectedBanks.length === 0) return [];
+      
+      const allCards = [];
+      
+      for (const bank of connectedBanks) {
+        const bankId = bank.toLowerCase();
+        try {
+          const response = await cardManagementAPI.getCards(bankId, CLIENT_ID_ID);
+          const cards = response?.data?.data?.cards || response?.data?.cards || [];
+          
+          // Получаем баланс для каждой карты
+          const cardsWithBalance = await Promise.all(
+            cards.map(async (card) => {
+              const cardId = card.cardId || card.id;
+              const balance = bankBalances?.[bankId] || 0;
+              
+              // Маппинг названий банков
+              const bankNames = {
+                'vbank': 'VBank',
+                'abank': 'ABank',
+                'sbank': 'SBank'
+              };
+              
+              const bankName = bankNames[bankId] || bank.toUpperCase();
+              
+              // Получаем последние 4 цифры карты
+              const cardNumber = card.maskedPan?.slice(-4) || 
+                               card.pan?.slice(-4) || 
+                               card.cardNumber?.slice(-4) || 
+                               '0000';
+              
+              return {
+                id: cardId,
+                cardId: cardId,
+                bankId: bankId,
+                bankName: bankName,
+                name: `${bankName} ••••${cardNumber}`,
+                balance: balance,
+                cardNumber: cardNumber,
+                maskedPan: card.maskedPan || card.pan || `••••${cardNumber}`,
+                card: card
+              };
+            })
+          );
+          
+          allCards.push(...cardsWithBalance);
+        } catch (error) {
+          console.error(`Ошибка при загрузке карт для ${bankId}:`, error);
+          // Fallback: добавляем банк без карт, если есть баланс
+          if (bankBalances?.[bankId] > 0) {
+            const bankNames = {
+              'vbank': 'VBank',
+              'abank': 'ABank',
+              'sbank': 'SBank'
+            };
+            const bankName = bankNames[bankId] || bank.toUpperCase();
+            allCards.push({
+              id: bankId,
+              bankId: bankId,
+              bankName: bankName,
+              name: bankName,
+              balance: bankBalances[bankId],
+              cardNumber: '0000',
+              maskedPan: '••••0000',
+              isBankFallback: true
+            });
+          }
+        }
+      }
+      
+      return allCards;
+    },
+    {
+      enabled: !!CLIENT_ID_ID && connectedBanks.length > 0 && showTopUpVirtualCardModal,
+      refetchOnWindowFocus: false,
+      staleTime: 30000, // 30 секунд
+    }
+  );
+  
+  // Получаем доступные карты для пополнения
   const availableCards = useMemo(() => {
-    const cards = [];
-    
-    // Показываем только те карты, которые подключены через API
-    connectedBanks.forEach((bank) => {
-      const bankId = bank.toLowerCase();
-      const balance = bankBalances?.[bankId] || 0;
-      
-      // Маппинг названий банков
-      const bankNames = {
-        'vbank': 'VBank',
-        'abank': 'ABank',
-        'sbank': 'SBank'
-      };
-      
-      const bankName = bankNames[bankId] || bank.toUpperCase();
-      
-      cards.push({ 
-        id: bankId, 
-        name: bankName, 
-        balance: balance 
-      });
-    });
-    
-    return cards;
-  }, [connectedBanks, bankBalances]);
+    return cardsData || [];
+  }, [cardsData]);
 
   // Функции для редактирования планов
   const handleEditPlan = (plan, category) => {
@@ -2750,38 +2823,50 @@ const BudgetPlanningPage = () => {
               
               {/* Bank Cards */}
               <div className="space-y-2">
-                {availableCards.map((card) => (
-                  <div 
-                    key={card.id}
-                    onClick={() => setSelectedSourceCard(card.id)}
-                    className={`rounded-2xl p-4 cursor-pointer transition-colors ${
-                      selectedSourceCard === card.id
-                        ? `${getBankColor(card.name)} bg-opacity-20 border-2 ${getBankColor(card.name)}` 
-                        : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 rounded-full ${getBankColor(card.name)}`}></div>
-                        <div>
-                          <div className="text-black font-ibm text-base font-medium">{card.name}</div>
-                          <div className="text-gray-600 font-ibm text-sm">Доступно: {formatCurrency(card.balance)}</div>
-                        </div>
-                      </div>
-                      {selectedSourceCard === card.id && (
-                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
+                {isLoadingCards ? (
+                  <div className="text-gray-500 font-ibm text-sm text-center py-4">
+                    Загрузка карт...
                   </div>
-                ))}
-                {availableCards.length === 0 && (
+                ) : availableCards.length === 0 ? (
                   <div className="text-gray-500 font-ibm text-sm text-center py-4">
                     Нет доступных карт для пополнения
                   </div>
+                ) : (
+                  availableCards.map((card) => (
+                    <div 
+                      key={card.id}
+                      onClick={() => {
+                        setSelectedSourceCard(card.bankId || card.id);
+                        setSelectedCardInfo(card);
+                      }}
+                      className={`rounded-2xl p-4 cursor-pointer transition-colors ${
+                        selectedSourceCard === (card.bankId || card.id)
+                          ? `${getBankColor(card.bankName || card.name)} bg-opacity-20 border-2 ${getBankColor(card.bankName || card.name)}` 
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full ${getBankColor(card.bankName || card.name)}`}></div>
+                          <div>
+                            <div className="text-black font-ibm text-base font-medium">
+                              {card.name || card.bankName}
+                            </div>
+                            <div className="text-gray-600 font-ibm text-sm">
+                              Доступно: {formatCurrency(card.balance || 0)}
+                            </div>
+                          </div>
+                        </div>
+                        {selectedSourceCard === (card.bankId || card.id) && (
+                          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
