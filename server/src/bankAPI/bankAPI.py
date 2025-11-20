@@ -38,8 +38,7 @@ class BankHelper:
 
         # Проверяем, есть ли уже такой client_id_id в банке
         existing_user = await db.users.find_one(
-            {f"{bank_name}.client_id_id": client_id_id},
-            {f"{bank_name}.$": 1}
+            {bank_name: {"$elemMatch": {"client_id_id": client_id_id}}}
         )
 
         if existing_user:
@@ -66,18 +65,26 @@ class BankHelper:
                 # Пробуем использовать request_id как временный consent_id
                 # (некоторые API могут использовать request_id как consent_id для pending согласий)
                 if request_id:
-                    # Сохраняем pending согласие в БД
-                    await db.users.update_one(
-                        {bank_name: {"$exists": True}},
-                        {"$push": {bank_name: {
-                            "client_id_id": client_id_id,
-                            "consent": None,
-                            "request_id": request_id,
-                            "account_id": None,
-                            "bank_account_number": None
-                        }}},
-                        upsert=True
+                    existing = await db.users.find_one(
+                        {bank_name: {"$elemMatch": {"client_id_id": client_id_id}}}
                     )
+
+                    if not existing:
+                        # Сохраняем pending согласие в БД
+                        await db.users.update_one(
+                            {
+                                bank_name: {
+                                    "$not": { "$elemMatch": {"client_id_id": client_id_id} }
+                                }
+                            },
+                            {"$push": {bank_name: {
+                                "client_id_id": client_id_id,
+                                "consent": None,
+                                "request_id": request_id,
+                                "account_id": None,
+                                "bank_account_number": None
+                            }}}
+                        )
                     # Добавляем банк в global_users
                     await db.global_users.update_one(
                         {"user_id_id": client_id_id},
@@ -102,14 +109,16 @@ class BankHelper:
 
         # Если клиента нет — добавляем нового + Добавляем в global_users
         await db.users.update_one(
-            {bank_name: {"$exists": True}},
+            {
+                bank_name: {"$exists": True},
+                f"{bank_name}.client_id_id": {"$ne": client_id_id}
+            },  # ← просто ищем документ с этим банком
             {"$push": {bank_name: {
                 "client_id_id": client_id_id,
                 "consent": consent,
                 "account_id": account_id,
                 "bank_account_number": bank_account_number
-            }}},
-            upsert=True
+            }}}
         )
 
         # ОБЩИЙ СПИСОК ВСЕХ ЮЗЕРОВ
@@ -281,6 +290,17 @@ class BankHelper:
 
     # Создаем consest и выдаем его
     async def make_and_get_account_consent(self, bank_name, access_token, client_id_id):
+        db = self.db
+
+        existing = await db.users.find_one(
+            {f"{bank_name}.client_id_id": str(client_id_id)},
+            {f"{bank_name}.$": 1}
+        )
+
+        if existing and existing[bank_name][0].get("request_id"):
+            print("⛔ Уже есть pending согласие — второй раз не отправляю")
+            return {"status": "pending", "request_id": existing[bank_name][0]["request_id"]}
+        
         async with self._session.post(
             url=f"https://{bank_name}.{self.base_url}/account-consents/request",
             headers={
@@ -303,6 +323,7 @@ class BankHelper:
                 raise ValueError(f"❌ Ошибка при создании согласия для {bank_name}: {resp.status}")
             
             result = await resp.json()
+            print("\n\n\n\n\n", client_id_id, "\n", access_token, "\n\n\n\n\n")
             print(f"📋 Ответ согласия для {bank_name}: {result}")
             
             # Обрабатываем разные форматы ответа
@@ -350,19 +371,15 @@ class BankHelper:
             ) as resp:
                 if resp.status == 200:
                     result = await resp.json()
+                    print(result)
                     # Проверяем, есть ли consent_id в ответе
                     if isinstance(result, dict):
                         # Пробуем извлечь consent_id из разных мест в ответе
-                        consent_id = (
-                            result.get("consent_id") or 
-                            result.get("data", {}).get("consentId") or 
-                            result.get("data", {}).get("consent_id") or
-                            result.get("data", {}).get("consentId", {}).get("consentId") if isinstance(result.get("data", {}).get("consentId"), dict) else None
-                        )
+                        consent_id = result.get("data", {}).get("consentId", None)
                         
                         # Если статус approved и есть consent_id
                         status = result.get("status") or result.get("data", {}).get("status")
-                        if status == "approved" and consent_id:
+                        if status == "Authorized" and consent_id:
                             print(f"✅ Согласие одобрено! Найден consent_id: {consent_id}")
                             return consent_id
                         elif status == "pending":
@@ -379,129 +396,95 @@ class BankHelper:
         
         return None
 
-    # Выдать consent
     async def get_account_consent(self, bank_name, access_token, client_id_id):
         db = self.db
-        some_reason = True   # На будущее, если какая-то ошибка -> False
 
-        #Выдача из БД
-        if some_reason:
-            consent = await db.users.find_one(
+        # 1. Ищем запись о согласии в БД
+        user = await db.users.find_one(
+            {f"{bank_name}.client_id_id": client_id_id},
+            {f"{bank_name}.$": 1}
+        )
+
+        # 2. Если записи нет – создаём аккаунт (включая согласие)
+        if not user or bank_name not in user:
+            try:
+                print(f"⚠️ Нет аккаунта {bank_name}/{client_id_id}, создаю...")
+                await self.add_new_account(bank_name, client_id_id)
+            except ValueError:
+                # pending согласие уже сохранено в add_new_account
+                return None
+
+            # ищем снова
+            user = await db.users.find_one(
                 {f"{bank_name}.client_id_id": client_id_id},
                 {f"{bank_name}.$": 1}
             )
-            if consent and bank_name in consent:
-                consent_value = consent[bank_name][0].get("consent")
-                request_id = consent[bank_name][0].get("request_id")
-                
-                # Проверяем, является ли consent_value реальным consent_id или это request_id
-                # request_id обычно начинается с "req-", а consent_id с "consent-"
-                if consent_value:
-                    # Если consent_value начинается с "req-", это request_id, а не consent_id
-                    if consent_value.startswith("req-"):
-                        print(f"⚠️ Найден request_id вместо consent_id: {consent_value}, проверяю статус...")
-                        request_id = consent_value
-                        consent_value = None
-                    else:
-                        # Это реальный consent_id
-                        return consent_value
-                
-                # Если есть только request_id (pending согласие), пробуем проверить статус
-                if request_id and bank_name == "sbank":
-                    print(f"🔄 Проверяю статус pending согласия для {bank_name} (request_id: {request_id})...")
-                    new_consent_id = await self.check_consent_status_by_request_id(bank_name, access_token, request_id, client_id_id)
-                    if new_consent_id:
-                        # Обновляем consent в БД
-                        await db.users.update_one(
-                            {f"{bank_name}.client_id_id": client_id_id},
-                            {"$set": {f"{bank_name}.$.consent": new_consent_id}}
-                        )
-                        print(f"✅ consent_id обновлен в БД: {new_consent_id}")
-                        return new_consent_id
-                    # Если consent_id еще не получен, возвращаем None
-                    print(f"⚠️ consent_id еще не получен, согласие все еще pending")
-                    return None
-                
-                # Если consent есть, но это None или пустая строка, продолжаем
-                return None
-            
-            # Если аккаунта нет - создаем его автоматически
-            print(f"⚠️ Аккаунт для {bank_name}/{client_id_id} не найден, создаю автоматически...")
-            try:
-                await self.add_new_account(bank_name, client_id_id)
-                # Повторно ищем consent
-                consent = await db.users.find_one(
+
+        record = user[bank_name][0]
+        consent = record.get("consent")
+        request_id = record.get("request_id")
+
+        # 3. Если consent уже есть — возвращаем
+        if consent:
+            return consent
+
+        # 4. Если pending (consent=None, есть request_id)
+        if request_id:
+            print(f"🔄 Проверяю статус pending согласия (request_id={request_id})...")
+            new_consent = await self.check_consent_status_by_request_id(
+                bank_name, access_token, request_id, client_id_id
+            )
+
+            if new_consent:
+                # обновляем consent в БД
+                await db.users.update_one(
                     {f"{bank_name}.client_id_id": client_id_id},
-                    {f"{bank_name}.$": 1}
+                    {"$set": {f"{bank_name}.$.consent": new_consent}}
                 )
-                if consent and bank_name in consent:
-                    consent_value = consent[bank_name][0].get("consent")
-                    request_id = consent[bank_name][0].get("request_id")
-                    
-                    # Если есть consent, возвращаем его
-                    if consent_value:
-                        return consent_value
-                    
-                    # Если есть только request_id (pending согласие), пробуем проверить статус
-                    if request_id and bank_name == "sbank":
-                        print(f"🔄 Проверяю статус pending согласия для {bank_name} (request_id: {request_id})...")
-                        new_consent_id = await self.check_consent_status_by_request_id(bank_name, access_token, request_id, client_id_id)
-                        if new_consent_id:
-                            # Обновляем consent в БД
-                            await db.users.update_one(
-                                {f"{bank_name}.client_id_id": client_id_id},
-                                {"$set": {f"{bank_name}.$.consent": new_consent_id}}
-                            )
-                            print(f"✅ consent_id обновлен в БД: {new_consent_id}")
-                            return new_consent_id
-                        # Если consent_id еще не получен, возвращаем None
-                        print(f"⚠️ consent_id еще не получен, согласие все еще pending")
-                        return None
-                    
-                    return None
-            except ValueError as e:
-                error_msg = str(e)
-                # Если ошибка связана с pending согласием, сохраняем request_id и возвращаем None
-                if "требует ручного одобрения" in error_msg or "pending" in error_msg.lower():
-                    # Извлекаем request_id из сообщения об ошибке
-                    import re
-                    request_id_match = re.search(r'request_id[:\s]+([^\s\)]+)', error_msg)
-                    if request_id_match:
-                        request_id = request_id_match.group(1)
-                        # Сохраняем pending согласие в БД с request_id
-                        await db.users.update_one(
-                            {bank_name: {"$exists": True}},
-                            {"$push": {bank_name: {
-                                "client_id_id": client_id_id,
-                                "consent": None,
-                                "request_id": request_id,
-                                "account_id": None,
-                                "bank_account_number": None
-                            }}},
-                            upsert=True
-                        )
-                        # Добавляем банк в global_users
-                        await db.global_users.update_one(
-                            {"user_id_id": client_id_id},
-                            {"$addToSet": {"bank_names": bank_name}},
-                            upsert=True
-                        )
-                        print(f"✅ Pending согласие для {bank_name}/{client_id_id} сохранено в БД (request_id: {request_id})")
-                    print(f"⚠️ {bank_name}: Согласие требует ручного одобрения. Возвращаем None.")
-                    return None
-                print(f"❌ Ошибка при автоматическом создании аккаунта: {e}")
-                raise
-            except Exception as e:
-                print(f"❌ Ошибка при автоматическом создании аккаунта: {e}")
-            raise ValueError(f"❌ Аккаунт Отутствует в БД и не удалось создать")
+                print(f"✅ consent обновлен: {new_consent}")
+                return new_consent
+            
+            print("⚠️ Согласие всё ещё pending")
+            return None
 
-        print("\n\nПерешли на make_and_get_acc.._consent")
-        #Если в есть какая то причина (some_reason), делаем запрос
-        consent = await self.make_and_get_account_consent(bank_name=bank_name, access_token=access_token, client_id_id=client_id_id)
-        # Обновляем в бд
-        await self.update_account_consent_in_db(bank_name=bank_name, client_id_id=client_id_id, consent=consent)
+        # 5. Если нет consent и нет request_id — логика авто-банк (VBank/ABank)
+        print(f"➡️ Согласие отсутствует, создаю новое ({bank_name})...")
+        try:
+            consent_result = await self.make_and_get_account_consent(
+                bank_name, access_token, client_id_id
+            )
+        except ValueError:
+            # pending → добавлено в add_new_account
+            return None
 
-        return consent
+        # 6. Разбираем ответ create-consent
+        if isinstance(consent_result, dict):
+            if consent_result.get("status") == "approved":
+                final_consent = consent_result.get("consent_id")
+                await db.users.update_one(
+                    {f"{bank_name}.client_id_id": client_id_id},
+                    {"$set": {f"{bank_name}.$.consent": final_consent}}
+                )
+                return final_consent
+
+            elif consent_result.get("status") == "pending":
+                request_id = consent_result.get("request_id")
+                await db.users.update_one(
+                    {f"{bank_name}.client_id_id": client_id_id},
+                    {"$set": {f"{bank_name}.$.request_id": request_id}}
+                )
+                return None
+
+        # 7. Если просто строка — это consent_id
+        if isinstance(consent_result, str):
+            await db.users.update_one(
+                {f"{bank_name}.client_id_id": client_id_id},
+                {"$set": {f"{bank_name}.$.consent": consent_result}}
+            )
+            return consent_result
+
+        return None
+
     
     # Обновляем значение consent в БД
     async def update_account_consent_in_db(self, bank_name, client_id_id, consent):
