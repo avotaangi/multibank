@@ -549,6 +549,118 @@ async def get_card(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/cards/{card_id}/statement")
+async def get_card_statement(
+    card_id: str,
+    bank: str = Query(default="vbank"),
+    client_id: str = Query(...),
+    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
+):
+    """Получить выписку по карте в виде текстового файла"""
+    try:
+        if not session or not banking_client or not bank_helper:
+            raise HTTPException(status_code=503, detail="Service not initialized")
+        
+        from datetime import datetime
+        from fastapi.responses import Response
+        
+        # Получаем consent для банка
+        client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+        access_token = await bank_helper.get_access_token(bank_name=bank)
+        consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
+        
+        headers = {
+            "X-Requesting-Bank": banking_client.team_id
+        }
+        if consent:
+            headers["X-Consent-Id"] = consent
+        if consent_id:
+            headers["X-Consent-Id"] = consent_id
+        
+        # Получаем детали карты
+        params = {"client_id": client_id, "show_full_number": "true"}
+        card_response = await banking_client.request(
+            session,
+            bank,
+            "GET",
+            f"/cards/{card_id}",
+            params=params,
+            headers=headers
+        )
+        
+        # Извлекаем данные карты
+        card_data = card_response.get("data", {}) if isinstance(card_response, dict) else {}
+        if not card_data and isinstance(card_response, dict):
+            card_data = card_response
+        
+        # Формируем текст выписки
+        statement_lines = []
+        statement_lines.append("ВЫПИСКА ПО КАРТЕ")
+        statement_lines.append(f"Дата формирования: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
+        statement_lines.append("")
+        
+        # Информация о банке
+        statement_lines.append(f"БАНК: {bank.upper()}")
+        
+        # Номер карты
+        card_number = card_data.get("cardNumber") or card_data.get("pan") or card_data.get("maskedPan") or "N/A"
+        statement_lines.append(f"НОМЕР КАРТЫ: {card_number}")
+        
+        # Баланс
+        balance = card_data.get("balance") or card_data.get("availableBalance") or "0.00"
+        statement_lines.append(f"БАЛАНС: {balance}")
+        
+        # Статус
+        status = card_data.get("status") or card_data.get("cardStatus") or "N/A"
+        statement_lines.append(f"СТАТУС: {status}")
+        statement_lines.append("")
+        
+        # Реквизиты карты
+        credentials = card_data.get("credentials") or {}
+        if credentials:
+            statement_lines.append("РЕКВИЗИТЫ КАРТЫ:")
+            if credentials.get("pan"):
+                statement_lines.append(f"Номер карты: {credentials.get('pan')}")
+            if credentials.get("expiry"):
+                statement_lines.append(f"Срок действия: {credentials.get('expiry')}")
+            if credentials.get("holder"):
+                statement_lines.append(f"Держатель: {credentials.get('holder')}")
+            statement_lines.append("")
+        
+        # Токены кошельков
+        tokens = card_data.get("tokens") or []
+        if tokens:
+            statement_lines.append("ТОКЕНЫ КОШЕЛЬКОВ:")
+            for index, token in enumerate(tokens, 1):
+                token_name = token.get("name") or f"Токен {index}"
+                token_value = token.get("value") or token.get("token") or "N/A"
+                statement_lines.append(f"{index}. {token_name}: {token_value}")
+            statement_lines.append("")
+        
+        statement_lines.append("---")
+        statement_lines.append("Сгенерировано в MultiBank")
+        
+        # Объединяем в текст
+        statement_text = "\n".join(statement_lines)
+        
+        # Формируем имя файла
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        filename = f"Выписка_{bank}_{date_str}.txt"
+        
+        # Возвращаем файл
+        return Response(
+            content=statement_text.encode('utf-8'),
+            media_type="text/plain; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Type": "text/plain; charset=utf-8"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/{client_id_id}/bank_names")
 async def get_bank_names(client_id_id) -> list:
     # читаем из коллекции global_users

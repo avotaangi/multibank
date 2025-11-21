@@ -479,6 +479,24 @@ export const cardManagementAPI = {
     };
     return api.get(`/card-management/tokens/${publicId}`, config);
   },
+  
+  // Скачать выписку по карте
+  downloadStatement: (cardId, bank, clientId, headers = {}) => {
+    const teamId = import.meta.env.VITE_CLIENT_ID || 'team096';
+    const fullClientId = `${teamId}-${clientId}`;
+    
+    const config = {
+      headers: {
+        ...headers
+      },
+      params: {
+        bank: bank,
+        client_id: fullClientId
+      },
+      responseType: 'blob' // Важно для скачивания файла
+    };
+    return api.get(`/cards/${cardId}/statement`, config);
+  },
 }
 
 // Card Operations API (Управление картой ФЛ, операционные запросы)

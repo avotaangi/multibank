@@ -958,101 +958,107 @@ const CardAnalyticsPage = () => {
               Информация о карте
             </h2>
             <button
-              onClick={() => {
-                const currentCard = cards[currentCardIndex];
-                const cardInfo = {
-                  bank: currentCard?.name || 'Неизвестно',
-                  cardNumber: currentCard?.cardNumber || 'Недоступно',
-                  balance: currentCard?.balance || 'Недоступно',
-                  status: cardStatus === 'BLOCK' || cardStatus === 'PERMANENTBLOCK' ? 'Заблокирована' : 'Активна',
-                  credentials: cardCredentials?.data ? {
-                    pan: cardCredentials.data.encryptedPan ? (() => {
-                      try {
-                        return atob(cardCredentials.data.encryptedPan);
-                      } catch (e) {
-                        return cardCredentials.data.encryptedPan.substring(0, 20) + '...';
-                      }
-                    })() : 'Недоступно',
-                    expiry: cardCredentials.data.cardExpiry || 'Недоступно',
-                    holder: cardCredentials.data.embossingName || 'Недоступно'
-                  } : null,
-                  tokens: cardTokens?.data?.tokens || []
-                };
-
-                // Формируем текст выписки
-                let statementText = `ВЫПИСКА ПО КАРТЕ\n`;
-                statementText += `Дата формирования: ${new Date().toLocaleString('ru-RU')}\n\n`;
-                statementText += `БАНК: ${cardInfo.bank}\n`;
-                statementText += `НОМЕР КАРТЫ: ${cardInfo.cardNumber}\n`;
-                statementText += `БАЛАНС: ${cardInfo.balance}\n`;
-                statementText += `СТАТУС: ${cardInfo.status}\n\n`;
-
-                if (cardInfo.credentials) {
-                  statementText += `РЕКВИЗИТЫ КАРТЫ:\n`;
-                  statementText += `Номер карты: ${cardInfo.credentials.pan}\n`;
-                  statementText += `Срок действия: ${cardInfo.credentials.expiry}\n`;
-                  statementText += `Держатель: ${cardInfo.credentials.holder}\n\n`;
-                }
-
-                if (cardInfo.tokens.length > 0) {
-                  statementText += `ТОКЕНЫ КОШЕЛЬКОВ:\n`;
-                  cardInfo.tokens.forEach((token, index) => {
-                    statementText += `${index + 1}. ${token.name || `Токен ${index + 1}`}: ${token.value}\n`;
-                  });
-                  statementText += `\n`;
-                }
-
-                statementText += `\n---\n`;
-                statementText += `Сгенерировано в MultiBank\n`;
-
-                // Создаем Blob и скачиваем файл
-                const blob = new Blob([statementText], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const fileName = `Выписка_${cardInfo.bank}_${new Date().toISOString().split('T')[0]}.txt`;
-                
-                // Вспомогательная функция для скачивания файла
-                const downloadFile = (fileUrl, fileFileName) => {
-                const link = document.createElement('a');
-                  link.href = fileUrl;
-                  link.download = fileFileName;
-                  link.style.display = 'none';
-                document.body.appendChild(link);
+              onClick={async () => {
+                try {
+                  // Получаем ID карты для API запроса
+                  const cardIdForAPI = firstCard?.id || firstCard?.cardId || publicId || currentBank;
                   
-                  // Используем setTimeout для надежности на мобильных
-                  setTimeout(() => {
-                link.click();
-                    setTimeout(() => {
-                document.body.removeChild(link);
-                      URL.revokeObjectURL(fileUrl);
-                    }, 100);
-                  }, 0);
-                };
-                
-                // Проверяем, является ли устройство мобильным
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-                
-                if (isMobile && isIOS && navigator.share) {
-                  // Для iOS используем Web Share API, если доступен
-                  const file = new File([blob], fileName, { type: 'text/plain' });
-                  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({
-                      files: [file],
-                      title: fileName,
-                      text: 'Выписка по карте'
-                    }).catch(() => {
-                      // Fallback: используем download
-                      downloadFile(url, fileName);
-                    });
-                    // Освобождаем URL после share
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                  } else {
-                    // Fallback: используем download
-                    downloadFile(url, fileName);
+                  // Скачиваем выписку через API
+                  const response = await cardManagementAPI.downloadStatement(
+                    cardIdForAPI,
+                    currentBank,
+                    CLIENT_ID_ID
+                  );
+                  
+                  // Создаем Blob из ответа
+                  const blob = new Blob([response.data], { type: 'text/plain;charset=utf-8' });
+                  const url = URL.createObjectURL(blob);
+                  
+                  // Получаем имя файла из заголовков или генерируем
+                  const contentDisposition = response.headers['content-disposition'] || response.headers['Content-Disposition'];
+                  let fileName = `Выписка_${currentBank}_${new Date().toISOString().split('T')[0]}.txt`;
+                  if (contentDisposition) {
+                    const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (fileNameMatch && fileNameMatch[1]) {
+                      fileName = fileNameMatch[1].replace(/['"]/g, '');
+                      // Декодируем URL-encoded имя файла
+                      try {
+                        fileName = decodeURIComponent(fileName);
+                      } catch (e) {
+                        // Если не удалось декодировать, используем как есть
+                      }
+                    }
                   }
-                } else {
-                  // Для Android, десктопа и других устройств используем download
-                  downloadFile(url, fileName);
+                  
+                  // Функция для скачивания файла
+                  const downloadFile = (fileUrl, fileFileName) => {
+                    const link = document.createElement('a');
+                    link.href = fileUrl;
+                    link.download = fileFileName;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    
+                    setTimeout(() => {
+                      link.click();
+                      setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(fileUrl);
+                      }, 100);
+                    }, 0);
+                  };
+                  
+                  // Проверяем, находимся ли мы в Telegram WebApp
+                  const isTelegramWebApp = window.Telegram?.WebApp;
+                  
+                  if (isTelegramWebApp) {
+                    // Для Telegram WebApp создаем прямой URL к API endpoint
+                    const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                    const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
+                    const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
+                    
+                    // Пробуем открыть прямой URL (Telegram может обработать скачивание)
+                    const link = document.createElement('a');
+                    link.href = directUrl;
+                    link.download = fileName;
+                    link.target = '_blank';
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                      document.body.removeChild(link);
+                    }, 100);
+                    
+                    // Также пробуем через Blob как fallback
+                    setTimeout(() => {
+                      downloadFile(url, fileName);
+                    }, 200);
+                  } else {
+                    // Для обычных браузеров
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    
+                    if (isMobile && isIOS && navigator.share) {
+                      // Для iOS используем Web Share API
+                      const file = new File([blob], fileName, { type: 'text/plain' });
+                      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({
+                          files: [file],
+                          title: fileName,
+                          text: 'Выписка по карте'
+                        }).catch(() => {
+                          downloadFile(url, fileName);
+                        });
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                      } else {
+                        downloadFile(url, fileName);
+                      }
+                    } else {
+                      downloadFile(url, fileName);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Ошибка при скачивании выписки:', error);
+                  alert('Не удалось скачать выписку. Попробуйте позже.');
                 }
               }}
               className="flex items-center space-x-2 px-4 py-2 text-white rounded-[27px] hover:opacity-90 transition-opacity font-ibm text-sm font-medium"
