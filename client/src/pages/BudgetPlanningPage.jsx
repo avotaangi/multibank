@@ -211,6 +211,22 @@ const BudgetPlanningPage = () => {
     return sumLifestyle + sumDream + sumGoals + sumJoint + sumCategories;
   }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals, categoryPlans]);
 
+  // Локальный баланс накопительного счета (динамически изменяется при пополнении категорий)
+  // Изначально равен накопленной сумме (390 000 рублей)
+  const [displayBalance, setDisplayBalance] = useState(() => {
+    // Вычисляем начальную накопленную сумму из всех категорий
+    const initialSum = 
+      (lifestylePlans.reduce((s, p) => s + (p.currentAmount || 0), 0)) +
+      (dreamPlans.reduce((s, p) => s + (p.currentAmount || 0), 0)) +
+      (goalsPlans.reduce((s, p) => s + (p.currentAmount || 0), 0)) +
+      (jointGoals.reduce((s, g) => s + (g.currentAmount || 0), 0)) +
+      (Object.values(categoryPlans).reduce((sum, plans) => {
+        const list = Array.isArray(plans) ? plans : [];
+        return sum + list.reduce((s, p) => s + (p.currentAmount || 0), 0);
+      }, 0));
+    return initialSum || 390000; // По умолчанию 390 000, если нет данных
+  });
+
   // Общая сумма, которая должна собираться (целевые суммы)
   const totalTargetAmount = useMemo(() => {
     const sumLifestyle = lifestylePlans.reduce((s, p) => s + (p.targetAmount || 0), 0);
@@ -224,36 +240,63 @@ const BudgetPlanningPage = () => {
     return sumLifestyle + sumDream + sumGoals + sumJoint + sumCategories;
   }, [lifestylePlans, dreamPlans, goalsPlans, jointGoals, categoryPlans]);
   
-  // Создаем conic-gradient на основе процентного соотношения
+  // Вычисляем, сколько еще нужно накопить (на основе накопленных сумм по категориям, а не накопительного счета)
+  const remainingAmount = useMemo(() => {
+    return Math.max(0, totalTargetAmount - accumulatedSaved);
+  }, [accumulatedSaved, totalTargetAmount]);
+  
+  // Создаем conic-gradient на основе соотношения: сколько накоплено по категориям vs сколько нужно еще накопить
   const getConicGradient = () => {
-    if (totalAmount === 0) {
-      // Если на счету нет средств, показываем серый круг
+    if (totalTargetAmount === 0) {
+      // Если нет целевых сумм, показываем серый круг
       return 'conic-gradient(from 0deg, #E5E7EB 0deg 360deg)';
     }
     
-    let currentAngle = 0;
-    const gradients = budgetData
-      .filter(item => item.amount > 0) // Показываем только категории с ненулевыми суммами
-      .map(item => {
-        const percentage = (item.amount / totalAmount) * 100;
-        const angle = (percentage / 100) * 360;
-        const startAngle = currentAngle;
-        const endAngle = currentAngle + angle;
-        currentAngle += angle;
-        
-        return `${item.color} ${startAngle}deg ${endAngle}deg`;
-      }).join(', ');
+    // Вычисляем процент от целевой суммы, который уже накоплен
+    const savedPercentage = Math.min((accumulatedSaved / totalTargetAmount) * 100, 100);
+    const savedAngle = (savedPercentage / 100) * 360;
     
-    // Если есть нераспределенные средства, добавляем серый сегмент
-    const distributedAmount = budgetData.reduce((sum, item) => sum + item.amount, 0);
-    const undistributedAmount = totalAmount - distributedAmount;
-    if (undistributedAmount > 0 && gradients) {
-      const undistributedPercentage = (undistributedAmount / totalAmount) * 100;
-      const undistributedAngle = (undistributedPercentage / 100) * 360;
-      return `conic-gradient(from 0deg, ${gradients}, #E5E7EB ${currentAngle}deg ${currentAngle + undistributedAngle}deg)`;
+    if (savedPercentage >= 100) {
+      // Если накоплено достаточно или больше - показываем все категории
+      let currentAngle = 0;
+      const gradients = budgetData
+        .filter(item => item.amount > 0) // Показываем только категории с ненулевыми суммами
+        .map(item => {
+          const percentage = (item.amount / accumulatedSaved) * 100;
+          const angle = (percentage / 100) * 360;
+          const startAngle = currentAngle;
+          const endAngle = currentAngle + angle;
+          currentAngle += angle;
+          
+          return `${item.color} ${startAngle}deg ${endAngle}deg`;
+        }).join(', ');
+      
+      return gradients ? `conic-gradient(from 0deg, ${gradients})` : 'conic-gradient(from 0deg, #10B981 0deg 360deg)';
+    } else {
+      // Показываем сегменты по категориям (накопленное) и серый (сколько еще нужно)
+      let currentAngle = 0;
+      const gradients = budgetData
+        .filter(item => item.amount > 0) // Показываем только категории с ненулевыми суммами
+        .map(item => {
+          // Вычисляем процент от накопленной суммы для каждой категории
+          const percentage = (item.amount / accumulatedSaved) * 100;
+          // Масштабируем на угол накопленной части
+          const angle = (percentage / 100) * savedAngle;
+          const startAngle = currentAngle;
+          const endAngle = currentAngle + angle;
+          currentAngle += angle;
+          
+          return `${item.color} ${startAngle}deg ${endAngle}deg`;
+        }).join(', ');
+      
+      // Добавляем серый сегмент для оставшейся части
+      if (gradients) {
+        return `conic-gradient(from 0deg, ${gradients}, #E5E7EB ${currentAngle}deg 360deg)`;
+      } else {
+        // Если нет накопленных средств, показываем серый круг
+        return 'conic-gradient(from 0deg, #E5E7EB 0deg 360deg)';
+      }
     }
-    
-    return gradients ? `conic-gradient(from 0deg, ${gradients})` : 'conic-gradient(from 0deg, #E5E7EB 0deg 360deg)';
   };
 
 
@@ -541,6 +584,9 @@ const BudgetPlanningPage = () => {
       
       // Увеличиваем баланс виртуальной карты (средства пополняют счет)
       updateVirtualCardBalance(amount, 'add');
+      
+      // Обновляем отображаемый баланс - прибавляем сумму пополнения
+      setDisplayBalance(prev => prev + amount);
       
       // Обновляем план в соответствующем состоянии (средства распределяются по плану)
       if (selectedPlan.category === 'lifestyle') {
@@ -997,7 +1043,7 @@ const BudgetPlanningPage = () => {
                 </div>
                 <div className="text-right">
                   <div className="text-white font-ibm text-2xl font-semibold leading-[110%]">
-                    {formatCurrency(virtualCardBalance)}
+                    {formatCurrency(displayBalance)}
                   </div>
                 </div>
               </div>
@@ -1028,13 +1074,13 @@ const BudgetPlanningPage = () => {
           {/* Text Information */}
           <div className="flex-1 pl-6">
             <div className="text-black font-ibm text-sm font-normal leading-[110%] mb-2">
-              На накопительном счету
+              Накоплено
             </div>
             <div className="text-black font-ibm text-2xl font-medium leading-[110%] mb-2 whitespace-nowrap">
-              {formatCurrency(totalAmount)}
+              {formatCurrency(accumulatedSaved)}
             </div>
             <div className="text-black font-ibm text-sm font-normal leading-[110%]">
-              Распределено: {formatCurrency(accumulatedSaved)}
+              Нужно еще накопить: {formatCurrency(remainingAmount)}
             </div>
         </div>
       </div>
@@ -1053,7 +1099,7 @@ const BudgetPlanningPage = () => {
                   <span className="text-black font-ibm text-base font-normal leading-[110%]">{item.name}</span>
                 </div>
                 <span className="text-black font-ibm text-xs min-[360px]:text-sm font-normal leading-[110%] whitespace-nowrap">
-                  `${Math.round(item.amount).toLocaleString('ru-RU')} ₽ из ${Math.round(item.targetAmount || 0).toLocaleString('ru-RU')} ₽`
+                  {Math.round(item.amount).toLocaleString('ru-RU')} ₽ из {Math.round(item.targetAmount || 0).toLocaleString('ru-RU')} ₽
                 </span>
               </div>
             ))}
@@ -2755,6 +2801,8 @@ const BudgetPlanningPage = () => {
           <button
             onClick={() => {
               const add = Number(topUpJointAmount) || 0;
+              // Обновляем отображаемый баланс - прибавляем сумму пополнения
+              setDisplayBalance(prev => prev + add);
               setJointGoals(prev => prev.map(g => g.id === selectedJointGoal.id ? {
                 ...g,
                 currentAmount: Math.min(g.targetAmount, g.currentAmount + add)
