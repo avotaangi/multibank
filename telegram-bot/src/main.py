@@ -149,8 +149,8 @@ async def cmd_balance(message: types.Message):
     chat_id = message.chat.id
     
     try:
-        # Используем правильный client_id_id на основе telegramUserId % 10
-        client_id_id = user.id % 10
+        # Все пользователи используют один и тот же client_id_id = 1
+        client_id_id = 1
         
         # Получаем список банков пользователя
         banks_response = await api_request("GET", f"/api/{client_id_id}/bank_names")
@@ -205,8 +205,8 @@ async def cmd_transactions(message: types.Message):
     chat_id = message.chat.id
     
     try:
-        # Используем правильный client_id на основе telegramUserId % 10
-        client_id_id = user.id % 10
+        # Все пользователи используют один и тот же client_id_id = 1
+        client_id_id = 1
         client_id = f"team096-{client_id_id}"
         
         # Получаем список банков пользователя
@@ -420,8 +420,8 @@ async def callback_balance(callback: types.CallbackQuery):
     try:
         await callback.answer("💰 Получение информации о балансе...")
         
-        # Используем правильный client_id_id на основе telegramUserId % 10
-        client_id_id = user.id % 10
+        # Все пользователи используют один и тот же client_id_id = 1
+        client_id_id = 1
         
         # Получаем список банков пользователя
         banks_response = await api_request("GET", f"/api/{client_id_id}/bank_names")
@@ -477,8 +477,8 @@ async def callback_transactions(callback: types.CallbackQuery):
     try:
         await callback.answer("📊 Получение истории транзакций...")
         
-        # Используем правильный client_id на основе telegramUserId % 10
-        client_id_id = user.id % 10
+        # Все пользователи используют один и тот же client_id_id = 1
+        client_id_id = 1
         client_id = f"team096-{client_id_id}"
         
         # Получаем список банков пользователя

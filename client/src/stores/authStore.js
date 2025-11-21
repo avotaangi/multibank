@@ -249,77 +249,15 @@ const useAuthStore = create((set, get) => ({
     return isAuthenticated
   },
 
-  // Get client_id based on Telegram user ID
+  // Get client_id - always returns team096-1 for all users
   getClientId: () => {
-    try {
-      // Try to get Telegram user ID
-      if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-        const telegramUserId = window.Telegram.WebApp.initDataUnsafe.user.id
-        const clientIndex = telegramUserId % 10
-        return `team096-${clientIndex}`
-      }
-      
-      // Try to parse from initData
-      if (window.Telegram?.WebApp?.initData) {
-        const params = new URLSearchParams(window.Telegram.WebApp.initData)
-        const userStr = params.get('user')
-        if (userStr) {
-          try {
-            const user = JSON.parse(decodeURIComponent(userStr))
-            if (user.id) {
-              const clientIndex = user.id % 10
-              return `team096-${clientIndex}`
-            }
-          } catch (e) {
-            console.log('Could not parse user from initData')
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Error getting Telegram user ID:', error)
-    }
-    
-    // Default fallback
+    // Все пользователи используют один и тот же client_id
     return 'team096-1'
   },
 
-  // Get client_id_id (just the number) based on Telegram user ID
+  // Get client_id_id (just the number) - always returns 1 for all users
   getClientIdId: () => {
-    // Функция для нормализации id: если id === 0, возвращаем 1
-    const normalizeId = (id) => {
-      if (id === 0) return 1;
-      return id;
-    };
-    
-    try {
-      // Try to get Telegram user ID
-      if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-        const telegramUserId = window.Telegram.WebApp.initDataUnsafe.user.id
-        const clientIndex = telegramUserId % 10
-        return normalizeId(clientIndex)
-      }
-      
-      // Try to parse from initData
-      if (window.Telegram?.WebApp?.initData) {
-        const params = new URLSearchParams(window.Telegram.WebApp.initData)
-        const userStr = params.get('user')
-        if (userStr) {
-          try {
-            const user = JSON.parse(decodeURIComponent(userStr))
-            if (user.id) {
-              const clientIndex = user.id % 10
-              return normalizeId(clientIndex)
-            }
-          } catch (e) {
-            console.log('Could not parse user from initData')
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Error getting Telegram user ID:', error)
-    }
-    
-    // Default fallback
+    // Все пользователи используют один и тот же client_id_id = 1
     return 1
   }
 }))
