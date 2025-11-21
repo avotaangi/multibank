@@ -622,8 +622,6 @@ class BankHelper:
     async def get_account_balances(self, bank_name, client_id_id):
         access_token = await self.get_access_token(bank_name)
         consent = await self.get_account_consent(bank_name, access_token, client_id_id)
-
-        print(f"\n\n\n\n\n{consent}\n\n\n\n\n\n")
         
         # Если consent None (pending согласие), возвращаем 0
         if consent is None:
