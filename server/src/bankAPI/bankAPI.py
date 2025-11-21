@@ -385,6 +385,10 @@ class BankHelper:
                         elif status == "pending":
                             print(f"⚠️ Согласие все еще в статусе pending")
                             return None
+                        # ! -----------
+                        elif status == "Revoked":
+                            print(f"⚠️ Согласие отозвано")
+                            return None
                 elif resp.status == 404:
                     print(f"⚠️ Согласие с request_id {request_id} не найдено")
                     return None
@@ -424,6 +428,24 @@ class BankHelper:
         consent = record.get("consent")
         request_id = record.get("request_id")
 
+
+        # ! Если согласие отозвано или не найдено в BankingAPI - делаем согласие и request_id - None, чтоб пересоздать
+        new_consent = await self.check_consent_status_by_request_id(
+            bank_name, access_token, request_id, client_id_id
+        )
+        if consent and request_id and not new_consent:
+            consent = None
+            request_id = None
+            # * Убираем consent и request_id с БД
+            await db.users.update_one(
+                {f"{bank_name}.client_id_id": client_id_id},
+                {"$set": {
+                    f"{bank_name}.$.consent": None,
+                    f"{bank_name}.$.request_id": None
+                }}
+            )
+
+
         # 3. Если consent уже есть — возвращаем
         if consent:
             return consent
@@ -431,9 +453,6 @@ class BankHelper:
         # 4. Если pending (consent=None, есть request_id)
         if request_id:
             print(f"🔄 Проверяю статус pending согласия (request_id={request_id})...")
-            new_consent = await self.check_consent_status_by_request_id(
-                bank_name, access_token, request_id, client_id_id
-            )
 
             if new_consent:
                 # обновляем consent в БД
@@ -444,7 +463,7 @@ class BankHelper:
                 print(f"✅ consent обновлен: {new_consent}")
                 return new_consent
             
-            print("⚠️ Согласие всё ещё pending")
+            print("⚠️ Согласие всё ещё pending или отозвано")
             return None
 
         # 5. Если нет consent и нет request_id — логика авто-банк (VBank/ABank)
@@ -603,6 +622,8 @@ class BankHelper:
     async def get_account_balances(self, bank_name, client_id_id):
         access_token = await self.get_access_token(bank_name)
         consent = await self.get_account_consent(bank_name, access_token, client_id_id)
+
+        print(f"\n\n\n\n\n{consent}\n\n\n\n\n\n")
         
         # Если consent None (pending согласие), возвращаем 0
         if consent is None:
