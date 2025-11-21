@@ -79,6 +79,79 @@ async def main():
 async def health():
     return {"status": "ok", "service": "fastapi"}
 
+async def get_telegram_id_from_client_id(client_id: str) -> Optional[int]:
+    """Получить telegram_id из БД по client_id"""
+    try:
+        client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+        
+        # Ищем пользователя в коллекции users по client_id_id в любом банке
+        user = await db_instance.users.find_one({
+            "$or": [
+                {"vbank.client_id_id": client_id_id},
+                {"abank.client_id_id": client_id_id},
+                {"sbank.client_id_id": client_id_id}
+            ]
+        })
+        
+        if user:
+            telegram_id = user.get("telegramId")
+            if telegram_id:
+                return int(telegram_id)
+        
+        # Fallback: используем последнюю цифру client_id_id как telegram_id для тестирования
+        # Это позволяет системе работать даже если telegram_id не установлен в БД
+        try:
+            last_digit = int(str(client_id_id)[-1])
+            # Используем последнюю цифру * 10 для получения уникального ID
+            fallback_telegram_id = int(f"{last_digit}{last_digit}{last_digit}")
+            print(f"⚠️ telegram_id не найден в БД для client_id={client_id}, используем fallback: {fallback_telegram_id}")
+            return fallback_telegram_id
+        except:
+            pass
+        
+        return None
+    except Exception as e:
+        print(f"⚠️ Ошибка при получении telegram_id для client_id={client_id}: {e}")
+        return None
+
+@app.delete("/api/admin/clear-tokens")
+async def clear_tokens():
+    """Очистить все токены bankingAPI из базы данных"""
+    try:
+        result = await db_instance.access_tokens.delete_many({})
+        return {
+            "status": "success",
+            "message": f"Удалено {result.deleted_count} токен(ов)",
+            "deleted_count": result.deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при очистке токенов: {str(e)}")
+
+@app.post("/api/admin/reset-user-banks")
+async def reset_user_banks(client_id_id: str = Query(...)):
+    """Сбросить токены пользователя - очистить все токены для пользователя"""
+    try:
+        user_id = int(client_id_id) if client_id_id.isdigit() else None
+        
+        if user_id is None:
+            raise HTTPException(status_code=400, detail=f"Неверный client_id_id={client_id_id}, должен быть числом")
+        
+        # Очищаем токены для этого пользователя
+        result = await db_instance.access_tokens.delete_many({
+            "user_id": user_id
+        })
+        
+        return {
+            "status": "success",
+            "message": f"Токены пользователя {user_id} очищены",
+            "user_id": user_id,
+            "deleted_count": result.deleted_count
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при сбросе токенов: {str(e)}")
+
 # =========================
 # Auth endpoints
 # =========================
@@ -109,8 +182,11 @@ async def get_banking_accounts(
         if not session or not banking_client or not bank_helper:
             raise HTTPException(status_code=503, detail="Service not initialized")
         
-        # Получаем consent для банка
+        # Получаем user_id из client_id
         client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+        user_id = int(client_id_id) if client_id_id.isdigit() else None
+        
+        # Получаем consent для банка
         access_token = await bank_helper.get_access_token(bank_name=bank)
         consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
         
@@ -128,7 +204,7 @@ async def get_banking_accounts(
             return {"data": {"accounts": []}, "meta": {"pending_consent": True}}
         
         try:
-            print(f"🔍 [get_banking_accounts] Запрос счетов для {bank}, client_id={client_id}, consent={consent or consent_id}")
+            print(f"🔍 [get_banking_accounts] Запрос счетов для {bank}, client_id={client_id}, user_id={user_id}, consent={consent or consent_id}")
             print(f"🔍 [get_banking_accounts] Headers: {headers}")
             
             accounts = await banking_client.request(
@@ -137,7 +213,8 @@ async def get_banking_accounts(
                 "GET",
                 "/accounts",
                 params={"client_id": client_id},
-                headers=headers
+                headers=headers,
+                user_id=user_id
             )
             
             print(f"✅ [get_banking_accounts] Получен ответ от {bank}:")
@@ -225,6 +302,12 @@ async def create_payment(
         if not session or not banking_client:
             raise HTTPException(status_code=503, detail="Service not initialized")
         
+        # Получаем user_id из client_id
+        user_id = None
+        if client_id:
+            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+            user_id = int(client_id_id) if client_id_id.isdigit() else None
+        
         payment_data = await request.json()
         params = {}
         if client_id:
@@ -247,7 +330,8 @@ async def create_payment(
                 "/payments",
                 params=params,
                 data=payment_data,
-                headers=headers
+                headers=headers,
+                user_id=user_id
             )
             return payment
         except Exception as e:
@@ -288,7 +372,8 @@ async def create_payment(
                             "creditor_account": creditor_account_number,
                             "reference": comment
                         },
-                        headers={"X-Requesting-Bank": banking_client.team_id}
+                        headers={"X-Requesting-Bank": banking_client.team_id},
+                        user_id=user_id
                     )
                     
                     # Извлекаем consent_id из ответа
@@ -313,7 +398,8 @@ async def create_payment(
                             "/payments",
                             params=params,
                             data=payment_data,
-                            headers=headers
+                            headers=headers,
+                            user_id=user_id
                         )
                         return payment
                     else:
@@ -335,6 +421,13 @@ async def get_payment(payment_id: str, bank: str = Query(default="vbank"), clien
     try:
         if not session or not banking_client:
             raise HTTPException(status_code=503, detail="Service not initialized")
+        
+        # Получаем user_id из client_id
+        user_id = None
+        if client_id:
+            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+            user_id = int(client_id_id) if client_id_id.isdigit() else None
+        
         params = {}
         if client_id:
             params["client_id"] = client_id
@@ -344,7 +437,8 @@ async def get_payment(payment_id: str, bank: str = Query(default="vbank"), clien
             bank,
             "GET",
             f"/payments/{payment_id}",
-            params=params
+            params=params,
+            user_id=user_id
         )
         return payment
     except HTTPException:
@@ -366,6 +460,10 @@ async def get_cards(
     try:
         if not session or not banking_client or not bank_helper:
             raise HTTPException(status_code=503, detail="Service not initialized")
+        
+        # Получаем user_id из client_id
+        client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+        user_id = int(client_id_id) if client_id_id.isdigit() else None
         
         # Получаем consent для банка
         client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
@@ -392,7 +490,8 @@ async def get_cards(
                 "GET",
                 "/cards",
                 params={"client_id": client_id},
-                headers=headers
+                headers=headers,
+                user_id=user_id
             )
             return cards
         except Exception as e:
@@ -431,7 +530,8 @@ async def get_cards(
                             "requesting_bank": banking_client.team_id,
                             "requesting_bank_name": "MultiBank App"
                         },
-                        headers={"X-Requesting-Bank": banking_client.team_id}
+                        headers={"X-Requesting-Bank": banking_client.team_id},
+                        user_id=user_id
                     )
                     
                     # Извлекаем consent_id из ответа
@@ -481,7 +581,8 @@ async def get_cards(
                             "GET",
                             "/cards",
                             params={"client_id": client_id},
-                            headers=headers
+                            headers=headers,
+                            user_id=user_id
                         )
                         return cards
                     else:
@@ -506,12 +607,19 @@ async def get_card(
     bank: str = Query(default="vbank"),
     client_id: Optional[str] = Query(None),
     show_full_number: bool = Query(default=False),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
+    consent_id: Optional[str] = Header(None, alias="X-Consent-Id"),
+    telegram_id: Optional[int] = Query(None)
 ):
     """Получить детали карты"""
     try:
         if not session or not banking_client or not bank_helper:
             raise HTTPException(status_code=503, detail="Service not initialized")
+        
+        # Получаем user_id из client_id
+        user_id = None
+        if client_id:
+            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+            user_id = int(client_id_id) if client_id_id.isdigit() else None
         
         # Получаем consent для банка
         if client_id:
@@ -541,8 +649,9 @@ async def get_card(
             "GET",
             f"/cards/{card_id}",
             params=params,
-            headers=headers
-        )
+                    headers=headers,
+                    user_id=user_id
+                )
         return card
     except HTTPException:
         raise
@@ -579,13 +688,20 @@ async def get_card_statement(
         
         # Получаем детали карты
         params = {"client_id": client_id, "show_full_number": "true"}
+        # Получаем user_id из client_id
+        user_id = None
+        if client_id:
+            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+            user_id = int(client_id_id) if client_id_id.isdigit() else None
+        
         card_response = await banking_client.request(
             session,
             bank,
             "GET",
             f"/cards/{card_id}",
             params=params,
-            headers=headers
+            headers=headers,
+            user_id=user_id
         )
         
         # Извлекаем данные карты
@@ -663,26 +779,20 @@ async def get_card_statement(
 
 @app.get("/api/{client_id_id}/bank_names")
 async def get_bank_names(client_id_id) -> list:
-    # читаем из коллекции global_users
-    bank_names = []
-
-    # Ищем пользователя по client_id_id
-    user_doc = await db.global_users.find_one(
-        {"user_id_id": client_id_id},
-        {"_id": 0, "bank_names": 1}
-    )
-
-    if user_doc and "bank_names" in user_doc:
-        bank_names = user_doc["bank_names"]
-
-    # Временно отключено удаление sbank - теперь он должен работать
-    # if "sbank" in bank_names:
-    #     bank_names.remove("sbank")
-
+    """Получить список банков пользователя (возвращает все 3 банка для каждого пользователя)"""
+    # Всегда возвращаем все 3 банка для каждого пользователя
+    # У каждого пользователя будет свой токен для каждого банка
+    bank_names = ["vbank", "abank", "sbank"]
+    print(f"🔍 [get_bank_names] Пользователь client_id_id={client_id_id} имеет доступ к банкам: {bank_names}")
     return bank_names
 
 @app.get("/api/available_balance/{bank_name}/{client_id_id}")
 async def get_available_balance(bank_name, client_id_id) -> dict:
+    """Получить доступный баланс для банка пользователя"""
+    # Используем переданный bank_name (пользователь может запросить любой из 3 банков)
+    # Токены будут индивидуальными для каждого пользователя и банка
+    user_id = int(client_id_id) if client_id_id.isdigit() else None
+    print(f"🔍 [get_available_balance] Пользователь {client_id_id} (user_id={user_id}) запрашивает баланс для банка: {bank_name}")
     available_balance = await bank_helper.get_account_available_balance(bank_name, client_id_id)
     return {"balance": available_balance}
 
@@ -705,8 +815,9 @@ async def get_transactions(
             raise HTTPException(status_code=503, detail="Service not initialized")
         
         client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+        user_id = int(client_id_id) if client_id_id.isdigit() else None
         
-        # Определяем список банков для запроса
+        # Определяем список банков для запроса (все 3 банка для каждого пользователя)
         banks_to_query = [bank] if bank else ["vbank", "abank", "sbank"]
         
         all_transactions = []
@@ -738,7 +849,8 @@ async def get_transactions(
                     "GET",
                     "/accounts",
                     params={"client_id": client_id},
-                    headers=headers
+                    headers=headers,
+                    user_id=user_id
                 )
                 
                 # Извлекаем список счетов из ответа
@@ -783,7 +895,8 @@ async def get_transactions(
                             "GET",
                             f"/accounts/{account_id}/transactions",
                             params=params,
-                            headers=headers
+                            headers=headers,
+                            user_id=user_id
                         )
                         
                         # Извлекаем транзакции из ответа
@@ -873,13 +986,20 @@ async def get_account_transactions(
         if client_id:
             params["client_id"] = client_id
         
+        # Получаем user_id из client_id
+        user_id = None
+        if client_id:
+            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+            user_id = int(client_id_id) if client_id_id.isdigit() else None
+        
         transactions = await banking_client.request(
             session,
             bank,
             "GET",
             f"/accounts/{account_id}/transactions",
             params=params,
-            headers=headers
+            headers=headers,
+            user_id=user_id
         )
         return transactions
     except HTTPException:
@@ -928,10 +1048,11 @@ async def get_products(
             raise HTTPException(status_code=503, detail="Service not initialized")
         
         client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+        user_id = int(client_id_id) if client_id_id.isdigit() else None
         team_id = banking_client.team_id
         full_client_id = f"{team_id}-{client_id_id}"
         
-        # Определяем список банков для запроса
+        # Определяем список банков для запроса (все 3 банка для каждого пользователя)
         banks_to_query = [bank] if bank else ["vbank", "abank", "sbank"]
         
         all_products = []
@@ -975,7 +1096,8 @@ async def get_products(
                                 "reason": "Агрегация продуктов для мультибанк-приложения"
                             },
                             headers={"X-Requesting-Bank": team_id},
-                            params={"client_id": full_client_id}
+                            params={"client_id": full_client_id},
+                            user_id=user_id
                         )
                         
                         # Извлекаем consent_id из ответа
@@ -1019,7 +1141,8 @@ async def get_products(
                         "GET",
                         "/product-agreements",
                         params={"client_id": full_client_id},
-                        headers=headers
+                        headers=headers,
+                        user_id=user_id
                         )
                     except Exception as agreements_error:
                         # Если ошибка 401, обновляем токен и повторяем запрос
@@ -1035,7 +1158,7 @@ async def get_products(
                             new_access_token = await bank_helper.get_access_token(bank_name=bank_name)
                             if new_access_token:
                                 # Обновляем токен в banking_client
-                                await banking_client.get_bank_token(session, bank_name)
+                                await banking_client.get_bank_token(session, bank_name, user_id=user_id)
                                 # Повторяем запрос
                                 try:
                                     agreements_response = await banking_client.request(
@@ -1044,7 +1167,8 @@ async def get_products(
                                         "GET",
                                         "/product-agreements",
                                         params={"client_id": full_client_id},
-                                        headers=headers
+                                        headers=headers,
+                                        user_id=user_id
                                     )
                                 except Exception as retry_error:
                                     print(f"⚠️ Ошибка при повторном получении договоров для {bank_name}: {str(retry_error)}")
@@ -1077,7 +1201,8 @@ async def get_products(
                                         "reason": "Агрегация продуктов для мультибанк-приложения"
                                     },
                                     headers={"X-Requesting-Bank": team_id},
-                                    params={"client_id": full_client_id}
+                                    params={"client_id": full_client_id},
+                                    user_id=user_id
                                 )
                                 
                                 # Извлекаем consent_id из ответа
@@ -1103,7 +1228,8 @@ async def get_products(
                                                 "GET",
                                                 "/product-agreements",
                                                 params={"client_id": full_client_id},
-                                                headers=headers
+                                                headers=headers,
+                                                user_id=user_id
                                             )
                                         except Exception as retry_error:
                                             print(f"⚠️ Ошибка при повторном получении договоров для {bank_name} после пересоздания согласия: {str(retry_error)}")
@@ -1161,7 +1287,8 @@ async def get_products(
                                 "GET",
                                 f"/product-agreements/{agreement_id}",
                                 params={"client_id": full_client_id},
-                                headers=headers
+                                headers=headers,
+                                user_id=user_id
                                 )
                             except Exception as details_error:
                                 # Если ошибка 401, обновляем токен и повторяем запрос
@@ -1177,7 +1304,7 @@ async def get_products(
                                     new_access_token = await bank_helper.get_access_token(bank_name=bank_name)
                                     if new_access_token:
                                         # Обновляем токен в banking_client
-                                        await banking_client.get_bank_token(session, bank_name)
+                                        await banking_client.get_bank_token(session, bank_name, user_id=user_id)
                                         # Повторяем запрос
                                         try:
                                             agreement_details = await banking_client.request(
@@ -1186,7 +1313,8 @@ async def get_products(
                                                 "GET",
                                                 f"/product-agreements/{agreement_id}",
                                                 params={"client_id": full_client_id},
-                                                headers=headers
+                                                headers=headers,
+                                                user_id=user_id
                                             )
                                         except Exception as retry_error:
                                             print(f"⚠️ Ошибка при повторном получении деталей договора для {bank_name}: {str(retry_error)}")
@@ -1219,7 +1347,8 @@ async def get_products(
                                                 "reason": "Агрегация продуктов для мультибанк-приложения"
                                             },
                                             headers={"X-Requesting-Bank": team_id},
-                                            params={"client_id": full_client_id}
+                                            params={"client_id": full_client_id},
+                                            user_id=user_id
                                         )
                                         
                                         # Извлекаем consent_id из ответа
@@ -1245,7 +1374,8 @@ async def get_products(
                                                         "GET",
                                                         f"/product-agreements/{agreement_id}",
                                                         params={"client_id": full_client_id},
-                                                        headers=headers
+                                                        headers=headers,
+                                                        user_id=user_id
                                                     )
                                                 except Exception as retry_error:
                                                     print(f"⚠️ Ошибка при повторном получении деталей договора для {bank_name} после пересоздания согласия: {str(retry_error)}")
@@ -1301,7 +1431,8 @@ async def get_products(
                                             "GET",
                                             f"/accounts/{account_id}/balances",
                                             params={"client_id": full_client_id},
-                                            headers=balance_headers
+                                            headers=balance_headers,
+                                            user_id=user_id
                                         )
                                         except Exception as balance_error:
                                             # Если ошибка 401, обновляем токен и повторяем запрос
@@ -1317,7 +1448,7 @@ async def get_products(
                                                 new_access_token = await bank_helper.get_access_token(bank_name=bank_name)
                                                 if new_access_token:
                                                     # Обновляем токен в banking_client
-                                                    await banking_client.get_bank_token(session, bank_name)
+                                                    await banking_client.get_bank_token(session, bank_name, user_id=user_id)
                                                     # Повторяем запрос
                                                     try:
                                                         balance_response = await banking_client.request(
@@ -1326,7 +1457,8 @@ async def get_products(
                                                             "GET",
                                                             f"/accounts/{account_id}/balances",
                                                             params={"client_id": full_client_id},
-                                                            headers=balance_headers
+                                                            headers=balance_headers,
+                                                            user_id=user_id
                                                         )
                                                     except Exception as retry_error:
                                                         print(f"⚠️ Ошибка при повторном получении баланса для {bank_name}: {str(retry_error)}")

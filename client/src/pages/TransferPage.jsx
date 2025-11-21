@@ -75,7 +75,7 @@ const TransferPage = () => {
       
       // Инициализируем список пользователей, если он пуст
       if (usersList.length === 0) {
-        const usersArr = Array.from({ length: 10 }, (_, i) => i + 1)
+        const usersArr = Array.from({ length: 5 }, (_, i) => i + 1)
           .filter(id => id !== CLIENT_ID_ID)
           .map(id => ({
             id: String(id),
@@ -149,8 +149,8 @@ const TransferPage = () => {
       setLoadingUsers(true);
       const displayName = getUserDisplayName();
       
-      // Создаем список ID от 1 до 10, исключая свой CLIENT_ID_ID
-      const usersArr = Array.from({ length: 10 }, (_, i) => i + 1)
+      // Создаем список ID от 1 до 5, исключая свой CLIENT_ID_ID
+      const usersArr = Array.from({ length: 5 }, (_, i) => i + 1)
         .filter(id => id !== CLIENT_ID_ID)
         .map(id => ({
           id: String(id),

@@ -249,15 +249,30 @@ const useAuthStore = create((set, get) => ({
     return isAuthenticated
   },
 
-  // Get client_id - always returns team096-1 for all users
+  // Get client_id based on telegram_id: (telegram_id % 4) + 1
   getClientId: () => {
-    // Все пользователи используют один и тот же client_id
-    return 'team096-1'
+    const client_id_id = get().getClientIdId()
+    return `team096-${client_id_id}`
   },
 
-  // Get client_id_id (just the number) - always returns 1 for all users
+  // Get client_id_id (just the number) based on telegram_id: (telegram_id % 4) + 1
   getClientIdId: () => {
-    // Все пользователи используют один и тот же client_id_id = 1
+    // Получаем telegram_id из Telegram WebApp
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp
+      const user = tg.initDataUnsafe?.user
+      
+      if (user && user.id) {
+        const telegram_id = user.id
+        // Вычисляем client_id_id по формуле: (telegram_id % 4) + 1
+        const client_id_id = (telegram_id % 4) + 1
+        console.log(`📱 Telegram ID: ${telegram_id}, вычислен client_id_id: ${client_id_id}`)
+        return client_id_id
+      }
+    }
+    
+    // Fallback для разработки: используем 1
+    console.log('⚠️ Telegram ID не найден, используем fallback client_id_id = 1')
     return 1
   }
 }))

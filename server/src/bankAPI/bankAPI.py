@@ -233,6 +233,7 @@ class BankHelper:
         return {"status": "added", "bank_name": bank_name}
 
     
+    
     # Возвращает access_token конкретного банка
     async def get_access_token(self, bank_name) -> dict:
         db = self.db
@@ -396,6 +397,35 @@ class BankHelper:
         
         return None
 
+    async def update_account_data_after_consent_approval(self, bank_name, access_token, consent, client_id_id):
+        """Обновляет account_id и bank_account_number в БД после одобрения согласия"""
+        db = self.db
+        
+        try:
+            print(f"🔄 [update_account_data_after_consent_approval] Обновляю данные для {bank_name}/{client_id_id}, consent: {consent}")
+            # Получаем актуальные данные из API с принудительным обновлением
+            account_id = await self.get_account_id(bank_name, access_token, consent, client_id_id)
+            bank_account_number = await self.get_bank_account_number(bank_name, access_token, consent, client_id_id, force_refresh=True)
+            
+            print(f"📊 [update_account_data_after_consent_approval] Получены данные для {bank_name}/{client_id_id}:")
+            print(f"   account_id: {account_id}")
+            print(f"   bank_account_number: {bank_account_number}")
+            
+            # Обновляем в БД
+            result = await db.users.update_one(
+                {f"{bank_name}.client_id_id": client_id_id},
+                {"$set": {
+                    f"{bank_name}.$.account_id": account_id,
+                    f"{bank_name}.$.bank_account_number": bank_account_number
+                }}
+            )
+            print(f"✅ [update_account_data_after_consent_approval] Обновлены account_id и bank_account_number для {bank_name}/{client_id_id}, matched: {result.matched_count}, modified: {result.modified_count}")
+        except Exception as e:
+            print(f"⚠️ [update_account_data_after_consent_approval] Ошибка при обновлении account_id и bank_account_number для {bank_name}/{client_id_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            # Не пробрасываем ошибку, чтобы не сломать основной поток
+
     async def get_account_consent(self, bank_name, access_token, client_id_id):
         db = self.db
 
@@ -442,6 +472,8 @@ class BankHelper:
                     {"$set": {f"{bank_name}.$.consent": new_consent}}
                 )
                 print(f"✅ consent обновлен: {new_consent}")
+                # Обновляем account_id и bank_account_number после одобрения согласия
+                await self.update_account_data_after_consent_approval(bank_name, access_token, new_consent, client_id_id)
                 return new_consent
             
             print("⚠️ Согласие всё ещё pending")
@@ -465,6 +497,8 @@ class BankHelper:
                     {f"{bank_name}.client_id_id": client_id_id},
                     {"$set": {f"{bank_name}.$.consent": final_consent}}
                 )
+                # Обновляем account_id и bank_account_number после одобрения согласия
+                await self.update_account_data_after_consent_approval(bank_name, access_token, final_consent, client_id_id)
                 return final_consent
 
             elif consent_result.get("status") == "pending":
@@ -481,6 +515,8 @@ class BankHelper:
                 {f"{bank_name}.client_id_id": client_id_id},
                 {"$set": {f"{bank_name}.$.consent": consent_result}}
             )
+            # Обновляем account_id и bank_account_number после одобрения согласия
+            await self.update_account_data_after_consent_approval(bank_name, access_token, consent_result, client_id_id)
             return consent_result
 
         return None
@@ -610,6 +646,8 @@ class BankHelper:
                                 {"$set": {f"{bank_name}.$.consent": new_consent}}
                             )
                             print(f"✅ Новое согласие создано для {bank_name}, повторяю запрос...")
+                            # Обновляем account_id и bank_account_number после создания нового согласия
+                            await self.update_account_data_after_consent_approval(bank_name, access_token, new_consent, client_id_id)
                             # Повторяем запрос с новым согласием
                             async with self._session.get(
                                 url=f"https://{bank_name}.{self.base_url}/accounts",
@@ -672,25 +710,40 @@ class BankHelper:
             account_id = accounts[0].get("accountId") or accounts[0].get("account_id") or accounts[0].get("id")
             if not account_id:
                 raise ValueError(f"❌ Не удалось извлечь account_id из ответа: {accounts[0]}")
+            
+            # Обновляем в БД для будущих запросов
+            await db.users.update_one(
+                {f"{bank_name}.client_id_id": client_id_id},
+                {"$set": {f"{bank_name}.$.account_id": account_id}}
+            )
+            print(f"✅ account_id обновлен в БД: {account_id}")
+            
             return account_id
         
     # Получить Номер счета клиента конкретного банка
-    async def get_bank_account_number(self, bank_name, access_token, consent, client_id_id):
+    async def get_bank_account_number(self, bank_name, access_token, consent, client_id_id, force_refresh=False):
         db = self.db
 
-        # Проверяем, есть ли user_id_id в БД
-        record = await db.users.find_one(
-            {f"{bank_name}.client_id_id": client_id_id},
-            {f"{bank_name}.$": 1}
-        )
-        if record and bank_name in record:
-            account_data = record[bank_name][0]
-            bank_account_number = account_data.get("bank_account_number")
-            if bank_account_number:
-                print(f"⚡ account_id найден в БД: {bank_account_number}")
-                return bank_account_number
+        # Если нет согласия, не можем получить данные
+        if not consent:
+            raise ValueError(f"❌ Нет согласия для получения bank_account_number из {bank_name}")
 
-        # Если нет — делаем запрос к API
+        # Если force_refresh=False, проверяем БД сначала
+        if not force_refresh:
+            record = await db.users.find_one(
+                {f"{bank_name}.client_id_id": client_id_id},
+                {f"{bank_name}.$": 1}
+            )
+            if record and bank_name in record:
+                account_data = record[bank_name][0]
+                bank_account_number = account_data.get("bank_account_number")
+                # Если есть валидный номер счета в БД, возвращаем его
+                if bank_account_number and bank_account_number != "0000":
+                    print(f"⚡ bank_account_number найден в БД: {bank_account_number}")
+                    return bank_account_number
+
+        # Если force_refresh=True или нет в БД — делаем запрос к API
+            
         async with self._session.get(
             url=f"https://{bank_name}.{self.base_url}/accounts",
             headers={
@@ -704,9 +757,42 @@ class BankHelper:
             timeout=15
         ) as resp:
             if resp.status != 200:
-                raise ValueError(f"❌ Ошибка при получении accounts из {bank_name}: {resp.status}")
+                error_text = await resp.text()
+                raise ValueError(f"❌ Ошибка при получении accounts из {bank_name}: {resp.status} - {error_text}")
             result = await resp.json()
-            bank_account_number = result["data"]["account"][0]["account"][0].get("identification", "0000")
+            
+            # Обработка разных форматов ответа
+            accounts = []
+            if "data" in result:
+                if "account" in result["data"]:
+                    accounts = result["data"]["account"]
+                elif "accounts" in result["data"]:
+                    accounts = result["data"]["accounts"]
+                else:
+                    accounts = result["data"] if isinstance(result["data"], list) else [result["data"]]
+            else:
+                accounts = result.get("accounts", result.get("account", []))
+            
+            if not accounts or len(accounts) == 0:
+                raise ValueError(f"❌ Нет счетов для клиента {client_id_id} в банке {bank_name}")
+            
+            # Извлекаем номер счета
+            account_data = accounts[0]
+            if "account" in account_data and isinstance(account_data["account"], list) and len(account_data["account"]) > 0:
+                bank_account_number = account_data["account"][0].get("identification")
+            else:
+                bank_account_number = account_data.get("identification")
+            
+            if not bank_account_number:
+                raise ValueError(f"❌ Не удалось извлечь bank_account_number из ответа: {account_data}")
+            
+            # Обновляем в БД для будущих запросов
+            await db.users.update_one(
+                {f"{bank_name}.client_id_id": client_id_id},
+                {"$set": {f"{bank_name}.$.bank_account_number": bank_account_number}}
+            )
+            print(f"✅ bank_account_number обновлен в БД: {bank_account_number}")
+            
             return bank_account_number
             
 
@@ -870,11 +956,80 @@ class BankHelper:
     # ---------------------------------------------------------------------------------------------------
     # ----------------------------------- Payments ------------------------------------------------------
 
-    # Получить согласие на перевод
-    async def get_transfer_consent(self, client_id_id, from_bank, amount,
-                                   from_access_token, debtor_bank_account_number,
-                                    creditor_bank_account_number):
-
+    # Получить или создать multi_use согласие на переводы (максимальные разрешения)
+    async def get_or_create_payment_consent(self, client_id_id, from_bank, from_access_token, debtor_bank_account_number):
+        """Получает существующее multi_use согласие из БД или создает новое с максимальными разрешениями"""
+        db = self.db
+        
+        # Проверяем, есть ли уже multi_use согласие в БД
+        user = await db.users.find_one(
+            {f"{from_bank}.client_id_id": client_id_id},
+            {f"{from_bank}.$": 1}
+        )
+        
+        if user and from_bank in user:
+            record = user[from_bank][0]
+            payment_consent = record.get("payment_consent")
+            payment_consent_status = record.get("payment_consent_status")
+            
+            # Если есть активное согласие, используем его
+            if payment_consent and payment_consent_status == "approved":
+                print(f"✅ Используем существующее payment consent: {payment_consent}")
+                return payment_consent
+            
+            # Если есть pending согласие, проверяем его статус
+            if payment_consent_status == "pending":
+                payment_request_id = record.get("payment_request_id")
+                if payment_request_id:
+                    print(f"🔄 Проверяю статус pending payment consent (request_id={payment_request_id})...")
+                    # Проверяем статус через API
+                    try:
+                        async with self._session.get(
+                            url=f"https://{from_bank}.{self.base_url}/payment-consents/{payment_request_id}",
+                            headers={
+                                "Authorization": f"Bearer {from_access_token}",
+                                "X-Requesting-Bank": self.client_id,
+                                "Content-Type": "application/json"
+                            },
+                            timeout=15
+                        ) as resp:
+                            if resp.status == 200:
+                                result = await resp.json()
+                                status = result.get("status") or result.get("data", {}).get("status")
+                                if status == "Authorized" or status == "approved":
+                                    consent_id = result.get("consent_id") or result.get("data", {}).get("consentId")
+                                    if consent_id:
+                                        # Обновляем в БД
+                                        await db.users.update_one(
+                                            {f"{from_bank}.client_id_id": client_id_id},
+                                            {"$set": {
+                                                f"{from_bank}.$.payment_consent": consent_id,
+                                                f"{from_bank}.$.payment_consent_status": "approved",
+                                                f"{from_bank}.$.payment_request_id": None
+                                            }}
+                                        )
+                                        print(f"✅ Payment consent одобрен: {consent_id}")
+                                        return consent_id
+                    except Exception as e:
+                        print(f"⚠️ Ошибка при проверке статуса payment consent: {e}")
+        
+        # Создаем single_use согласие БЕЗ creditor_account - это должно одобряться автоматически
+        # Согласно документации: "БЕЗ указания получателя (платеж любому, но только один раз)"
+        # Это согласие позволит делать один перевод на любой счет
+        consent_request_body = {
+            "requesting_bank": f"{self.client_id}",
+            "client_id": f"{self.client_id}-{client_id_id}",
+            "consent_type": "single_use",
+            "debtor_account": f"{debtor_bank_account_number}",
+            "amount": 10000000.00,  # Максимальная сумма для согласия (10 млн)
+            "currency": "RUB",
+            "reference": "Автоматические межбанковские переводы"
+            # НЕ указываем creditor_account - это позволит делать перевод на любой счет
+        }
+        
+        print(f"🔐 Создаю новое single_use согласие БЕЗ creditor_account для автоматических переводов:")
+        print(f"   URL: https://{from_bank}.{self.base_url}/payment-consents/request")
+        print(f"   Body: {consent_request_body}")
 
         async with self._session.post(
             url=f"https://{from_bank}.{self.base_url}/payment-consents/request",
@@ -883,68 +1038,192 @@ class BankHelper:
                 "X-Requesting-Bank": self.client_id,
                 "Content-Type": "application/json"
             },
-            json={
-                "requesting_bank": f"{self.client_id}",
-                "client_id": f"{self.client_id}-{client_id_id}",
-                "consent_type": "single_use",
-                "amount": amount,
-                "currency": "RUB",
-                "debtor_account": f"{debtor_bank_account_number}",
-                "creditor_account": f"{creditor_bank_account_number}",
-                "reference": "Оплата услуг"
-            },
+            json=consent_request_body,
             timeout=15
         ) as resp:
             if resp.status != 200:
                 text = await resp.text()
+                print(f"❌ Ошибка при создании single_use payment consent:")
+                print(f"   Status: {resp.status}")
+                print(f"   Response: {text}")
+                raise Exception(f"Ошибка при создании single_use consent: {resp.status} {text}")
+            
+            result = await resp.json()
+            
+            print(f"📋 Ответ на запрос согласия на перевод:")
+            print(f"   Status: {result.get('status')}")
+            print(f"   Full response: {result}")
+            
+            status = result.get("status")
+            consent_id = result.get("consent_id") or result.get("data", {}).get("consentId")
+            request_id = result.get("request_id") or result.get("data", {}).get("requestId")
+            
+            if status == "approved" and consent_id:
+                # Сохраняем в БД
+                await db.users.update_one(
+                    {f"{from_bank}.client_id_id": client_id_id},
+                    {"$set": {
+                        f"{from_bank}.$.payment_consent": consent_id,
+                        f"{from_bank}.$.payment_consent_status": "approved",
+                        f"{from_bank}.$.payment_request_id": None
+                    }}
+                )
+                print(f"✅ Согласие на перевод одобрено и сохранено: {consent_id}")
+                return consent_id
+            elif status == "pending" and request_id:
+                # Сохраняем request_id для последующей проверки
+                await db.users.update_one(
+                    {f"{from_bank}.client_id_id": client_id_id},
+                    {"$set": {
+                        f"{from_bank}.$.payment_consent": None,
+                        f"{from_bank}.$.payment_consent_status": "pending",
+                        f"{from_bank}.$.payment_request_id": request_id
+                    }}
+                )
+                print(f"⚠️ Согласие на перевод требует одобрения (request_id: {request_id})")
+                return None
+            else:
+                print(f"⚠️ Согласие на перевод не одобрено. Status: {status}")
+                print(f"   Полный ответ: {result}")
+                return None
+
+    # Получить согласие на перевод
+    async def get_transfer_consent(self, client_id_id, from_bank, amount,
+                                   from_access_token, debtor_bank_account_number,
+                                    creditor_bank_account_number):
+        # Для всех банков используем single_use с creditor_account - это повышает шансы автоодобрения
+        # Согласно документации, single_use с указанием получателя должен одобряться автоматически
+        consent_request_body = {
+            "requesting_bank": f"{self.client_id}",
+            "client_id": f"{self.client_id}-{client_id_id}",
+            "consent_type": "single_use",
+            "amount": float(amount),
+            "currency": "RUB",
+            "debtor_account": f"{debtor_bank_account_number}",
+            "creditor_account": f"{creditor_bank_account_number}",
+            "reference": "Мультибанковский перевод"
+        }
+        
+        print(f"🔐 Запрашиваю single_use согласие с creditor_account для {from_bank} (автоодобрение):")
+        print(f"   URL: https://{from_bank}.{self.base_url}/payment-consents/request")
+        print(f"   Body: {consent_request_body}")
+        
+        async with self._session.post(
+            url=f"https://{from_bank}.{self.base_url}/payment-consents/request",
+            headers={
+                "Authorization": f"Bearer {from_access_token}",
+                "X-Requesting-Bank": self.client_id,
+                "Content-Type": "application/json"
+            },
+            json=consent_request_body,
+            timeout=15
+        ) as resp:
+            if resp.status != 200:
+                text = await resp.text()
+                print(f"❌ Ошибка при создании payment consent для {from_bank}:")
+                print(f"   Status: {resp.status}")
+                print(f"   Response: {text}")
                 raise Exception(f"Ошибка при создании consent: {resp.status} {text}")
             
             result = await resp.json()
-            # Проверяем если подтвердили согласие на перевод
-            if result.get("status") == "approved":
-                transfer_consent = result.get("consent_id")
-                return transfer_consent
-            return None
+            print(f"📋 Ответ на запрос согласия на перевод для {from_bank}:")
+            print(f"   Status: {result.get('status')}")
+            print(f"   Full response: {result}")
+            
+            status = result.get("status")
+            consent_id = result.get("consent_id") or result.get("data", {}).get("consentId")
+            request_id = result.get("request_id") or result.get("data", {}).get("requestId")
+            
+            if status == "approved" and consent_id:
+                print(f"✅ Согласие на перевод одобрено для {from_bank}: {consent_id}")
+                return consent_id
+            elif status == "pending" and request_id:
+                print(f"⚠️ Согласие для {from_bank} требует одобрения (request_id: {request_id})")
+                # Возвращаем None, чтобы система попробовала создать платеж без согласия
+                return None
+            else:
+                print(f"⚠️ Согласие для {from_bank} не одобрено. Status: {status}")
+                return None
 
 
 
     # Создание платежа  
     async def make_transfer(self, client_id_id, to_client_id_id, from_bank, to_bank, amount) -> dict:
+        db = self.db
         from_access_token = await self.get_access_token(bank_name=from_bank)
         to_access_token = await self.get_access_token(bank_name=to_bank)
 
         from_consent = await self.get_account_consent(from_bank, from_access_token, client_id_id)
         to_consent = await self.get_account_consent(to_bank, to_access_token, to_client_id_id)
 
-        debtor_bank_account_number = await self.get_bank_account_number(from_bank, from_access_token, from_consent, client_id_id)
-        creditor_bank_account_number = await self.get_bank_account_number(to_bank, to_access_token, to_consent, to_client_id_id)
+        # Проверяем, что согласия получены
+        if not from_consent:
+            raise ValueError(f"❌ Нет согласия для банка отправителя {from_bank}")
+        if not to_consent:
+            raise ValueError(f"❌ Нет согласия для банка получателя {to_bank}")
+
+        # Принудительно обновляем данные счетов перед переводом, чтобы убедиться, что используем актуальные номера
+        print(f"🔄 Обновляю данные счетов перед переводом...")
+        try:
+            await self.update_account_data_after_consent_approval(from_bank, from_access_token, from_consent, client_id_id)
+        except Exception as e:
+            print(f"⚠️ Не удалось обновить данные отправителя, продолжаю с данными из БД: {e}")
+        
+        try:
+            await self.update_account_data_after_consent_approval(to_bank, to_access_token, to_consent, to_client_id_id)
+        except Exception as e:
+            print(f"⚠️ Не удалось обновить данные получателя, продолжаю с данными из БД: {e}")
+
+        # Принудительно обновляем данные из API перед переводом
+        debtor_bank_account_number = await self.get_bank_account_number(from_bank, from_access_token, from_consent, client_id_id, force_refresh=True)
+        creditor_bank_account_number = await self.get_bank_account_number(to_bank, to_access_token, to_consent, to_client_id_id, force_refresh=True)
+
+        print(f"📊 Данные для перевода:")
+        print(f"   Отправитель ({from_bank}): {debtor_bank_account_number}")
+        print(f"   Получатель ({to_bank}): {creditor_bank_account_number}")
+        print(f"   Сумма: {amount}")
 
         amount = float(amount)
 
-        # Получение согласия на перевод
-        transfer_consent = await self.get_transfer_consent(client_id_id, from_bank,
-                                                           amount, from_access_token,
-                                                           debtor_bank_account_number, 
-                                                           creditor_bank_account_number)
+        # Для каждого перевода создаем single_use согласие с creditor_account
+        # Это должно одобряться автоматически и позволять делать множественные переводы
+        transfer_consent = None
+        try:
+            transfer_consent = await self.get_transfer_consent(
+                client_id_id, from_bank, amount, from_access_token,
+                debtor_bank_account_number, creditor_bank_account_number
+            )
+            if not transfer_consent:
+                print("⚠️ Не удалось получить согласие на перевод, попробуем без него")
+        except Exception as e:
+            print(f"⚠️ Ошибка при получении согласия на перевод, попробуем без него: {e}")
 
-        # Если не дали согласие
-        if transfer_consent == None:
-            print("Произошла какая-то ошибка при получении согласия на перевод!")
-            return {"status": "error", "message": "Произошла какая-то ошибка при получении согласия на перевод!"}
-
-        async with self._session.post(
-            url=f"https://{from_bank}.{self.base_url}/payments",
-            headers={
-                "Authorization": f"Bearer {from_access_token}",
-                "Content-Type": "application/json",
-                "X-Requesting-Bank": f"{self.client_id}",
-                "X-FAPI-Interaction-Id": f"{self.client_id}-pay-004",
-                "X-Payment-Consent-Id": f"{transfer_consent}"
-            },
-            params={
-                "client_id": f"{self.client_id}-{client_id_id}"
-            },
-            json={
+        # Формируем тело запроса
+        # Для межбанковского перевода creditorAccount не должен содержать schemeName
+        # Согласно документации: только identification и bank_code
+        if from_bank == to_bank:
+            # Внутрибанковский перевод
+            payment_body = {
+                "data": {
+                    "initiation": {
+                        "instructedAmount": {
+                            "amount": str(amount),
+                            "currency": "RUB"
+                        },
+                        "debtorAccount": {
+                            "schemeName": "RU.CBR.PAN",
+                            "identification": f"{debtor_bank_account_number}"
+                        },
+                        "creditorAccount": {
+                            "schemeName": "RU.CBR.PAN",
+                            "identification": f"{creditor_bank_account_number}"
+                        }
+                    }
+                }
+            }
+        else:
+            # Межбанковский перевод - НЕ указываем schemeName для creditorAccount
+            payment_body = {
                 "data": {
                     "initiation": {
                         "instructedAmount": {
@@ -961,11 +1240,126 @@ class BankHelper:
                         }
                     }
                 }
+            }
+        
+        # Формируем заголовки - X-Payment-Consent-Id опционален
+        payment_headers = {
+            "Authorization": f"Bearer {from_access_token}",
+            "Content-Type": "application/json",
+            "X-Requesting-Bank": f"{self.client_id}",
+            "X-FAPI-Interaction-Id": f"{self.client_id}-pay-004"
+        }
+        
+        # Добавляем согласие только если оно есть
+        if transfer_consent:
+            payment_headers["X-Payment-Consent-Id"] = transfer_consent
+        
+        print(f"💸 Создаю платеж:")
+        print(f"   URL: https://{from_bank}.{self.base_url}/payments")
+        print(f"   Body: {payment_body}")
+        print(f"   Transfer consent: {transfer_consent}")
+
+        async with self._session.post(
+            url=f"https://{from_bank}.{self.base_url}/payments",
+            headers=payment_headers,
+            params={
+                "client_id": f"{self.client_id}-{client_id_id}"
             },
+            json=payment_body,
             timeout=15
         ) as resp:
+            if resp.status == 403:
+                # Если получили 403 PAYMENT_CONSENT_REQUIRED, создаем согласие и повторяем
+                error_text = await resp.text()
+                print(f"⚠️ Получен 403, требуется согласие на перевод. Создаю согласие...")
+                
+                # Создаем single_use согласие БЕЗ creditor_account для межбанковских переводов
+                # Это позволит делать переводы на любые счета
+                consent_request_body = {
+                    "requesting_bank": f"{self.client_id}",
+                    "client_id": f"{self.client_id}-{client_id_id}",
+                    "consent_type": "single_use",
+                    "amount": amount,
+                    "currency": "RUB",
+                    "debtor_account": f"{debtor_bank_account_number}",
+                    "reference": "Мультибанковский перевод"
+                    # НЕ указываем creditor_account - это позволит делать переводы на любые счета
+                }
+                
+                print(f"🔐 Создаю single_use согласие БЕЗ creditor_account:")
+                print(f"   Body: {consent_request_body}")
+                
+                async with self._session.post(
+                    url=f"https://{from_bank}.{self.base_url}/payment-consents/request",
+                    headers={
+                        "Authorization": f"Bearer {from_access_token}",
+                        "X-Requesting-Bank": self.client_id,
+                        "Content-Type": "application/json"
+                    },
+                    json=consent_request_body,
+                    timeout=15
+                ) as consent_resp:
+                    if consent_resp.status == 200:
+                        consent_result = await consent_resp.json()
+                        consent_status = consent_result.get("status")
+                        consent_id = consent_result.get("consent_id") or consent_result.get("data", {}).get("consentId")
+                        
+                        if consent_status == "approved" and consent_id:
+                            print(f"✅ Согласие одобрено автоматически: {consent_id}")
+                            # Повторяем запрос с согласием
+                            payment_headers["X-Payment-Consent-Id"] = consent_id
+                            
+                            async with self._session.post(
+                                url=f"https://{from_bank}.{self.base_url}/payments",
+                                headers=payment_headers,
+                                params={
+                                    "client_id": f"{self.client_id}-{client_id_id}"
+                                },
+                                json=payment_body,
+                                timeout=15
+                            ) as retry_resp:
+                                if retry_resp.status not in (200, 201):
+                                    retry_error = await retry_resp.text()
+                                    print(f"❌ Ошибка при повторном создании платежа:")
+                                    print(f"   Status: {retry_resp.status}")
+                                    print(f"   Response: {retry_error}")
+                                    raise Exception(f"Ошибка при создании платежа: {retry_resp.status} {retry_error}")
+                                
+                                result = await retry_resp.json()
+                                if result["data"].get("status") != "AcceptedSettlementCompleted":
+                                    print(f"⚠️ Перевод не подтвержден! Статус: {result['data'].get('status')}")
+                                    return {"status": "error", "message": "Перевод не подтвержден!"}
+                                paymentId = result["data"].get("paymentId")
+                                print(f"✅ Перевод успешно выполнен! Payment ID: {paymentId}")
+                                return {"status": "success", "message": "Перевод выполнен!", "paymentId": paymentId}
+                        elif consent_status == "pending":
+                            request_id = consent_result.get("request_id") or consent_result.get("data", {}).get("requestId")
+                            print(f"⚠️ Согласие требует одобрения (request_id: {request_id})")
+                            # Сохраняем request_id в БД для последующей проверки
+                            await db.users.update_one(
+                                {f"{from_bank}.client_id_id": client_id_id},
+                                {"$set": {
+                                    f"{from_bank}.$.payment_consent": None,
+                                    f"{from_bank}.$.payment_consent_status": "pending",
+                                    f"{from_bank}.$.payment_request_id": request_id
+                                }}
+                            )
+                            return {"status": "error", "message": f"Согласие на перевод требует одобрения. Request ID: {request_id}"}
+                        else:
+                            print(f"⚠️ Согласие не одобрено. Status: {consent_status}")
+                            return {"status": "error", "message": f"Согласие на перевод не одобрено. Status: {consent_status}"}
+                    else:
+                        consent_error = await consent_resp.text()
+                        print(f"❌ Ошибка при создании согласия: {consent_resp.status} {consent_error}")
+                        raise Exception(f"Ошибка при создании согласия: {consent_resp.status} {consent_error}")
+            
             if resp.status not in (200, 201):
-                raise Exception(f"Ошибка при создании платежа: {resp.status} {await resp.text()}")
+                error_text = await resp.text()
+                print(f"❌ Ошибка при создании платежа:")
+                print(f"   Status: {resp.status}")
+                print(f"   Response: {error_text}")
+                print(f"   Request body: {payment_body}")
+                raise Exception(f"Ошибка при создании платежа: {resp.status} {error_text}")
             result = await resp.json()
             if result["data"].get("status") != "AcceptedSettlementCompleted":
                 return {"status": "Перевод не подтвержден!"}
