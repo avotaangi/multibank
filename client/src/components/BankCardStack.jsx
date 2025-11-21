@@ -202,7 +202,9 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
           return { ...cardsList, cards };
         }
       }
-      return { ...cardsList, cards: [] };
+      // Если карт нет, возвращаем структуру с пустым массивом и метаданными
+      console.log('⚠️ [BankCardStack-ABANK] Карты не найдены, возвращаем пустой массив');
+      return { ...cardsList, cards: [], meta: cardsList?.meta || cardsList?.data?.meta };
     },
     {
       enabled: !!CLIENT_ID_ID,
@@ -275,7 +277,9 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
           return { ...cardsList, cards };
         }
       }
-      return { ...cardsList, cards: [] };
+      // Если карт нет, возвращаем структуру с пустым массивом и метаданными
+      console.log('⚠️ [BankCardStack-SBANK] Карты не найдены, возвращаем пустой массив');
+      return { ...cardsList, cards: [], meta: cardsList?.meta || cardsList?.data?.meta };
     },
     {
       enabled: !!CLIENT_ID_ID,
@@ -389,7 +393,13 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
       
       console.log(`🔍 [BankCardStack] Обрабатываю карту ${card.id}, cardsData:`, cardsData);
       
-      if (cardsData) {
+      // Проверяем, есть ли pending_consent в метаданных
+      const hasPendingConsent = cardsData?.meta?.pending_consent || cardsData?.data?.meta?.pending_consent;
+      if (hasPendingConsent) {
+        console.log(`⚠️ [BankCardStack] Для ${card.id} согласие в статусе pending, используем дефолтный номер карты`);
+      }
+      
+      if (cardsData && !hasPendingConsent) {
         // Пробуем получить из деталей карты (полный номер, если доступен)
         const cardDetails = cardsData?.cardDetails?.data || cardsData?.cardDetails;
         if (cardDetails) {
@@ -429,21 +439,26 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
           console.log(`🔍 [BankCardStack] cardsList для ${card.id}:`, cardsList);
           console.log(`🔍 [BankCardStack] Количество карт в списке для ${card.id}:`, cardsList.length);
           
-          const firstCard = cardsList[0];
-          if (firstCard) {
-            console.log(`🔍 [BankCardStack] Первая карта для ${card.id}:`, firstCard);
-            // Используем cardNumber из API (уже маскированный)
-            const cardNumber = firstCard.cardNumberFull || firstCard.cardNumber;
-            console.log(`🔍 [BankCardStack] cardNumber из firstCard для ${card.id}:`, cardNumber);
-            if (cardNumber) {
-              // Если номер уже маскирован (содержит *), используем как есть
-              realCardNumber = cardNumber.includes('*') ? cardNumber : formatCardNumber(cardNumber);
-              console.log(`✅ [BankCardStack] Номер из списка для ${card.id}:`, realCardNumber);
-            } else {
-              console.warn(`⚠️ [BankCardStack] cardNumber не найден в firstCard для ${card.id}`);
-            }
+          // Если список карт пустой, используем дефолтный номер
+          if (cardsList.length === 0) {
+            console.log(`⚠️ [BankCardStack] Список карт пустой для ${card.id}, используем дефолтный номер`);
           } else {
-            console.warn(`⚠️ [BankCardStack] firstCard не найден для ${card.id}, cardsList.length:`, cardsList.length);
+            const firstCard = cardsList[0];
+            if (firstCard) {
+              console.log(`🔍 [BankCardStack] Первая карта для ${card.id}:`, firstCard);
+              // Используем cardNumber из API (уже маскированный)
+              const cardNumber = firstCard.cardNumberFull || firstCard.cardNumber;
+              console.log(`🔍 [BankCardStack] cardNumber из firstCard для ${card.id}:`, cardNumber);
+              if (cardNumber) {
+                // Если номер уже маскирован (содержит *), используем как есть
+                realCardNumber = cardNumber.includes('*') ? cardNumber : formatCardNumber(cardNumber);
+                console.log(`✅ [BankCardStack] Номер из списка для ${card.id}:`, realCardNumber);
+              } else {
+                console.warn(`⚠️ [BankCardStack] cardNumber не найден в firstCard для ${card.id}`);
+              }
+            } else {
+              console.warn(`⚠️ [BankCardStack] firstCard не найден для ${card.id}, cardsList.length:`, cardsList.length);
+            }
           }
         }
       }

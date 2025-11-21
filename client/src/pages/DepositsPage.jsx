@@ -11,7 +11,7 @@ import useTestCardsStore from '../stores/testCardsStore';
 import { productsAPI } from '../services/api';
 import useAuthStore from '../stores/authStore';
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const CLIENT_ID_ID = import.meta.env.VITE_CLIENT_ID_ID;
 
 const DepositsPage = () => {
@@ -137,29 +137,29 @@ const DepositsPage = () => {
   
   // Загружаем балансы карт из store (не вызываем старый endpoint)
   useEffect(() => {
-    const baseCards = [
-      { id: 'vbank', name: 'VBank', bankName: 'VBank', cardNumber: '5294', color: '#0055BC' },
-      { id: 'abank', name: 'ABank', bankName: 'ABank', cardNumber: '5678', color: '#DC2626' },
-      { id: 'sbank', name: 'SBank', bankName: 'SBank', cardNumber: '9012', color: '#10B981' }
-    ];
-    
+        const baseCards = [
+          { id: 'vbank', name: 'VBank', bankName: 'VBank', cardNumber: '5294', color: '#0055BC' },
+          { id: 'abank', name: 'ABank', bankName: 'ABank', cardNumber: '5678', color: '#DC2626' },
+          { id: 'sbank', name: 'SBank', bankName: 'SBank', cardNumber: '9012', color: '#10B981' }
+        ];
+        
     const cardsWithBal = baseCards.map((card) => {
       const bankKey = card.id;
       const balance = bankBalances?.[bankKey] || 0;
-      return { ...card, balance };
+              return { ...card, balance };
     });
-    
-    const testCards = getAllCards();
-    const testCardsWithBalance = testCards.map(card => {
-      const bankKey = card.bankName?.toLowerCase() || card.name?.toLowerCase() || '';
-      const balance = bankBalances?.[bankKey] || card.balance || 0;
-      return {
-        ...card,
-        balance
-      };
-    });
-    
-    setCardsWithBalances([...cardsWithBal, ...testCardsWithBalance]);
+        
+        const testCards = getAllCards();
+        const testCardsWithBalance = testCards.map(card => {
+          const bankKey = card.bankName?.toLowerCase() || card.name?.toLowerCase() || '';
+          const balance = bankBalances?.[bankKey] || card.balance || 0;
+          return {
+            ...card,
+            balance
+          };
+        });
+        
+        setCardsWithBalances([...cardsWithBal, ...testCardsWithBalance]);
   }, [getAllCards, bankBalances]);
   
   const handleOpenAutoTransferModal = (depositId) => {
@@ -335,13 +335,13 @@ const DepositsPage = () => {
                   : deposit.bgColor;
                 
                 const depositSettings = getDepositSettings(depositId);
-                const card = cardsWithBalances.find(c => c.id === depositSettings?.cardId);
-                
-                return (
+              const card = cardsWithBalances.find(c => c.id === depositSettings?.cardId);
+              
+              return (
                   <div key={depositId || index} className={`${bgColor} rounded-2xl p-4 hover:shadow-md transition-shadow`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="text-white font-ibm text-xl font-medium leading-[110%] mb-1">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="text-white font-ibm text-xl font-medium leading-[110%] mb-1">
                           {typeof depositAmount === 'number' 
                             ? depositAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : parseFloat(depositAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -351,10 +351,10 @@ const DepositsPage = () => {
                           {depositName}
                         </div>
                       </div>
-                      <div className="text-white font-ibm text-sm font-medium leading-[110%]">
+                    <div className="text-white font-ibm text-sm font-medium leading-[110%]">
                         {depositRate}% годовых
-                      </div>
                     </div>
+                  </div>
                   
                   {depositSettings ? (
                     <div className="bg-white bg-opacity-20 rounded-xl p-3 mb-2">
@@ -372,14 +372,14 @@ const DepositsPage = () => {
                     </div>
                   ) : null}
                   
-                    <button
+                  <button
                       onClick={() => handleOpenAutoTransferModal(depositId)}
-                      className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-ibm text-sm font-medium py-2 rounded-xl transition-colors"
-                    >
-                      {depositSettings ? 'Изменить автопополнение' : 'Настроить автопополнение'}
-                    </button>
-                  </div>
-                );
+                    className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-ibm text-sm font-medium py-2 rounded-xl transition-colors"
+                  >
+                    {depositSettings ? 'Изменить автопополнение' : 'Настроить автопополнение'}
+                  </button>
+                </div>
+              );
               })
             )}
           </div>

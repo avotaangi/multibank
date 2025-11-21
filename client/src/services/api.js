@@ -2,9 +2,21 @@ import axios from 'axios'
 
 // Create axios instance
 // Используем FastAPI вместо Node.js бэкенда
-const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Приоритет: VITE_API_BASE -> VITE_API_URL -> localhost:8000
+let apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+// Если указан внешний URL, но мы в локальной разработке, используем localhost
+// Проверяем, что это не production URL при локальной разработке
+if (apiBase.includes('cloudpub.ru') || apiBase.includes('ngrok') || apiBase.includes('loca.lt')) {
+  // Для локальной разработки приоритет у localhost
+  const localhostBase = 'http://localhost:8000'
+  console.log('⚠️ [API] Обнаружен внешний URL, но используем localhost для разработки:', localhostBase)
+  apiBase = localhostBase
+}
+
 // Убеждаемся, что baseURL заканчивается на /api для всех запросов
 const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
+console.log('🔗 [API] Base URL:', baseURL, '| API Base:', apiBase)
 const api = axios.create({
   baseURL: baseURL,
   timeout: 10000,
