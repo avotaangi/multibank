@@ -407,7 +407,12 @@ const YourBankPage = () => {
                 <div className="flex-1">
                   <div className="text-gray-900 font-ibm font-medium text-sm">
                     <button
-                      onClick={(e) => handleDownloadPDF(e, 'personal-data-agreement.pdf')}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDownloadPDF(e, 'personal-data-agreement.pdf');
+                      }}
                       className="text-blue-600 underline hover:text-blue-700 text-left"
                     >
                       Скачать выписку: Согласие на обработку персональных данных
@@ -430,7 +435,12 @@ const YourBankPage = () => {
                 <div className="flex-1">
                   <div className="text-gray-900 font-ibm font-medium text-sm">
                     <button
-                      onClick={(e) => handleDownloadPDF(e, 'credit-history-agreement.pdf')}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDownloadPDF(e, 'credit-history-agreement.pdf');
+                      }}
                       className="text-blue-600 underline hover:text-blue-700 text-left"
                     >
                       Скачать выписку: Согласие на получение кредитной истории и доступ к счетам
@@ -457,7 +467,12 @@ const YourBankPage = () => {
                 <div className="flex-1">
                   <div className="text-gray-900 font-ibm font-medium text-sm">
                     <button
-                      onClick={(e) => handleDownloadPDF(e, 'biometry-agreement.pdf')}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDownloadPDF(e, 'biometry-agreement.pdf');
+                      }}
                       className="text-blue-600 underline hover:text-blue-700 text-left"
                     >
                       Скачать выписку: Согласие на использование биометрии для подтверждения операций
