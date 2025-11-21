@@ -967,6 +967,7 @@ async def get_products(
                             "/product-agreement-consents/request",
                             data={
                                 "requesting_bank": team_id,
+                                "client_id": full_client_id,
                                 "read_product_agreements": True,
                                 "open_product_agreements": False,
                                 "close_product_agreements": False,
@@ -1013,12 +1014,12 @@ async def get_products(
                 try:
                     try:
                         agreements_response = await banking_client.request(
-                            session,
-                            bank_name,
-                            "GET",
-                            "/product-agreements",
-                            params={"client_id": full_client_id},
-                            headers=headers
+                        session,
+                        bank_name,
+                        "GET",
+                        "/product-agreements",
+                        params={"client_id": full_client_id},
+                        headers=headers
                         )
                     except Exception as agreements_error:
                         # Если ошибка 401, обновляем токен и повторяем запрос
@@ -1068,6 +1069,7 @@ async def get_products(
                                     "/product-agreement-consents/request",
                                     data={
                                         "requesting_bank": team_id,
+                                        "client_id": full_client_id,
                                         "read_product_agreements": True,
                                         "open_product_agreements": False,
                                         "close_product_agreements": False,
@@ -1154,12 +1156,12 @@ async def get_products(
                         try:
                             try:
                                 agreement_details = await banking_client.request(
-                                    session,
-                                    bank_name,
-                                    "GET",
-                                    f"/product-agreements/{agreement_id}",
-                                    params={"client_id": full_client_id},
-                                    headers=headers
+                                session,
+                                bank_name,
+                                "GET",
+                                f"/product-agreements/{agreement_id}",
+                                params={"client_id": full_client_id},
+                                headers=headers
                                 )
                             except Exception as details_error:
                                 # Если ошибка 401, обновляем токен и повторяем запрос
@@ -1209,6 +1211,7 @@ async def get_products(
                                             "/product-agreement-consents/request",
                                             data={
                                                 "requesting_bank": team_id,
+                                                "client_id": full_client_id,
                                                 "read_product_agreements": True,
                                                 "open_product_agreements": False,
                                                 "close_product_agreements": False,
@@ -1293,13 +1296,13 @@ async def get_products(
                                         
                                         try:
                                             balance_response = await banking_client.request(
-                                                session,
-                                                bank_name,
-                                                "GET",
-                                                f"/accounts/{account_id}/balances",
-                                                params={"client_id": full_client_id},
-                                                headers=balance_headers
-                                            )
+                                            session,
+                                            bank_name,
+                                            "GET",
+                                            f"/accounts/{account_id}/balances",
+                                            params={"client_id": full_client_id},
+                                            headers=balance_headers
+                                        )
                                         except Exception as balance_error:
                                             # Если ошибка 401, обновляем токен и повторяем запрос
                                             error_str = str(balance_error)
