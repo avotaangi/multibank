@@ -660,16 +660,17 @@ const BudgetPlanningPage = () => {
     }
   };
 
-  // Загружаем карты из бэкенда для всех подключенных банков
+  // Загружаем карты из бэкенда для всех трех банков (vbank, abank, sbank)
   const { data: cardsData, isLoading: isLoadingCards } = useQuery(
-    ['cardsForTopUp', connectedBanks, CLIENT_ID_ID],
+    ['cardsForTopUp', CLIENT_ID_ID],
     async () => {
-      if (!CLIENT_ID_ID || connectedBanks.length === 0) return [];
+      if (!CLIENT_ID_ID) return [];
       
       const allCards = [];
+      // Всегда пытаемся загрузить карты для всех трех банков
+      const banksToLoad = ['vbank', 'abank', 'sbank'];
       
-      for (const bank of connectedBanks) {
-        const bankId = bank.toLowerCase();
+      for (const bankId of banksToLoad) {
         try {
           const response = await cardManagementAPI.getCards(bankId, CLIENT_ID_ID);
           const cards = response?.data?.data?.cards || response?.data?.cards || [];
@@ -687,13 +688,13 @@ const BudgetPlanningPage = () => {
                 'sbank': 'SBank'
               };
               
-              const bankName = bankNames[bankId] || bank.toUpperCase();
+              const bankName = bankNames[bankId] || bankId.toUpperCase();
               
               // Получаем последние 4 цифры карты
               const cardNumber = card.maskedPan?.slice(-4) || 
                                card.pan?.slice(-4) || 
                                card.cardNumber?.slice(-4) || 
-                               '0000';
+                               '3923';
               
               return {
                 id: cardId,
@@ -712,32 +713,14 @@ const BudgetPlanningPage = () => {
           allCards.push(...cardsWithBalance);
         } catch (error) {
           console.error(`Ошибка при загрузке карт для ${bankId}:`, error);
-          // Fallback: добавляем банк без карт, если есть баланс
-          if (bankBalances?.[bankId] > 0) {
-            const bankNames = {
-              'vbank': 'VBank',
-              'abank': 'ABank',
-              'sbank': 'SBank'
-            };
-            const bankName = bankNames[bankId] || bank.toUpperCase();
-            allCards.push({
-              id: bankId,
-              bankId: bankId,
-              bankName: bankName,
-              name: bankName,
-              balance: bankBalances[bankId],
-              cardNumber: '0000',
-              maskedPan: '••••0000',
-              isBankFallback: true
-            });
-          }
+          // Не добавляем fallback здесь, это будет сделано в availableCards
         }
       }
       
       return allCards;
     },
     {
-      enabled: !!CLIENT_ID_ID && connectedBanks.length > 0 && showTopUpVirtualCardModal,
+      enabled: !!CLIENT_ID_ID && showTopUpVirtualCardModal,
       refetchOnWindowFocus: false,
       staleTime: 30000, // 30 секунд
     }
@@ -745,8 +728,41 @@ const BudgetPlanningPage = () => {
   
   // Получаем доступные карты для пополнения
   const availableCards = useMemo(() => {
-    return cardsData || [];
-  }, [cardsData]);
+    const cardsFromAPI = cardsData || [];
+    
+    // Если есть карты из API, возвращаем их
+    if (cardsFromAPI.length > 0) {
+      return cardsFromAPI;
+    }
+    
+    // Если карт из API нет, создаем карты из bankBalances для всех трех банков
+    const fallbackCards = [];
+    const banks = ['vbank', 'abank', 'sbank'];
+    const bankNames = {
+      'vbank': 'VBank',
+      'abank': 'ABank',
+      'sbank': 'SBank'
+    };
+    
+    banks.forEach((bankId) => {
+      const balance = bankBalances?.[bankId] || 0;
+      // Показываем карту, если есть баланс или если банк подключен
+      if (balance > 0 || connectedBanks.includes(bankId)) {
+        fallbackCards.push({
+          id: bankId,
+          bankId: bankId,
+          bankName: bankNames[bankId] || bankId.toUpperCase(),
+          name: bankNames[bankId] || bankId.toUpperCase(),
+          balance: balance,
+          cardNumber: '3923', // Дефолтный номер карты
+          maskedPan: `••••3923`,
+          isBankFallback: true
+        });
+      }
+    });
+    
+    return fallbackCards;
+  }, [cardsData, bankBalances, connectedBanks]);
 
   // Функции для редактирования планов
   const handleEditPlan = (plan, category) => {
