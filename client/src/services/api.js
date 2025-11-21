@@ -176,6 +176,9 @@ export const productsAPI = {
   createAgreement: (data, params = {}) => api.post('/products/agreements', { data, params }),
   getAgreement: (agreementId, params = {}) => api.get(`/products/agreements/${agreementId}`, { params }),
   closeAgreement: (agreementId, data = {}, params = {}) => api.delete(`/products/agreements/${agreementId}`, { data, params }),
+  
+  // Bank Products API - продукты из банков с балансами
+  getBankProducts: (params = {}) => api.get('/products', { params }),
 }
 
 // Banking API - токены и информация о банках

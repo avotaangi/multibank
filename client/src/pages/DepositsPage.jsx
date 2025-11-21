@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useQuery } from 'react-query';
 import InfoPanel from '../components/InfoPanel';
 import { usePageInfo } from '../hooks/usePageInfo';
 import { Info, X, ChevronRight } from 'lucide-react';
 import { getDepositsData, getTotalDeposits, getAverageRate } from '../data/depositsData';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
+import { productsAPI } from '../services/api';
+import useAuthStore from '../stores/authStore';
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const CLIENT_ID_ID = import.meta.env.VITE_CLIENT_ID_ID;
@@ -17,6 +20,7 @@ const DepositsPage = () => {
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const { virtualCardBalance, bankBalances } = useBalanceStore();
   const { getAllCards } = useTestCardsStore();
+  const getClientId = useAuthStore((state) => state.getClientId);
   const [showAutoTransferModal, setShowAutoTransferModal] = useState(false);
   const [selectedDepositId, setSelectedDepositId] = useState(null);
   const [selectedCardId, setSelectedCardId] = useState(null);
@@ -26,10 +30,98 @@ const DepositsPage = () => {
   const [cardsWithBalances, setCardsWithBalances] = useState([]);
   const [loadingBalances, setLoadingBalances] = useState(false);
   
-  // Используем общие данные о вкладах, синхронизированные с виртуальной картой VBank
-  const deposits = useMemo(() => getDepositsData(virtualCardBalance), [virtualCardBalance]);
-  const totalDeposits = useMemo(() => getTotalDeposits(virtualCardBalance), [virtualCardBalance]);
-  const averageRate = useMemo(() => getAverageRate(virtualCardBalance), [virtualCardBalance]);
+  // Загружаем продукты из API
+  const clientId = getClientId();
+  console.log('🔍 [DepositsPage] clientId:', clientId);
+  const { data: productsData, isLoading: isLoadingProducts, error: productsError } = useQuery(
+    ['bankProducts', clientId],
+    async () => {
+      console.log('🚀 [DepositsPage] Fetching products with client_id:', clientId);
+      const response = await productsAPI.getBankProducts({ client_id: clientId });
+      console.log('📦 [DepositsPage] Raw API response:', response);
+      return response;
+    },
+    {
+      enabled: !!clientId,
+      refetchOnWindowFocus: false,
+      staleTime: 60000, // 1 минута
+      retry: 2,
+      onError: (error) => {
+        console.error('❌ [DepositsPage] Error fetching products:', error);
+      },
+      onSuccess: (data) => {
+        console.log('✅ [DepositsPage] Successfully fetched products:', data);
+      }
+    }
+  );
+  
+  // Фильтруем активные депозиты из API (только deposit)
+  const apiDeposits = useMemo(() => {
+    console.log('🔍 [DepositsPage] productsData (full):', productsData);
+    console.log('🔍 [DepositsPage] productsData?.data:', productsData?.data);
+    console.log('🔍 [DepositsPage] productsData?.data?.data:', productsData?.data?.data);
+    console.log('🔍 [DepositsPage] productsData?.data?.data?.products:', productsData?.data?.data?.products);
+    
+    // Проверяем разные возможные структуры ответа
+    let allProducts = null;
+    
+    // Вариант 1: productsData.data.data.products (axios оборачивает в .data)
+    if (productsData?.data?.data?.products) {
+      allProducts = productsData.data.data.products;
+      console.log('✅ [DepositsPage] Found products in productsData.data.data.products');
+    }
+    // Вариант 2: productsData.data.products (прямой доступ)
+    else if (productsData?.data?.products) {
+      allProducts = productsData.data.products;
+      console.log('✅ [DepositsPage] Found products in productsData.data.products');
+    }
+    // Вариант 3: productsData.products (если axios не оборачивает)
+    else if (productsData?.products) {
+      allProducts = productsData.products;
+      console.log('✅ [DepositsPage] Found products in productsData.products');
+    }
+    
+    if (!allProducts || !Array.isArray(allProducts)) {
+      console.log('⚠️ [DepositsPage] No products array found in response');
+      return [];
+    }
+    
+    console.log('📦 [DepositsPage] All products:', allProducts);
+    // Фильтруем только активные депозиты (product_type === 'deposit')
+    const deposits = allProducts.filter(p => {
+      const isDeposit = p.product_type === 'deposit';
+      console.log(`🔍 [DepositsPage] Product ${p.agreement_id || p.id}: type=${p.product_type}, isDeposit=${isDeposit}`);
+      return isDeposit;
+    });
+    console.log('✅ [DepositsPage] Filtered active deposits:', deposits);
+    return deposits;
+  }, [productsData]);
+  
+  // Всегда используем депозиты из API (даже если их нет, показываем пустой список)
+  const deposits = apiDeposits;
+  
+  // Подсчитываем общую сумму депозитов
+  const totalDeposits = useMemo(() => {
+    if (apiDeposits.length > 0) {
+      const total = apiDeposits.reduce((sum, deposit) => {
+        // Используем amount из agreement_details.data
+        const amount = deposit.agreement_details?.data?.amount ?? deposit.amount ?? deposit.balance ?? 0;
+        return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+      }, 0);
+      console.log('💰 [DepositsPage] Total deposits:', total);
+      return total;
+    }
+    return 0;
+  }, [apiDeposits]);
+  
+  // Средняя доходность (для API депозитов используем фиксированное значение или из данных)
+  const averageRate = useMemo(() => {
+    if (apiDeposits.length > 0) {
+      // Можно добавить расчет на основе данных из API, если они есть
+      return '8.5'; // Временное значение
+    }
+    return '0';
+  }, [apiDeposits]);
   
   // Загружаем настройки автоперевода из localStorage
   useEffect(() => {
@@ -43,49 +135,31 @@ const DepositsPage = () => {
     }
   }, []);
   
-  // Загружаем балансы карт через API
+  // Загружаем балансы карт из store (не вызываем старый endpoint)
   useEffect(() => {
-    const fetchCardBalances = async () => {
-      setLoadingBalances(true);
-      try {
-        const baseCards = [
-          { id: 'vbank', name: 'VBank', bankName: 'VBank', cardNumber: '5294', color: '#0055BC' },
-          { id: 'abank', name: 'ABank', bankName: 'ABank', cardNumber: '5678', color: '#DC2626' },
-          { id: 'sbank', name: 'SBank', bankName: 'SBank', cardNumber: '9012', color: '#10B981' }
-        ];
-        
-        const cardsWithBal = await Promise.all(
-          baseCards.map(async (card) => {
-            try {
-              const res = await axios.get(`${API_BASE}/available_balance/${card.id}/${CLIENT_ID_ID}`);
-              const balance = parseFloat(res.data?.balance || 0);
-              return { ...card, balance };
-            } catch (err) {
-              console.error(`Ошибка при загрузке баланса для ${card.id}:`, err);
-              return { ...card, balance: 0 };
-            }
-          })
-        );
-        
-        const testCards = getAllCards();
-        const testCardsWithBalance = testCards.map(card => {
-          const bankKey = card.bankName?.toLowerCase() || card.name?.toLowerCase() || '';
-          const balance = bankBalances?.[bankKey] || card.balance || 0;
-          return {
-            ...card,
-            balance
-          };
-        });
-        
-        setCardsWithBalances([...cardsWithBal, ...testCardsWithBalance]);
-      } catch (err) {
-        console.error('Ошибка при загрузке балансов карт:', err);
-      } finally {
-        setLoadingBalances(false);
-      }
-    };
+    const baseCards = [
+      { id: 'vbank', name: 'VBank', bankName: 'VBank', cardNumber: '5294', color: '#0055BC' },
+      { id: 'abank', name: 'ABank', bankName: 'ABank', cardNumber: '5678', color: '#DC2626' },
+      { id: 'sbank', name: 'SBank', bankName: 'SBank', cardNumber: '9012', color: '#10B981' }
+    ];
     
-    fetchCardBalances();
+    const cardsWithBal = baseCards.map((card) => {
+      const bankKey = card.id;
+      const balance = bankBalances?.[bankKey] || 0;
+      return { ...card, balance };
+    });
+    
+    const testCards = getAllCards();
+    const testCardsWithBalance = testCards.map(card => {
+      const bankKey = card.bankName?.toLowerCase() || card.name?.toLowerCase() || '';
+      const balance = bankBalances?.[bankKey] || card.balance || 0;
+      return {
+        ...card,
+        balance
+      };
+    });
+    
+    setCardsWithBalances([...cardsWithBal, ...testCardsWithBalance]);
   }, [getAllCards, bankBalances]);
   
   const handleOpenAutoTransferModal = (depositId) => {
@@ -220,26 +294,67 @@ const DepositsPage = () => {
           </div>
 
           {/* Deposit Cards */}
-          <div className="space-y-3 mb-6 ">
-            {deposits.map((deposit) => {
-              const depositSettings = getDepositSettings(deposit.id);
-              const card = cardsWithBalances.find(c => c.id === depositSettings?.cardId);
-              
-              return (
-                <div key={deposit.id} className={`${deposit.bgColor} rounded-2xl p-4 hover:shadow-md transition-shadow`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="text-white font-ibm text-xl font-medium leading-[110%] mb-1">
-                        {deposit.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+          <div className="relative z-10 px-5 py-2 space-y-3 mb-6">
+            {isLoadingProducts ? (
+              <div className="text-center py-8 text-gray-500 font-ibm text-sm">
+                Загрузка вкладов...
+              </div>
+            ) : productsError ? (
+              <div className="text-center py-8 text-red-500 font-ibm text-sm">
+                Ошибка загрузки вкладов: {productsError.message}
+              </div>
+            ) : deposits.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 font-ibm text-sm">
+                Нет активных вкладов
+              </div>
+            ) : (
+              deposits.map((deposit, index) => {
+                // Для API депозитов используем другую структуру
+                const isApiDeposit = deposit.product_type === 'deposit';
+                const depositId = isApiDeposit ? deposit.agreement_id : deposit.id;
+                
+                // Получаем данные из agreement_details.data
+                const agreementData = deposit.agreement_details?.data;
+                
+                // Получаем сумму из agreement_details.data.amount
+                const depositAmount = isApiDeposit 
+                  ? (agreementData?.amount ?? deposit.amount ?? deposit.balance ?? 0)
+                  : deposit.amount;
+                
+                // Получаем название из agreement_details.data.product_name
+                const depositName = isApiDeposit 
+                  ? (agreementData?.product_name || deposit.product_name || `Вклад ${deposit.bank?.toUpperCase() || ''}`)
+                  : deposit.name;
+                
+                // Получаем процентную ставку из agreement_details.data.interest_rate
+                const depositRate = isApiDeposit 
+                  ? (agreementData?.interest_rate ?? '8.5')
+                  : deposit.rate;
+                const bgColor = isApiDeposit 
+                  ? (deposit.bank === 'vbank' ? 'bg-[#0055BC]' : deposit.bank === 'abank' ? 'bg-[#EF3124]' : deposit.bank === 'sbank' ? 'bg-[#00A859]' : 'bg-blue-600')
+                  : deposit.bgColor;
+                
+                const depositSettings = getDepositSettings(depositId);
+                const card = cardsWithBalances.find(c => c.id === depositSettings?.cardId);
+                
+                return (
+                  <div key={depositId || index} className={`${bgColor} rounded-2xl p-4 hover:shadow-md transition-shadow`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="text-white font-ibm text-xl font-medium leading-[110%] mb-1">
+                          {typeof depositAmount === 'number' 
+                            ? depositAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : parseFloat(depositAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          } ₽
+                        </div>
+                        <div className="text-white font-ibm text-sm font-normal leading-[110%]">
+                          {depositName}
+                        </div>
                       </div>
-                      <div className="text-white font-ibm text-sm font-normal leading-[110%]">
-                        {deposit.name}
+                      <div className="text-white font-ibm text-sm font-medium leading-[110%]">
+                        {depositRate}% годовых
                       </div>
                     </div>
-                    <div className="text-white font-ibm text-sm font-medium leading-[110%]">
-                      {deposit.rate}% годовых
-                    </div>
-                  </div>
                   
                   {depositSettings ? (
                     <div className="bg-white bg-opacity-20 rounded-xl p-3 mb-2">
@@ -257,15 +372,16 @@ const DepositsPage = () => {
                     </div>
                   ) : null}
                   
-                  <button
-                    onClick={() => handleOpenAutoTransferModal(deposit.id)}
-                    className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-ibm text-sm font-medium py-2 rounded-xl transition-colors"
-                  >
-                    {depositSettings ? 'Изменить автопополнение' : 'Настроить автопополнение'}
-                  </button>
-                </div>
-              );
-            })}
+                    <button
+                      onClick={() => handleOpenAutoTransferModal(depositId)}
+                      className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-ibm text-sm font-medium py-2 rounded-xl transition-colors"
+                    >
+                      {depositSettings ? 'Изменить автопополнение' : 'Настроить автопополнение'}
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
 
 

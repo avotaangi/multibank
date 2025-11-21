@@ -9,7 +9,7 @@ import useBalanceStore from '../stores/balanceStore';
 import useTransfersStore from '../stores/transfersStore';
 import { useTelegramUser } from '../hooks/useTelegramUser';
 import useAuthStore from '../stores/authStore';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getTelegramWebApp } from '../utils/telegram';
 
 const API_BASE = import.meta.env.VITE_API_BASE; // 🔗 твой FastAPI endpoint
@@ -17,6 +17,7 @@ const API_BASE = import.meta.env.VITE_API_BASE; // 🔗 твой FastAPI endpoin
 const TransferPage = () => {
   const pageInfo = usePageInfo();
   const location = useLocation();
+  const navigate = useNavigate();
   const telegramUser = useTelegramUser();
   const getClientIdId = useAuthStore((state) => state.getClientIdId);
   // Функция для нормализации id: если id === 0, возвращаем 1
@@ -232,6 +233,12 @@ const TransferPage = () => {
       setShowSuccessModal(true);
       setAmount('');
       setMessage('');
+      
+      // Автоматический переход на главную страницу через 2 секунды
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        navigate('/dashboard');
+      }, 2000);
     } catch (err) {
       console.error(err);
       setFormError('Ошибка при выполнении перевода');
@@ -432,7 +439,10 @@ const TransferPage = () => {
             <h3 className="text-lg font-semibold mb-2">Перевод выполнен</h3>
             <p className="text-gray-600 mb-4">Средства успешно переведены</p>
             <button
-              onClick={() => setShowSuccessModal(false)}
+              onClick={() => {
+                setShowSuccessModal(false);
+                navigate('/dashboard');
+              }}
               className="bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded-[20px]"
             >
               Закрыть

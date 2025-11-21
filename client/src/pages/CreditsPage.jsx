@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'react-query';
 import { CreditCard, FileText, CheckCircle, Clock, XCircle, Plus, Search, Info } from 'lucide-react';
-import { creditProductsAPI, cashLoanApplicationsAPI } from '../services/api';
+import { creditProductsAPI, cashLoanApplicationsAPI, productsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import InfoPanel from '../components/InfoPanel';
 import { usePageInfo } from '../hooks/usePageInfo';
+import useAuthStore from '../stores/authStore';
 
 const CreditsPage = () => {
   const navigate = useNavigate();
@@ -13,6 +14,61 @@ const CreditsPage = () => {
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [activeTab, setActiveTab] = useState('products'); // 'products', 'offers', 'applications', 'cash-loan'
   const [selectedProductId, setSelectedProductId] = useState(null);
+  const getClientId = useAuthStore((state) => state.getClientId);
+  
+  // Загружаем продукты из API
+  const clientId = getClientId();
+  const { data: productsData, isLoading: isLoadingBankProducts, error: productsError } = useQuery(
+    ['bankProducts', clientId],
+    () => productsAPI.getBankProducts({ client_id: clientId }),
+    {
+      enabled: !!clientId,
+      refetchOnWindowFocus: false,
+      staleTime: 60000, // 1 минута
+      retry: 2,
+    }
+  );
+  
+  // Фильтруем кредиты из API
+  const apiLoans = useMemo(() => {
+    console.log('🔍 [CreditsPage] productsData (full):', productsData);
+    console.log('🔍 [CreditsPage] productsData?.data:', productsData?.data);
+    console.log('🔍 [CreditsPage] productsData?.data?.data:', productsData?.data?.data);
+    console.log('🔍 [CreditsPage] productsData?.data?.data?.products:', productsData?.data?.data?.products);
+    
+    // Проверяем разные возможные структуры ответа
+    let allProducts = null;
+    
+    // Вариант 1: productsData.data.data.products (axios оборачивает в .data)
+    if (productsData?.data?.data?.products) {
+      allProducts = productsData.data.data.products;
+      console.log('✅ [CreditsPage] Found products in productsData.data.data.products');
+    }
+    // Вариант 2: productsData.data.products (прямой доступ)
+    else if (productsData?.data?.products) {
+      allProducts = productsData.data.products;
+      console.log('✅ [CreditsPage] Found products in productsData.data.products');
+    }
+    // Вариант 3: productsData.products (если axios не оборачивает)
+    else if (productsData?.products) {
+      allProducts = productsData.products;
+      console.log('✅ [CreditsPage] Found products in productsData.products');
+    }
+    
+    if (!allProducts || !Array.isArray(allProducts)) {
+      console.log('⚠️ [CreditsPage] No products array found in response');
+      return [];
+    }
+    
+    console.log('📦 [CreditsPage] All products:', allProducts);
+    const loans = allProducts.filter(p => {
+      const isLoan = p.product_type === 'loan';
+      console.log(`🔍 [CreditsPage] Product ${p.agreement_id}: type=${p.product_type}, isLoan=${isLoan}`);
+      return isLoan;
+    });
+    console.log('✅ [CreditsPage] Filtered loans:', loans);
+    return loans;
+  }, [productsData]);
   
   // Cash Loan Application state
   const [applicationForm, setApplicationForm] = useState({
@@ -61,7 +117,7 @@ const CreditsPage = () => {
   const [createdApplicationId, setCreatedApplicationId] = useState(null);
 
   // Получение списка кредитных продуктов
-  const { data: productsData, isLoading: isLoadingProducts, refetch: refetchProducts } = useQuery(
+  const { data: creditProductsData, isLoading: isLoadingProducts, refetch: refetchProducts } = useQuery(
     ['creditProducts'],
     () => creditProductsAPI.getProducts({ page: 1 }),
     {
@@ -104,7 +160,7 @@ const CreditsPage = () => {
   );
 
   // Обработка структуры ответов API
-  const products = productsData?.data?.Data?.Product || productsData?.Data?.Product || [];
+  const products = creditProductsData?.data?.Data?.Product || creditProductsData?.Data?.Product || [];
   const offers = offersData?.data?.Data?.ProductOffers || offersData?.Data?.ProductOffers || [];
   const applications = applicationsData?.data?.Data?.ProductApplication || applicationsData?.Data?.ProductApplication || [];
 
@@ -406,102 +462,110 @@ const CreditsPage = () => {
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-white font-ibm text-lg font-medium leading-[110%]">
-                  Доступные кредитные продукты
+                  Мои кредиты
                 </div>
               </div>
               <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
-                Выберите кредитный продукт для просмотра деталей
+                Активные кредитные продукты из ваших банков
               </div>
               <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
             </div>
             <div className="px-4 pb-4 pt-4 bg-white">
               <div className="space-y-4">
-
-                {isLoadingProducts ? (
+                {isLoadingBankProducts ? (
                   <div className="flex justify-center py-8">
                     <LoadingSpinner size="lg" />
                   </div>
-                ) : creditProducts.length === 0 ? (
+                ) : productsError ? (
+                  <div className="text-center py-8 text-red-500 font-ibm text-sm">
+                    Ошибка загрузки кредитов: {productsError.message}
+                  </div>
+                ) : !apiLoans || apiLoans.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <CreditCard className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                    <p className="font-ibm">Нет доступных продуктов</p>
+                    <p className="font-ibm">Нет активных кредитов</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {creditProducts.map((product) => (
-                      <div
-                        key={product.productId}
-                        className="bg-gray-100 rounded-[27px] p-4 h-[91px] flex flex-col justify-between cursor-pointer hover:bg-gray-200 transition-colors"
-                        onClick={() => setSelectedProductId(product.productId)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="text-black font-ibm text-sm font-normal leading-[110%]">
-                            {getProductTypeLabel(product.productType)}
-                          </div>
-                          <div className="text-black font-ibm text-sm font-normal leading-[110%]">
-                            {product.productName}
-                          </div>
-                        </div>
-                        <div className="text-black font-ibm text-2xl font-normal leading-[110%] text-center">
-                          {product.productName}
-                        </div>
-                        {product.productVersion && (
-                          <div className="text-black font-ibm text-xs font-normal leading-[110%] text-center">
-                            Версия: {product.productVersion}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Детали продукта */}
-                {selectedProductId && (
-                  <div className="mt-6 bg-gray-50 rounded-[27px] p-4 border border-gray-200 ">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 font-ibm">Детали продукта</h3>
-                  <button
-                    onClick={() => setSelectedProductId(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </button>
-                </div>
-                {isLoadingDetails ? (
-                  <div className="flex justify-center py-4">
-                    <LoadingSpinner size="md" />
-                  </div>
-                ) : (productDetails?.data?.Data?.Product || productDetails?.Data?.Product) ? (
-                  <div className="space-y-3 font-ibm text-sm">
-                    {(() => {
-                      const product = productDetails?.data?.Data?.Product || productDetails?.Data?.Product;
+                    {apiLoans.map((loan, index) => {
+                      // Получаем данные из agreement_details.data
+                      const agreementData = loan.agreement_details?.data;
+                      
+                      // Получаем название из agreement_details.data.product_name
+                      const loanName = agreementData?.product_name || loan.product_name || `Кредит ${loan.bank?.toUpperCase() || ''}`;
+                      
+                      // Получаем остаток по кредиту из outstanding_amount или agreement_details.data
+                      const outstandingAmount = loan.outstanding_amount ?? agreementData?.account_balance ?? loan.amount ?? 0;
+                      
+                      // Получаем процентную ставку из agreement_details.data.interest_rate
+                      const loanRate = agreementData?.interest_rate ?? '12.9';
+                      
+                      // Получаем статус из agreement_details.data.status
+                      const loanStatus = agreementData?.status || loan.status || 'active';
+                      
+                      // Получаем сумму кредита для расчета процента погашения
+                      const loanAmount = agreementData?.amount ?? loan.amount ?? outstandingAmount;
+                      
+                      // Рассчитываем процент погашения
+                      const repaymentPercent = loanAmount > 0 
+                        ? Math.max(0, Math.min(100, ((loanAmount - outstandingAmount) / loanAmount) * 100))
+                        : 0;
+                      
+                      // Цвет банка
+                      const bankColor = loan.bank === 'vbank' ? '#0055BC' : loan.bank === 'abank' ? '#EF3124' : loan.bank === 'sbank' ? '#00A859' : '#6366F1';
+                      
                       return (
-                        <>
-                          <div>
-                            <span className="font-semibold text-gray-700">Название: </span>
-                            <span className="text-gray-900">{product.productName}</span>
+                        <div
+                          key={loan.agreement_id || index}
+                          className="bg-gray-100 rounded-[27px] p-4 cursor-pointer hover:bg-gray-200 transition-colors"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <div 
+                                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                                style={{ backgroundColor: `${bankColor}20` }}
+                              >
+                                <svg className="w-5 h-5" style={{ color: bankColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                                  {loanName}
+                                </div>
+                                <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                                  Ставка {loanRate}% годовых
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                                {typeof outstandingAmount === 'number' 
+                                  ? outstandingAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                  : parseFloat(outstandingAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                } ₽
+                              </div>
+                              <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                                {loanStatus === 'active' ? 'Активен' : 'Неактивен'}
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-semibold text-gray-700">Тип: </span>
-                            <span className="text-gray-900">{getProductTypeLabel(product.productType)}</span>
-                          </div>
-                          {product.ProductDetails && (
-                            <div>
-                              <span className="font-semibold text-gray-700">Активен: </span>
-                              <span className="text-gray-900">
-                                {product.ProductDetails.active ? 'Да' : 'Нет'}
-                              </span>
+                          {loanAmount > 0 && (
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="h-2 rounded-full" 
+                                style={{ 
+                                  width: `${repaymentPercent}%`,
+                                  backgroundColor: bankColor
+                                }}
+                              ></div>
                             </div>
                           )}
-                        </>
+                        </div>
                       );
-                    })()}
+                    })}
                   </div>
-                ) : (
-                    <p className="text-gray-500 text-sm font-ibm">Не удалось загрузить детали</p>
-                  )}
-                </div>
-              )}
+                )}
               </div>
             </div>
           </div>
@@ -579,29 +643,89 @@ const CreditsPage = () => {
         {activeTab === 'applications' && (
           <>
             {/* Header Section with Total */}
-            {applications.length > 0 && (
-              <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden " style={{ backgroundColor: '#F59E0C', animationDelay: '0.1s' }}>
-                <div className="p-4" style={{ backgroundColor: '#F59E0C' }}>
-                  <div className="flex items-center mb-3">
-                    <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                      <CreditCard className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-white font-ibm text-lg font-medium leading-[110%]">
-                      Осталось до погашения кредитов
-                    </div>
+            <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden relative z-10 px-5 py-2" style={{ backgroundColor: '#F59E0C', animationDelay: '0.1s' }}>
+              <div className="p-4" style={{ backgroundColor: '#F59E0C' }}>
+                <div className="flex items-center mb-3">
+                  <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
+                    <CreditCard className="w-5 h-5 text-white" />
                   </div>
-                  <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
-                    Статус: балансируй кредиты — живи спокойно
+                  <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                    Осталось до погашения кредитов
                   </div>
-                  <div className="text-white font-ibm text-3xl font-medium leading-[110%] text-center">
-                    {totalCreditAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
-                  </div>
-                  <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
                 </div>
+                <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+                  Статус: балансируй кредиты — живи спокойно
+                </div>
+                <div className="text-white font-ibm text-3xl font-medium leading-[110%] text-center">
+                  {(() => {
+                    // Подсчитываем общий остаток по кредитам из API
+                    const apiTotal = apiLoans.reduce((sum, loan) => {
+                      const outstanding = loan.outstanding_amount || 0;
+                      return sum + (typeof outstanding === 'number' ? outstanding : parseFloat(outstanding) || 0);
+                    }, 0);
+                    // Используем сумму из API или из заявлений
+                    const total = apiTotal > 0 ? apiTotal : totalCreditAmount;
+                    return total.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()} ₽
+                </div>
+                <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
               </div>
-            )}
-
-            <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden " style={{ backgroundColor: '#3C82F6', animationDelay: '0.2s' }}>
+              
+              {/* Список кредитов из API */}
+              {isLoadingBankProducts ? (
+                <div className="px-4 pb-4 pt-4 bg-white">
+                  <div className="flex justify-center py-8">
+                    <LoadingSpinner size="lg" />
+                  </div>
+                </div>
+              ) : productsError ? (
+                <div className="px-4 pb-4 pt-4 bg-white">
+                  <div className="text-center py-8 text-red-500 font-ibm text-sm">
+                    Ошибка загрузки кредитов: {productsError.message}
+                  </div>
+                </div>
+              ) : apiLoans.length > 0 ? (
+                <div className="px-4 pb-4 pt-4 bg-white">
+                  <div className="space-y-4">
+                    {apiLoans.map((loan, index) => {
+                      const outstanding = loan.outstanding_amount || 0;
+                      const loanName = loan.agreement_details?.productName || `Кредит ${loan.bank?.toUpperCase() || ''}`;
+                      const bankColor = loan.bank === 'vbank' ? '#0055BC' : loan.bank === 'abank' ? '#EF3124' : loan.bank === 'sbank' ? '#00A859' : '#6366F1';
+                      
+                      return (
+                        <div
+                          key={loan.agreement_id || index}
+                          className="bg-gray-100 rounded-[27px] p-4 h-[120px] flex flex-col justify-between"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="text-black font-ibm text-sm font-normal leading-[110%]">
+                              Остаток по кредиту
+                            </div>
+                            <div 
+                              className="w-8 h-8 rounded-lg flex-shrink-0"
+                              style={{ backgroundColor: bankColor }}
+                            ></div>
+                          </div>
+                          <div className="text-black font-ibm text-2xl font-normal leading-[110%] text-center">
+                            {typeof outstanding === 'number'
+                              ? outstanding.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              : parseFloat(outstanding || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            } ₽
+                          </div>
+                          <div className="text-black font-ibm text-xs font-normal leading-[110%] text-center">
+                            {loanName}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            
+            {/* Старые заявления (если есть) */}
+            {applications.length > 0 && (
+              <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden " style={{ backgroundColor: '#3C82F6', animationDelay: '0.2s' }}>
               <div className="p-4" style={{ backgroundColor: '#3C82F6' }}>
                 <div className="flex items-center mb-3">
                   <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
@@ -669,7 +793,8 @@ const CreditsPage = () => {
                   )}
                 </div>
               </div>
-            </div>
+              </div>
+            )}
           </>
         )}
 

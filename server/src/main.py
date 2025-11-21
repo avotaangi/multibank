@@ -75,32 +75,9 @@ app.add_middleware(
 async def main():
     return {"status": "ok", "message": "FastAPI Banking API is running"}
 
-# Инициализация банков (вызывается один раз при первом запуске)
-@app.post("/init/banks")
-async def init_banks():
-    """Инициализировать все банки в системе"""
-    try:
-        vbank = await bank_helper.add_bank("vbank")
-        abank = await bank_helper.add_bank("abank")
-        sbank = await bank_helper.add_bank("sbank")
-        return {
-            "status": "success",
-            "banks": {
-                "vbank": vbank,
-                "abank": abank,
-                "sbank": sbank
-            }
-        }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "fastapi"}
-
-@app.get("/api/health")
-async def api_health():
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
 # =========================
 # Auth endpoints
@@ -205,766 +182,31 @@ async def get_banking_accounts(
 # Products endpoints
 # =========================
 
-@app.get("/api/products")
-async def get_products(
-    bank: Optional[str] = Query(None),
-    product_type: Optional[str] = Query(None)
-):
-    """Получить каталог продуктов из банков"""
-    try:
-        banks = [bank] if bank else banking_client.get_banks()
-        all_products = []
-        
-        for bank_name in banks:
-            try:
-                params = {}
-                if product_type:
-                    params["product_type"] = product_type
-                
-                products = await banking_client.request(
-                    session,
-                    bank_name,
-                    "GET",
-                    "/products",
-                    params=params
-                )
-                
-                products_list = products.get("products", [])
-                if isinstance(products, list):
-                    products_list = products
-                
-                for product in products_list:
-                    product["bank"] = bank_name
-                    product["bankName"] = bank_name.upper()
-                
-                all_products.extend(products_list)
-            except Exception as e:
-                print(f"Error fetching products from {bank_name}: {e}")
-        
-        return {"products": all_products}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/products/{product_id}")
-async def get_product(product_id: str, bank: Optional[str] = Query(None)):
-    """Получить детали продукта"""
-    try:
-        banks = [bank] if bank else banking_client.get_banks()
-        
-        for bank_name in banks:
-            try:
-                product = await banking_client.request(
-                    session,
-                    bank_name,
-                    "GET",
-                    f"/products/{product_id}"
-                )
-                product["bank"] = bank_name
-                product["bankName"] = bank_name.upper()
-                return product
-            except:
-                continue
-        
-        raise HTTPException(status_code=404, detail="Product not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 # =========================
-# Product Agreements endpoints (Договоры по продуктам)
+# Payments endpoints
 # =========================
 
-@app.post("/api/products/agreements")
-async def create_product_agreement(
-    request: ProductAgreementRequest,
-    bank: str = Query(default="vbank"),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
-):
-    """Открыть продукт (создать договор)"""
-    try:
-        if not session or not banking_client or not bank_helper:
-            raise HTTPException(status_code=503, detail="Service not initialized")
-        
-        # Получаем consent для банка
-        client_id_id = request.client_id.split('-')[-1] if '-' in request.client_id else request.client_id
-        access_token = await bank_helper.get_access_token(bank_name=bank)
-        consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
-        
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        if consent:
-            headers["X-Consent-Id"] = consent
-        if consent_id:
-            headers["X-Consent-Id"] = consent_id
-        
-        if not consent and not consent_id:
-            raise HTTPException(status_code=403, detail="Consent required")
-        
-        # Подготавливаем данные для создания договора
-        agreement_data = {
-            "product_id": request.product_id,
-            "client_id": request.client_id,
-            **request.additional_data
-        }
-        
-        if request.amount:
-            agreement_data["amount"] = request.amount
-        if request.currency:
-            agreement_data["currency"] = request.currency
-        if request.term:
-            agreement_data["term"] = request.term
-        
-        # Создаем договор
-        agreement = await banking_client.request(
-            session,
-            bank,
-            "POST",
-            "/products/agreements",
-            params={"client_id": request.client_id},
-            data=agreement_data,
-            headers=headers
-        )
-        
-        return agreement
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/products/agreements")
-async def get_product_agreements(
-    bank: str = Query(default="vbank"),
-    client_id: str = Query(...),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
-):
-    """Получить список открытых продуктов (договоров)"""
-    try:
-        if not session or not banking_client or not bank_helper:
-            raise HTTPException(status_code=503, detail="Service not initialized")
-        
-        # Получаем consent для банка
-        client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
-        access_token = await bank_helper.get_access_token(bank_name=bank)
-        consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
-        
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        if consent:
-            headers["X-Consent-Id"] = consent
-        if consent_id:
-            headers["X-Consent-Id"] = consent_id
-        
-        if not consent and not consent_id:
-            return {"data": {"agreements": []}, "meta": {"pending_consent": True}}
-        
-        try:
-            agreements = await banking_client.request(
-                session,
-                bank,
-                "GET",
-                "/products/agreements",
-                params={"client_id": client_id},
-                headers=headers
-            )
-            return agreements
-        except Exception as e:
-            error_str = str(e)
-            if "403" in error_str or "CONSENT_REQUIRED" in error_str:
-                return {"data": {"agreements": []}, "meta": {"pending_consent": True, "error": error_str}}
-            return {"data": {"agreements": []}, "meta": {"error": error_str}}
-    except HTTPException:
-        raise
-    except Exception as e:
-        return {"data": {"agreements": []}, "meta": {"error": str(e)}}
-
-@app.get("/api/products/agreements/{agreement_id}")
-async def get_product_agreement(
-    agreement_id: str,
-    bank: str = Query(default="vbank"),
-    client_id: Optional[str] = Query(None),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
-):
-    """Получить детали договора по продукту"""
-    try:
-        if not session or not banking_client or not bank_helper:
-            raise HTTPException(status_code=503, detail="Service not initialized")
-        
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        
-        # Получаем consent для банка
-        if client_id:
-            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
-            access_token = await bank_helper.get_access_token(bank_name=bank)
-            consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
-            if consent:
-                headers["X-Consent-Id"] = consent
-        
-        if consent_id:
-            headers["X-Consent-Id"] = consent_id
-        
-        params = {}
-        if client_id:
-            params["client_id"] = client_id
-        
-        agreement = await banking_client.request(
-            session,
-            bank,
-            "GET",
-            f"/products/agreements/{agreement_id}",
-            params=params,
-            headers=headers
-        )
-        return agreement
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/products/agreements/{agreement_id}/deposit")
-async def deposit_to_product(
-    agreement_id: str,
-    request: DepositRequest,
-    bank: str = Query(default="vbank"),
-    client_id: str = Query(...),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id"),
-    x_payment_consent_id: Optional[str] = Header(None, alias="X-Payment-Consent-Id")
-):
-    """Пополнить счет продукта (депозит)"""
-    try:
-        if not session or not banking_client or not bank_helper:
-            raise HTTPException(status_code=503, detail="Service not initialized")
-        
-        # Получаем consent для банка
-        client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
-        access_token = await bank_helper.get_access_token(bank_name=bank)
-        consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
-        
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        if consent:
-            headers["X-Consent-Id"] = consent
-        if consent_id:
-            headers["X-Consent-Id"] = consent_id
-        
-        if not consent and not consent_id:
-            raise HTTPException(status_code=403, detail="Consent required")
-        
-        # Получаем информацию о договоре для получения номера счета
-        agreement = await banking_client.request(
-            session,
-            bank,
-            "GET",
-            f"/products/agreements/{agreement_id}",
-            params={"client_id": client_id},
-            headers=headers
-        )
-        
-        # Извлекаем номер счета продукта из договора
-        product_account_number = None
-        if isinstance(agreement, dict):
-            product_account_number = (
-                agreement.get("data", {}).get("accountNumber") or
-                agreement.get("data", {}).get("account_number") or
-                agreement.get("accountNumber") or
-                agreement.get("account_number")
-            )
-        
-        if not product_account_number:
-            raise HTTPException(status_code=404, detail="Product account not found in agreement")
-        
-        # Получаем номер счета для списания (обычно основной счет клиента)
-        debtor_account_number = await bank_helper.get_bank_account_number(bank, access_token, consent, client_id_id)
-        
-        # Создаем платеж для пополнения
-        payment_data = {
-            "data": {
-                "initiation": {
-                    "instructedAmount": {
-                        "amount": str(request.amount),
-                        "currency": request.currency or "RUB"
-                    },
-                    "debtorAccount": {
-                        "schemeName": "RU.CBR.PAN",
-                        "identification": debtor_account_number
-                    },
-                    "creditorAccount": {
-                        "schemeName": "RU.CBR.PAN",
-                        "identification": product_account_number
-                    },
-                    "comment": request.reference or "Пополнение счета продукта"
-                }
-            }
-        }
-        
-        # Добавляем payment consent если нужно
-        payment_headers = headers.copy()
-        if x_payment_consent_id:
-            payment_headers["X-Payment-Consent-Id"] = x_payment_consent_id
-        
-        try:
-            payment = await banking_client.request(
-                session,
-                bank,
-                "POST",
-                "/payments",
-                params={"client_id": client_id},
-                data=payment_data,
-                headers=payment_headers
-            )
-            return payment
-        except Exception as e:
-            # Если ошибка 403 PAYMENT_CONSENT_REQUIRED, автоматически создаем согласие
-            error_str = str(e)
-            if "403" in error_str and ("PAYMENT_CONSENT_REQUIRED" in error_str or "consent" in error_str.lower()):
-                print(f"⚠️ Требуется согласие на платеж для пополнения продукта, создаю автоматически...")
-                
-                # Создаем payment consent
-                try:
-                    consent_result = await banking_client.request(
-                        session,
-                        bank,
-                        "POST",
-                        "/payment-consents/request",
-                        data={
-                            "requesting_bank": banking_client.team_id,
-                            "client_id": client_id,
-                            "consent_type": "single_use",
-                            "amount": request.amount,
-                            "currency": request.currency or "RUB",
-                            "debtor_account": debtor_account_number,
-                            "creditor_account": product_account_number,
-                            "reference": request.reference or "Пополнение счета продукта"
-                        },
-                        headers={"X-Requesting-Bank": banking_client.team_id}
-                    )
-                    
-                    payment_consent_id = None
-                    if isinstance(consent_result, dict):
-                        payment_consent_id = consent_result.get("consent_id") or consent_result.get("data", {}).get("consentId") or consent_result.get("data", {}).get("consent_id")
-                    else:
-                        payment_consent_id = consent_result
-                    
-                    if payment_consent_id:
-                        payment_headers["X-Payment-Consent-Id"] = payment_consent_id
-                        payment = await banking_client.request(
-                            session,
-                            bank,
-                            "POST",
-                            "/payments",
-                            params={"client_id": client_id},
-                            data=payment_data,
-                            headers=payment_headers
-                        )
-                        return payment
-                    else:
-                        raise HTTPException(status_code=500, detail="Failed to get payment consent_id")
-                except Exception as e2:
-                    raise HTTPException(status_code=500, detail=f"Failed to create payment consent: {str(e2)}")
-            else:
-                raise
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/products/agreements/{agreement_id}/balance")
-async def get_product_agreement_balance(
-    agreement_id: str,
-    bank: str = Query(default="vbank"),
-    client_id: Optional[str] = Query(None),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
-):
-    """Получить баланс по договору продукта"""
-    try:
-        if not session or not banking_client or not bank_helper:
-            raise HTTPException(status_code=503, detail="Service not initialized")
-        
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        
-        # Получаем consent для банка
-        if client_id:
-            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
-            access_token = await bank_helper.get_access_token(bank_name=bank)
-            consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
-            if consent:
-                headers["X-Consent-Id"] = consent
-        
-        if consent_id:
-            headers["X-Consent-Id"] = consent_id
-        
-        params = {}
-        if client_id:
-            params["client_id"] = client_id
-        
-        # Пробуем получить баланс через специальный эндпоинт
-        try:
-            balance = await banking_client.request(
-                session,
-                bank,
-                "GET",
-                f"/products/agreements/{agreement_id}/balance",
-                params=params,
-                headers=headers
-            )
-            return balance
-        except:
-            # Если специального эндпоинта нет, получаем через договор
-            agreement = await banking_client.request(
-                session,
-                bank,
-                "GET",
-                f"/products/agreements/{agreement_id}",
-                params=params,
-                headers=headers
-            )
-            
-            # Извлекаем баланс из договора
-            if isinstance(agreement, dict):
-                balance_data = (
-                    agreement.get("data", {}).get("balance") or
-                    agreement.get("data", {}).get("currentBalance") or
-                    agreement.get("balance") or
-                    agreement.get("currentBalance")
-                )
-                if balance_data:
-                    return {"data": {"balance": balance_data}}
-            
-            return {"data": {"balance": {"amount": {"amount": "0", "currency": "RUB"}}}}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/products/agreements/{agreement_id}/transactions")
-async def get_product_agreement_transactions(
-    agreement_id: str,
-    bank: str = Query(default="vbank"),
-    client_id: Optional[str] = Query(None),
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=50, ge=1, le=500),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
-):
-    """Получить историю транзакций по договору продукта"""
-    try:
-        if not session or not banking_client or not bank_helper:
-            raise HTTPException(status_code=503, detail="Service not initialized")
-        
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        
-        # Получаем consent для банка
-        if client_id:
-            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
-            access_token = await bank_helper.get_access_token(bank_name=bank)
-            consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
-            if consent:
-                headers["X-Consent-Id"] = consent
-        
-        if consent_id:
-            headers["X-Consent-Id"] = consent_id
-        
-        params = {
-            "page": page,
-            "limit": limit
-        }
-        if client_id:
-            params["client_id"] = client_id
-        
-        # Пробуем получить транзакции через специальный эндпоинт
-        try:
-            transactions = await banking_client.request(
-                session,
-                bank,
-                "GET",
-                f"/products/agreements/{agreement_id}/transactions",
-                params=params,
-                headers=headers
-            )
-            return transactions
-        except:
-            # Если специального эндпоинта нет, возвращаем пустой список
-            return {"data": {"transactions": []}}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/products/agreements/{agreement_id}/withdraw")
-async def withdraw_from_product(
-    agreement_id: str,
-    request: WithdrawRequest,
-    bank: str = Query(default="vbank"),
-    client_id: str = Query(...),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id"),
-    x_payment_consent_id: Optional[str] = Header(None, alias="X-Payment-Consent-Id")
-):
-    """Снять средства со счета продукта"""
-    try:
-        if not session or not banking_client or not bank_helper:
-            raise HTTPException(status_code=503, detail="Service not initialized")
-        
-        # Получаем consent для банка
-        client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
-        access_token = await bank_helper.get_access_token(bank_name=bank)
-        consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
-        
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        if consent:
-            headers["X-Consent-Id"] = consent
-        if consent_id:
-            headers["X-Consent-Id"] = consent_id
-        
-        if not consent and not consent_id:
-            raise HTTPException(status_code=403, detail="Consent required")
-        
-        # Получаем информацию о договоре для получения номера счета продукта
-        agreement = await banking_client.request(
-            session,
-            bank,
-            "GET",
-            f"/products/agreements/{agreement_id}",
-            params={"client_id": client_id},
-            headers=headers
-        )
-        
-        # Извлекаем номер счета продукта из договора
-        product_account_number = None
-        if isinstance(agreement, dict):
-            product_account_number = (
-                agreement.get("data", {}).get("accountNumber") or
-                agreement.get("data", {}).get("account_number") or
-                agreement.get("accountNumber") or
-                agreement.get("account_number")
-            )
-        
-        if not product_account_number:
-            raise HTTPException(status_code=404, detail="Product account not found")
-        
-        # Определяем счет получателя (куда переводим средства)
-        creditor_account_number = request.destination_account
-        if not creditor_account_number:
-            # Если не указан, используем основной счет клиента
-            creditor_account_number = await bank_helper.get_bank_account_number(bank, access_token, consent, client_id_id)
-        
-        # Создаем платеж для снятия средств
-        payment_data = {
-            "data": {
-                "initiation": {
-                    "instructedAmount": {
-                        "amount": str(request.amount),
-                        "currency": request.currency or "RUB"
-                    },
-                    "debtorAccount": {
-                        "schemeName": "RU.CBR.PAN",
-                        "identification": product_account_number
-                    },
-                    "creditorAccount": {
-                        "schemeName": "RU.CBR.PAN",
-                        "identification": creditor_account_number
-                    },
-                    "comment": request.reference or "Снятие средств со счета продукта"
-                }
-            }
-        }
-        
-        # Добавляем payment consent если нужно
-        payment_headers = headers.copy()
-        if x_payment_consent_id:
-            payment_headers["X-Payment-Consent-Id"] = x_payment_consent_id
-        
-        try:
-            payment = await banking_client.request(
-                session,
-                bank,
-                "POST",
-                "/payments",
-                params={"client_id": client_id},
-                data=payment_data,
-                headers=payment_headers
-            )
-            return payment
-        except Exception as e:
-            # Если ошибка 403 PAYMENT_CONSENT_REQUIRED, автоматически создаем согласие
-            error_str = str(e)
-            if "403" in error_str and ("PAYMENT_CONSENT_REQUIRED" in error_str or "consent" in error_str.lower()):
-                print(f"⚠️ Требуется согласие на платеж для снятия средств, создаю автоматически...")
-                
-                # Создаем payment consent
-                try:
-                    consent_result = await banking_client.request(
-                        session,
-                        bank,
-                        "POST",
-                        "/payment-consents/request",
-                        data={
-                            "requesting_bank": banking_client.team_id,
-                            "client_id": client_id,
-                            "consent_type": "single_use",
-                            "amount": request.amount,
-                            "currency": request.currency or "RUB",
-                            "debtor_account": product_account_number,
-                            "creditor_account": creditor_account_number,
-                            "reference": request.reference or "Снятие средств со счета продукта"
-                        },
-                        headers={"X-Requesting-Bank": banking_client.team_id}
-                    )
-                    
-                    payment_consent_id = None
-                    if isinstance(consent_result, dict):
-                        payment_consent_id = consent_result.get("consent_id") or consent_result.get("data", {}).get("consentId") or consent_result.get("data", {}).get("consent_id")
-                    else:
-                        payment_consent_id = consent_result
-                    
-                    if payment_consent_id:
-                        payment_headers["X-Payment-Consent-Id"] = payment_consent_id
-                        payment = await banking_client.request(
-                            session,
-                            bank,
-                            "POST",
-                            "/payments",
-                            params={"client_id": client_id},
-                            data=payment_data,
-                            headers=payment_headers
-                        )
-                        return payment
-                    else:
-                        raise HTTPException(status_code=500, detail="Failed to get payment consent_id")
-                except Exception as e2:
-                    raise HTTPException(status_code=500, detail=f"Failed to create payment consent: {str(e2)}")
-            else:
-                raise
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/products/agreements/{agreement_id}")
-async def close_product_agreement(
-    agreement_id: str,
-    bank: str = Query(default="vbank"),
-    client_id: Optional[str] = Query(None),
-    reason: Optional[str] = Query(None, description="Причина закрытия"),
-    force: Optional[bool] = Query(default=False, description="Принудительное закрытие"),
-    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
-):
-    """Закрыть продукт (закрыть договор)"""
-    try:
-        if not session or not banking_client or not bank_helper:
-            raise HTTPException(status_code=503, detail="Service not initialized")
-        
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        
-        # Получаем consent для банка
-        if client_id:
-            client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
-            access_token = await bank_helper.get_access_token(bank_name=bank)
-            consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
-            if consent:
-                headers["X-Consent-Id"] = consent
-        
-        if consent_id:
-            headers["X-Consent-Id"] = consent_id
-        
-        params = {}
-        if client_id:
-            params["client_id"] = client_id
-        if reason:
-            params["reason"] = reason
-        if force:
-            params["force"] = str(force).lower()
-        
-        # Закрываем договор (DELETE запросы обычно не имеют body, используем params)
-        result = await banking_client.request(
-            session,
-            bank,
-            "DELETE",
-            f"/products/agreements/{agreement_id}",
-            params=params,
-            data=None,
-            headers=headers
-        )
-        return result
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 # =========================
-# Consents endpoints
+# Product Agreements endpoints - УДАЛЕНЫ (не используются)
 # =========================
 
-@app.post("/api/consents/accounts")
-async def create_account_consent(
+# =========================
+# Consents endpoints - УДАЛЕНЫ (не используются)  
+# =========================
+
+# =========================
+# Payments endpoints
+# =========================
+
+@app.post("/api/payments")
+async def create_payment(
+    request: Request,
     bank: str = Query(default="vbank"),
-    client_id: str = Query(...),
-    permissions: list = Query(default=["ReadAccountsDetail", "ReadBalances", "ReadTransactionsDetail", "ReadCards"]),
-    reason: str = Query(default="Агрегация счетов для мультибанк-приложения"),
-    requesting_bank_name: str = Query(default="MultiBank App")
+    client_id: Optional[str] = Query(None),
+    x_payment_consent_id: Optional[str] = Header(None, alias="X-Payment-Consent-Id"),
+    x_requesting_bank: Optional[str] = Header(None, alias="X-Requesting-Bank")
 ):
-    """Создать согласие на доступ к счетам"""
-    try:
-        headers = {
-            "X-Requesting-Bank": banking_client.team_id
-        }
-        
-        consent = await banking_client.request(
-            session,
-            bank,
-            "POST",
-            "/account-consents/request",
-            data={
-                "client_id": client_id,
-                "permissions": permissions,
-                "reason": reason,
-                "requesting_bank": banking_client.team_id,
-                "requesting_bank_name": requesting_bank_name
-            },
-            headers=headers
-        )
-        return consent
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/consents/accounts/{consent_id}")
-async def get_account_consent(consent_id: str, bank: str = Query(default="vbank")):
-    """Получить согласие по ID"""
-    try:
-        consent = await banking_client.request(
-            session,
-            bank,
-            "GET",
-            f"/account-consents/{consent_id}"
-        )
-        return consent
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/consents/accounts/{consent_id}")
-async def revoke_account_consent(consent_id: str, bank: str = Query(default="vbank")):
-    """Отозвать согласие"""
-    try:
-        await banking_client.request(
-            session,
-            bank,
-            "DELETE",
-            f"/account-consents/{consent_id}"
-        )
-        return {"status": "revoked"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    """Создать платеж"""
 
 # =========================
 # Payments endpoints
@@ -1336,6 +578,146 @@ async def get_available_balance(bank_name, client_id_id) -> dict:
 # Transactions endpoints
 # =========================
 
+@app.get("/api/transactions")
+async def get_transactions(
+    client_id: str = Query(...),
+    bank: Optional[str] = Query(None),
+    startDate: Optional[str] = Query(None),
+    endDate: Optional[str] = Query(None),
+    limit: int = Query(default=1000, ge=1, le=1000),
+    consent_id: Optional[str] = Header(None, alias="X-Consent-Id")
+):
+    """Получить транзакции со всех счетов пользователя"""
+    try:
+        if not session or not banking_client or not bank_helper:
+            raise HTTPException(status_code=503, detail="Service not initialized")
+        
+        client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+        
+        # Определяем список банков для запроса
+        banks_to_query = [bank] if bank else ["vbank", "abank", "sbank"]
+        
+        all_transactions = []
+        
+        # Получаем транзакции из каждого банка
+        for bank_name in banks_to_query:
+            try:
+                # Получаем consent для банка
+                access_token = await bank_helper.get_access_token(bank_name=bank_name)
+                consent = await bank_helper.get_account_consent(bank_name=bank_name, access_token=access_token, client_id_id=client_id_id)
+                
+                headers = {
+                    "X-Requesting-Bank": banking_client.team_id
+                }
+                if consent:
+                    headers["X-Consent-Id"] = consent
+                if consent_id:
+                    headers["X-Consent-Id"] = consent_id
+                
+                # Если нет согласия, пропускаем этот банк
+                if not consent and not consent_id:
+                    print(f"⚠️ Согласие для {bank_name} не получено, пропускаем")
+                    continue
+                
+                # Получаем список счетов
+                accounts_response = await banking_client.request(
+                    session,
+                    bank_name,
+                    "GET",
+                    "/accounts",
+                    params={"client_id": client_id},
+                    headers=headers
+                )
+                
+                # Извлекаем список счетов из ответа
+                accounts = []
+                if isinstance(accounts_response, dict):
+                    if "data" in accounts_response:
+                        if isinstance(accounts_response["data"], dict):
+                            accounts = accounts_response["data"].get("accounts", [])
+                        elif isinstance(accounts_response["data"], list):
+                            accounts = accounts_response["data"]
+                    elif "accounts" in accounts_response:
+                        accounts = accounts_response["accounts"]
+                    elif "account" in accounts_response:
+                        accounts = accounts_response["account"] if isinstance(accounts_response["account"], list) else [accounts_response["account"]]
+                elif isinstance(accounts_response, list):
+                    accounts = accounts_response
+                
+                if not accounts:
+                    print(f"⚠️ Нет счетов для {bank_name}, пропускаем")
+                    continue
+                
+                # Получаем транзакции для каждого счета
+                for account in accounts:
+                    account_id = account.get("accountId") or account.get("account_id") or account.get("id")
+                    if not account_id:
+                        continue
+                    
+                    try:
+                        params = {
+                            "page": 1,
+                            "limit": limit
+                        }
+                        if startDate:
+                            params["from_booking_date_time"] = startDate
+                        if endDate:
+                            params["to_booking_date_time"] = endDate
+                        params["client_id"] = client_id
+                        
+                        account_transactions = await banking_client.request(
+                            session,
+                            bank_name,
+                            "GET",
+                            f"/accounts/{account_id}/transactions",
+                            params=params,
+                            headers=headers
+                        )
+                        
+                        # Извлекаем транзакции из ответа
+                        transactions = []
+                        if isinstance(account_transactions, dict):
+                            if "data" in account_transactions:
+                                if isinstance(account_transactions["data"], dict):
+                                    transactions = account_transactions["data"].get("transactions", [])
+                                elif isinstance(account_transactions["data"], list):
+                                    transactions = account_transactions["data"]
+                            elif "transactions" in account_transactions:
+                                transactions = account_transactions["transactions"]
+                        elif isinstance(account_transactions, list):
+                            transactions = account_transactions
+                        
+                        # Добавляем информацию о банке к каждой транзакции
+                        for transaction in transactions:
+                            if isinstance(transaction, dict):
+                                transaction["bank"] = bank_name
+                                transaction["account_id"] = account_id
+                        
+                        all_transactions.extend(transactions)
+                    except Exception as e:
+                        print(f"⚠️ Ошибка при получении транзакций для счета {account_id} в {bank_name}: {str(e)}")
+                        continue
+                        
+            except Exception as e:
+                print(f"⚠️ Ошибка при обработке банка {bank_name}: {str(e)}")
+                continue
+        
+        # Сортируем транзакции по дате (новые первыми)
+        all_transactions.sort(key=lambda x: x.get("bookingDateTime") or x.get("booking_date_time") or x.get("date") or "", reverse=True)
+        
+        # Ограничиваем количество транзакций
+        all_transactions = all_transactions[:limit]
+        
+        return {
+            "data": {
+                "transactions": all_transactions
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/accounts/{account_id}/transactions")
 async def get_account_transactions(
     account_id: str,
@@ -1418,4 +800,273 @@ async def make_transfer(payload: TransferRequest):
     transfer = await bank_helper.make_transfer(client_id_id, to_client_id_id, from_bank, to_bank, amount)
 
     return transfer
+
+# =========================
+# Products endpoints
+# =========================
+
+@app.get("/api/products")
+async def get_products(
+    client_id: str = Query(...),
+    bank: Optional[str] = Query(None)
+):
+    """Получить информацию по всем продуктам (депозиты, кредиты, карты) со всех банков, включая балансы и остатки по кредитам"""
+    try:
+        if not session or not banking_client or not bank_helper:
+            raise HTTPException(status_code=503, detail="Service not initialized")
+        
+        client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
+        team_id = banking_client.team_id
+        full_client_id = f"{team_id}-{client_id_id}"
+        
+        # Определяем список банков для запроса
+        banks_to_query = [bank] if bank else ["vbank", "abank", "sbank"]
+        
+        all_products = []
+        
+        # Получаем продукты из каждого банка
+        for bank_name in banks_to_query:
+            try:
+                # Получаем access_token для банка
+                access_token = await bank_helper.get_access_token(bank_name=bank_name)
+                if not access_token:
+                    print(f"⚠️ Не удалось получить access_token для {bank_name}, пропускаем")
+                    continue
+                
+                # Проверяем наличие product-agreement consent в БД
+                user = await db_instance.users.find_one(
+                    {f"{bank_name}.client_id_id": client_id_id},
+                    {f"{bank_name}.$": 1}
+                )
+                
+                product_agreement_consent = None
+                if user and bank_name in user and user[bank_name]:
+                    record = user[bank_name][0]
+                    product_agreement_consent = record.get("product_agreement_consent")
+                
+                # Если нет согласия, создаем его
+                if not product_agreement_consent:
+                    print(f"⚠️ Согласие на product-agreements для {bank_name} не найдено, создаю новое...")
+                    try:
+                        consent_response = await banking_client.request(
+                            session,
+                            bank_name,
+                            "POST",
+                            "/product-agreement-consents/request",
+                            data={
+                                "requesting_bank": team_id,
+                                "read_product_agreements": True,
+                                "open_product_agreements": False,
+                                "close_product_agreements": False,
+                                "allowed_product_types": ["deposit", "loan", "card"],
+                                "reason": "Агрегация продуктов для мультибанк-приложения"
+                            },
+                            headers={"X-Requesting-Bank": team_id},
+                            params={"client_id": full_client_id}
+                        )
+                        
+                        # Извлекаем consent_id из ответа
+                        if isinstance(consent_response, dict):
+                            consent_id = consent_response.get("consent_id") or consent_response.get("data", {}).get("consentId")
+                            status = consent_response.get("status") or consent_response.get("data", {}).get("status")
+                            
+                            if status == "approved" and consent_id:
+                                product_agreement_consent = consent_id
+                                # Сохраняем в БД
+                                await db_instance.users.update_one(
+                                    {f"{bank_name}.client_id_id": client_id_id},
+                                    {"$set": {f"{bank_name}.$.product_agreement_consent": product_agreement_consent}}
+                                )
+                                print(f"✅ Согласие на product-agreements для {bank_name} создано и сохранено: {product_agreement_consent}")
+                            elif status == "pending":
+                                print(f"⚠️ Согласие на product-agreements для {bank_name} находится в статусе pending")
+                                # Пропускаем этот банк, так как согласие еще не одобрено
+                                continue
+                            else:
+                                print(f"⚠️ Не удалось получить согласие для {bank_name}, статус: {status}")
+                                continue
+                        else:
+                            print(f"⚠️ Неожиданный формат ответа для согласия {bank_name}")
+                            continue
+                    except Exception as e:
+                        print(f"❌ Ошибка при создании согласия на product-agreements для {bank_name}: {str(e)}")
+                        continue
+                
+                # Получаем список договоров
+                headers = {
+                    "X-Requesting-Bank": team_id,
+                    "X-Product-Agreement-Consent-Id": product_agreement_consent
+                }
+                
+                try:
+                    agreements_response = await banking_client.request(
+                        session,
+                        bank_name,
+                        "GET",
+                        "/product-agreements",
+                        params={"client_id": full_client_id},
+                        headers=headers
+                    )
+                    
+                    # Извлекаем список договоров из ответа
+                    agreements = []
+                    if isinstance(agreements_response, dict):
+                        if "data" in agreements_response:
+                            if isinstance(agreements_response["data"], dict):
+                                agreements = agreements_response["data"].get("agreements", [])
+                            elif isinstance(agreements_response["data"], list):
+                                agreements = agreements_response["data"]
+                        elif "agreements" in agreements_response:
+                            agreements = agreements_response["agreements"]
+                        elif "agreement" in agreements_response:
+                            agreements = agreements_response["agreement"] if isinstance(agreements_response["agreement"], list) else [agreements_response["agreement"]]
+                    elif isinstance(agreements_response, list):
+                        agreements = agreements_response
+                    
+                    if not agreements:
+                        print(f"⚠️ Нет договоров для {bank_name}, пропускаем")
+                        continue
+                    
+                    # Для каждого договора получаем баланс/остаток
+                    for agreement in agreements:
+                        agreement_id = agreement.get("agreementId") or agreement.get("agreement_id") or agreement.get("id")
+                        product_type = agreement.get("productType") or agreement.get("product_type")
+                        product_id = agreement.get("productId") or agreement.get("product_id")
+                        
+                        if not agreement_id:
+                            continue
+                        
+                        # Получаем детали договора для получения account_id
+                        try:
+                            agreement_details = await banking_client.request(
+                                session,
+                                bank_name,
+                                "GET",
+                                f"/product-agreements/{agreement_id}",
+                                params={"client_id": full_client_id},
+                                headers=headers
+                            )
+                            
+                            # Извлекаем account_id из деталей договора
+                            account_id = None
+                            if isinstance(agreement_details, dict):
+                                if "data" in agreement_details:
+                                    account_id = agreement_details["data"].get("accountId") or agreement_details["data"].get("account_id")
+                                elif "accountId" in agreement_details:
+                                    account_id = agreement_details["accountId"]
+                                elif "account_id" in agreement_details:
+                                    account_id = agreement_details["account_id"]
+                            
+                            balance = None
+                            outstanding_amount = None
+                            
+                            # Для депозитов и кредитов получаем баланс счета
+                            if account_id and product_type in ["deposit", "loan"]:
+                                try:
+                                    # Получаем account consent для баланса
+                                    account_consent = await bank_helper.get_account_consent(
+                                        bank_name=bank_name,
+                                        access_token=access_token,
+                                        client_id_id=client_id_id
+                                    )
+                                    
+                                    if account_consent:
+                                        balance_headers = {
+                                            "X-Requesting-Bank": team_id,
+                                            "X-Consent-Id": account_consent
+                                        }
+                                        
+                                        balance_response = await banking_client.request(
+                                            session,
+                                            bank_name,
+                                            "GET",
+                                            f"/accounts/{account_id}/balances",
+                                            params={"client_id": full_client_id},
+                                            headers=balance_headers
+                                        )
+                                        
+                                        # Извлекаем баланс
+                                        if isinstance(balance_response, dict):
+                                            if "data" in balance_response:
+                                                balances = balance_response["data"].get("balances", [])
+                                                if balances and isinstance(balances, list) and len(balances) > 0:
+                                                    balance_data = balances[0]
+                                                    balance = balance_data.get("amount", {}).get("amount") or balance_data.get("amount")
+                                                    if isinstance(balance, str):
+                                                        balance = float(balance)
+                                            elif "balances" in balance_response:
+                                                balances = balance_response["balances"]
+                                                if balances and isinstance(balances, list) and len(balances) > 0:
+                                                    balance_data = balances[0]
+                                                    balance = balance_data.get("amount", {}).get("amount") or balance_data.get("amount")
+                                                    if isinstance(balance, str):
+                                                        balance = float(balance)
+                                        
+                                        # Для кредитов остаток = абсолютное значение баланса (баланс обычно отрицательный)
+                                        if product_type == "loan" and balance is not None:
+                                            # Для кредитов баланс отрицательный, остаток - это абсолютное значение
+                                            outstanding_amount = abs(float(balance))
+                                        elif product_type == "deposit" and balance is not None:
+                                            # Для депозитов баланс положительный
+                                            balance = float(balance)
+                                except Exception as e:
+                                    print(f"⚠️ Ошибка при получении баланса для договора {agreement_id} в {bank_name}: {str(e)}")
+                            
+                            # Формируем информацию о продукте
+                            product_info = {
+                                "bank": bank_name,
+                                "agreement_id": agreement_id,
+                                "product_type": product_type,
+                                "product_id": product_id,
+                                "account_id": account_id,
+                                "balance": balance,
+                                "outstanding_amount": outstanding_amount,  # Остаток по кредиту
+                                "agreement_details": agreement_details if isinstance(agreement_details, dict) else {}
+                            }
+                            
+                            # Добавляем информацию из исходного договора
+                            product_info.update({
+                                k: v for k, v in agreement.items() 
+                                if k not in ["agreementId", "agreement_id", "id", "productType", "product_type", "productId", "product_id"]
+                            })
+                            
+                            all_products.append(product_info)
+                        except Exception as e:
+                            print(f"⚠️ Ошибка при получении деталей договора {agreement_id} в {bank_name}: {str(e)}")
+                            # Добавляем базовую информацию без баланса
+                            product_info = {
+                                "bank": bank_name,
+                                "agreement_id": agreement_id,
+                                "product_type": product_type,
+                                "product_id": product_id,
+                                "balance": None,
+                                "outstanding_amount": None
+                            }
+                            product_info.update({
+                                k: v for k, v in agreement.items() 
+                                if k not in ["agreementId", "agreement_id", "id", "productType", "product_type", "productId", "product_id"]
+                            })
+                            all_products.append(product_info)
+                            
+                except Exception as e:
+                    print(f"⚠️ Ошибка при получении договоров для {bank_name}: {str(e)}")
+                    continue
+                    
+            except Exception as e:
+                print(f"⚠️ Ошибка при обработке банка {bank_name}: {str(e)}")
+                continue
+        
+        return {
+            "data": {
+                "products": all_products
+            },
+            "meta": {
+                "total": len(all_products),
+                "banks_queried": banks_to_query
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

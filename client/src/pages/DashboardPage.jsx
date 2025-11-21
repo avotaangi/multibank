@@ -6,7 +6,7 @@ import { useQuery } from 'react-query';
 import useAuthStore from '../stores/authStore';
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
-import { bankingAPI, transactionAPI } from '../services/api';
+import { bankingAPI, transactionAPI, productsAPI } from '../services/api';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 
 import BankCardStack from '../components/BankCardStack';
@@ -48,6 +48,7 @@ function formatRub(valueNumber) {
 const DashboardPage = () => {
   const { user } = useAuthStore();
   const getClientIdId = useAuthStore((state) => state.getClientIdId);
+  const getClientId = useAuthStore((state) => state.getClientId);
   // Функция для нормализации id: если id === 0, возвращаем 1
   const normalizeId = (id) => {
     if (id === 0) return 1;
@@ -64,8 +65,55 @@ const DashboardPage = () => {
 
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   
-  // Данные о вкладах (из общего источника, синхронизированы с виртуальной картой VBank)
-  const deposits = useMemo(() => getDepositsData(virtualCardBalance), [virtualCardBalance]);
+  // Загружаем продукты из API
+  const clientId = getClientId();
+  const { data: productsData, isLoading: isLoadingProducts } = useQuery(
+    ['bankProducts', clientId],
+    async () => {
+      const response = await productsAPI.getBankProducts({ client_id: clientId });
+      return response;
+    },
+    {
+      enabled: !!clientId,
+      refetchOnWindowFocus: false,
+      staleTime: 60000, // 1 минута
+      retry: 2,
+    }
+  );
+  
+  // Получаем все продукты из API
+  const allProductsFromAPI = useMemo(() => {
+    // Проверяем разные возможные структуры ответа
+    let allProducts = null;
+    
+    if (productsData?.data?.data?.products) {
+      allProducts = productsData.data.data.products;
+    } else if (productsData?.data?.products) {
+      allProducts = productsData.data.products;
+    } else if (productsData?.products) {
+      allProducts = productsData.products;
+    }
+    
+    if (!allProducts || !Array.isArray(allProducts)) {
+      return [];
+    }
+    
+    return allProducts;
+  }, [productsData]);
+  
+  // Фильтруем активные депозиты из API
+  const apiDeposits = useMemo(() => {
+    return allProductsFromAPI.filter(p => p.product_type === 'deposit');
+  }, [allProductsFromAPI]);
+  
+  // Фильтруем кредиты из API
+  const apiLoans = useMemo(() => {
+    return allProductsFromAPI.filter(p => p.product_type === 'loan');
+  }, [allProductsFromAPI]);
+  
+  // Используем депозиты из API, если они есть, иначе fallback на старые данные
+  const fallbackDeposits = useMemo(() => getDepositsData(virtualCardBalance), [virtualCardBalance]);
+  const deposits = (Array.isArray(apiDeposits) && apiDeposits.length > 0) ? apiDeposits : fallbackDeposits;
   
   // Прокрутка наверх при монтировании
   useScrollToTop();
@@ -79,13 +127,19 @@ const DashboardPage = () => {
   
   // Загружаем транзакции за текущий месяц
   const { data: transactionsData } = useQuery(
-    ['transactions', 'monthly', currentMonth, currentYear],
-    () => transactionAPI.getTransactions({
-      startDate: monthStart,
-      endDate: monthEnd,
-      limit: 1000 // Получаем все транзакции за месяц
-    }),
+    ['transactions', 'monthly', currentMonth, currentYear, CLIENT_ID_ID],
+    () => {
+      const teamId = import.meta.env.VITE_CLIENT_ID || 'team096';
+      const fullClientId = `${teamId}-${CLIENT_ID_ID}`;
+      return transactionAPI.getTransactions({
+        client_id: fullClientId,
+        startDate: monthStart,
+        endDate: monthEnd,
+        limit: 1000 // Получаем все транзакции за месяц
+      });
+    },
     {
+      enabled: !!CLIENT_ID_ID, // Запрос выполняется только если есть CLIENT_ID_ID
       refetchOnWindowFocus: false,
       staleTime: 60000, // 1 минута
     }
@@ -384,7 +438,7 @@ const DashboardPage = () => {
   const [availableBanks, setAvailableBanks] = useState([]);   // ['vbank', 'abank', ...] — с API
   const [isLoadingBanks, setIsLoadingBanks] = useState(true);
   const [balanceFetchError, setBalanceFetchError] = useState(null);
-  const [isCardsLoading, setIsCardsLoading] = useState(true);
+  const [isCardsLoading, setIsCardsLoading] = useState(false); // Начинаем с false, так как карты не блокируют загрузку
 
   // Модалка добавления банка (твой прежний UX полностью сохранён)
   const [showAddBankModal, setShowAddBankModal] = useState(false);
@@ -599,10 +653,9 @@ const DashboardPage = () => {
 
   // =========================
   // Проверяем, загружаются ли все данные
-  // Показываем загрузку, пока загружаются банки, балансы или карты
-  const isDataLoading = isLoadingBanks || 
-                        isCardsLoading || 
-                        (availableBanks.length > 0 && Object.keys(bankBalances).length === 0 && !balanceFetchError);
+  // Показываем загрузку только пока загружаются банки
+  // Карты загружаются асинхронно в фоне и не блокируют отображение страницы
+  const isDataLoading = isLoadingBanks;
 
   // Рендер
   // =========================
@@ -1063,38 +1116,73 @@ const DashboardPage = () => {
 
           {/* Deposits List */}
           <div className="space-y-3 px-4 pb-4 pt-0">
-            {deposits.map((deposit) => {
-              return (
-                <div key={deposit.id} className="bg-white rounded-2xl p-4 border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                          {deposit.name}
-                        </div>
-                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                          Ставка {deposit.rate}% годовых
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                        {deposit.amount.toLocaleString('ru-RU')} ₽
-                      </div>
-                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                        {deposit.status === 'active' ? 'Активен' : 'Неактивен'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {deposits.length === 0 && (
+            {isLoadingProducts ? (
+              <div className="text-center py-4 text-gray-500 font-ibm text-sm">
+                Загрузка вкладов...
+              </div>
+            ) : !deposits || deposits.length === 0 ? (
               <div className="bg-white rounded-2xl p-4 border border-gray-200 text-center">
                 <div className="text-gray-500 font-ibm text-sm">
                   Нет активных вкладов
                 </div>
               </div>
+            ) : (
+              deposits.map((deposit, index) => {
+                // Для API депозитов используем другую структуру
+                const isApiDeposit = deposit.product_type === 'deposit';
+                const depositId = isApiDeposit ? deposit.agreement_id : deposit.id;
+                
+                // Получаем данные из agreement_details.data
+                const agreementData = deposit.agreement_details?.data;
+                
+                // Получаем название из agreement_details.data.product_name
+                const depositName = isApiDeposit 
+                  ? (agreementData?.product_name || deposit.product_name || `Вклад ${deposit.bank?.toUpperCase() || ''}`)
+                  : deposit.name;
+                
+                // Получаем сумму из agreement_details.data.amount
+                const depositAmount = isApiDeposit 
+                  ? (agreementData?.amount ?? deposit.amount ?? deposit.balance ?? 0)
+                  : deposit.amount;
+                
+                // Получаем процентную ставку из agreement_details.data.interest_rate
+                const depositRate = isApiDeposit 
+                  ? (agreementData?.interest_rate ?? '8.5')
+                  : deposit.rate;
+                
+                // Получаем статус из agreement_details.data.status
+                const depositStatus = isApiDeposit 
+                  ? (agreementData?.status || deposit.status || 'active')
+                  : deposit.status;
+                
+                return (
+                  <div key={depositId || index} className="bg-white rounded-2xl p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div>
+                          <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                            {depositName}
+                          </div>
+                          <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                            Ставка {depositRate}% годовых
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                          {typeof depositAmount === 'number' 
+                            ? depositAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : parseFloat(depositAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          } ₽
+                        </div>
+                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                          {depositStatus === 'active' ? 'Активен' : 'Неактивен'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -1132,36 +1220,92 @@ const DashboardPage = () => {
 
           {/* Credits Data */}
           <div className="space-y-3 px-4 pb-4 pt-0">
-            <div className="bg-white rounded-2xl p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-yellow-100">
-                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                      Потребительский кредит
-                    </div>
-                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                      Осталось до погашения
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                    80 000 ₽
-                  </div>
-                  <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                    Активен
-                  </div>
+            {isLoadingProducts ? (
+              <div className="text-center py-4 text-white font-ibm text-sm">
+                Загрузка кредитов...
+              </div>
+            ) : !apiLoans || apiLoans.length === 0 ? (
+              <div className="bg-white rounded-2xl p-4 border border-gray-200 text-center">
+                <div className="text-gray-500 font-ibm text-sm">
+                  Нет активных кредитов
                 </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="h-2 bg-yellow-500 rounded-full" style={{ width: '65%' }}></div>
-              </div>
-            </div>
+            ) : (
+              apiLoans.map((loan, index) => {
+                // Получаем данные из agreement_details.data
+                const agreementData = loan.agreement_details?.data;
+                
+                // Получаем название из agreement_details.data.product_name
+                const loanName = agreementData?.product_name || loan.product_name || `Кредит ${loan.bank?.toUpperCase() || ''}`;
+                
+                // Получаем остаток по кредиту из outstanding_amount или agreement_details.data
+                const outstandingAmount = loan.outstanding_amount ?? agreementData?.account_balance ?? loan.amount ?? 0;
+                
+                // Получаем процентную ставку из agreement_details.data.interest_rate
+                const loanRate = agreementData?.interest_rate ?? '12.9';
+                
+                // Получаем статус из agreement_details.data.status
+                const loanStatus = agreementData?.status || loan.status || 'active';
+                
+                // Получаем сумму кредита для расчета процента погашения
+                const loanAmount = agreementData?.amount ?? loan.amount ?? outstandingAmount;
+                
+                // Рассчитываем процент погашения
+                const repaymentPercent = loanAmount > 0 
+                  ? Math.max(0, Math.min(100, ((loanAmount - outstandingAmount) / loanAmount) * 100))
+                  : 0;
+                
+                // Цвет банка
+                const bankColor = loan.bank === 'vbank' ? '#0055BC' : loan.bank === 'abank' ? '#EF3124' : loan.bank === 'sbank' ? '#00A859' : '#6366F1';
+                
+                return (
+                  <div key={loan.agreement_id || index} className="bg-white rounded-2xl p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: `${bankColor}20` }}
+                        >
+                          <svg className="w-5 h-5" style={{ color: bankColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                            {loanName}
+                          </div>
+                          <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                            Осталось до погашения
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                          {typeof outstandingAmount === 'number' 
+                            ? outstandingAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : parseFloat(outstandingAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          } ₽
+                        </div>
+                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                          {loanStatus === 'active' ? 'Активен' : 'Неактивен'}
+                        </div>
+                      </div>
+                    </div>
+                    {loanAmount > 0 && (
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="h-2 rounded-full" 
+                          style={{ 
+                            width: `${repaymentPercent}%`,
+                            backgroundColor: bankColor
+                          }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>

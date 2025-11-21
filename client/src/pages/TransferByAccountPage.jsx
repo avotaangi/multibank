@@ -278,6 +278,12 @@ const TransferByAccountPage = () => {
         setRecipientAccountNumber('');
         setAmount('');
         setMessage('');
+        
+        // Автоматический переход на главную страницу через 2 секунды
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          navigate('/dashboard');
+        }, 2000);
       },
       onError: (error) => {
         console.error('Transfer error:', error);
@@ -434,7 +440,7 @@ const TransferByAccountPage = () => {
 
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
-    navigate(-1);
+    navigate('/dashboard');
   };
 
   if (isLoadingAccounts) {
