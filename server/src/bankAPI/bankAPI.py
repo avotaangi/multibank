@@ -538,8 +538,55 @@ class BankHelper:
             if resp.status != 200:
                 error_text = await resp.text()
                 print(f"❌ Ошибка при получении accounts из {bank_name}: {resp.status} - {error_text}")
+                # Если ошибка 401 (недействительный токен), обновляем токен и повторяем запрос
+                if resp.status == 401:
+                    print(f"🔄 Получена ошибка 401 для {bank_name}, обновляю токен и повторяю запрос...")
+                    # Обновляем токен (принудительно получаем новый)
+                    await db.access_tokens.update_one(
+                        {"bank_name": bank_name},
+                        {"$set": {"updated_at": datetime(1970, 1, 1, tzinfo=timezone.utc)}}  # Устанавливаем старую дату, чтобы токен считался истекшим
+                    )
+                    new_access_token = await self.get_access_token(bank_name)
+                    if not new_access_token:
+                        raise ValueError(f"❌ Не удалось получить новый токен для {bank_name}")
+                    
+                    # Повторяем запрос с новым токеном
+                    async with self._session.get(
+                        url=f"https://{bank_name}.{self.base_url}/accounts",
+                        headers={
+                            "Authorization": f"Bearer {new_access_token}",
+                            "X-Requesting-Bank": self.client_id,  
+                            "X-Consent-Id": consent               
+                        },
+                        params={
+                            "client_id": f"{self.client_id}-{client_id_id}"
+                        },
+                        timeout=15
+                    ) as retry_resp:
+                        if retry_resp.status != 200:
+                            retry_error_text = await retry_resp.text()
+                            raise ValueError(f"❌ Ошибка при повторном получении accounts из {bank_name} после обновления токена: {retry_resp.status} - {retry_error_text}")
+                        result = await retry_resp.json()
+                        # Обработка разных форматов ответа
+                        if "data" in result:
+                            if "account" in result["data"]:
+                                accounts = result["data"]["account"]
+                            elif "accounts" in result["data"]:
+                                accounts = result["data"]["accounts"]
+                            else:
+                                accounts = result["data"]
+                        else:
+                            accounts = result.get("accounts", result.get("account", []))
+                        
+                        if not accounts or len(accounts) == 0:
+                            raise ValueError(f"❌ Нет счетов для клиента {client_id_id} в банке {bank_name}")
+                        
+                        account_id = accounts[0].get("accountId") or accounts[0].get("account_id") or accounts[0].get("id")
+                        if not account_id:
+                            raise ValueError(f"❌ Не удалось извлечь account_id из ответа: {accounts[0]}")
+                        return account_id
                 # Если ошибка 403 CONSENT_REQUIRED, пытаемся пересоздать согласие
-                if resp.status == 403 and "CONSENT_REQUIRED" in error_text:
+                elif resp.status == 403 and "CONSENT_REQUIRED" in error_text:
                     print(f"🔄 Получена ошибка CONSENT_REQUIRED для {bank_name}, пытаюсь пересоздать согласие...")
                     # Удаляем старое согласие из БД
                     await db.users.update_one(
@@ -688,8 +735,37 @@ class BankHelper:
             if resp.status != 200:
                 error_text = await resp.text()
                 print(f"❌ Ошибка при получении балансов из {bank_name}: {resp.status} - {error_text}")
+                # Если ошибка 401 (недействительный токен), обновляем токен и повторяем запрос
+                if resp.status == 401:
+                    print(f"🔄 Получена ошибка 401 для {bank_name}, обновляю токен и повторяю запрос...")
+                    # Обновляем токен (принудительно получаем новый)
+                    db = self.db
+                    await db.access_tokens.update_one(
+                        {"bank_name": bank_name},
+                        {"$set": {"updated_at": datetime(1970, 1, 1, tzinfo=timezone.utc)}}  # Устанавливаем старую дату, чтобы токен считался истекшим
+                    )
+                    new_access_token = await self.get_access_token(bank_name)
+                    if not new_access_token:
+                        raise ValueError(f"❌ Не удалось получить новый токен для {bank_name}")
+                    
+                    # Повторяем запрос с новым токеном
+                    async with self._session.get(
+                        url=f"https://{bank_name}.{self.base_url}/accounts/{account_id}/balances",
+                        headers={
+                            "Authorization": f"Bearer {new_access_token}",
+                            "X-Requesting-Bank": self.client_id,  
+                            "X-Consent-Id": consent               
+                        },
+                        timeout=15
+                    ) as retry_resp:
+                        if retry_resp.status != 200:
+                            retry_error_text = await retry_resp.text()
+                            raise ValueError(f"❌ Ошибка при повторном получении балансов из {bank_name} после обновления токена: {retry_resp.status} - {retry_error_text}")
+                        result = await retry_resp.json()
+                        print(f"✅ Получены балансы из банка '{bank_name}' для клиента '{client_id_id}' (после обновления токена)")
+                        return result
                 # Если ошибка 403 CONSENT_REQUIRED, пытаемся пересоздать согласие
-                if resp.status == 403 and "CONSENT_REQUIRED" in error_text:
+                elif resp.status == 403 and "CONSENT_REQUIRED" in error_text:
                     print(f"🔄 Получена ошибка CONSENT_REQUIRED для {bank_name} при получении балансов, пытаюсь пересоздать согласие...")
                     db = self.db
                     # Удаляем старое согласие из БД

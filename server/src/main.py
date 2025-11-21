@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from schemas import TransferRequest, ProductAgreementRequest, DepositRequest, CloseAgreementRequest, WithdrawRequest
 from database import db
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 load_dotenv()
 
 # Импортируем db для использования в эндпоинтах
@@ -1011,14 +1011,116 @@ async def get_products(
                 }
                 
                 try:
-                    agreements_response = await banking_client.request(
-                        session,
-                        bank_name,
-                        "GET",
-                        "/product-agreements",
-                        params={"client_id": full_client_id},
-                        headers=headers
-                    )
+                    try:
+                        agreements_response = await banking_client.request(
+                            session,
+                            bank_name,
+                            "GET",
+                            "/product-agreements",
+                            params={"client_id": full_client_id},
+                            headers=headers
+                        )
+                    except Exception as agreements_error:
+                        # Если ошибка 401, обновляем токен и повторяем запрос
+                        error_str = str(agreements_error)
+                        if "401" in error_str:
+                            print(f"🔄 Получена ошибка 401 при получении договоров для {bank_name}, обновляю токен...")
+                            # Обновляем токен (принудительно получаем новый)
+                            await db_instance.access_tokens.update_one(
+                                {"bank_name": bank_name},
+                                {"$set": {"updated_at": datetime(1970, 1, 1, tzinfo=timezone.utc)}}
+                            )
+                            # Получаем новый токен
+                            new_access_token = await bank_helper.get_access_token(bank_name=bank_name)
+                            if new_access_token:
+                                # Обновляем токен в banking_client
+                                await banking_client.get_bank_token(session, bank_name)
+                                # Повторяем запрос
+                                try:
+                                    agreements_response = await banking_client.request(
+                                        session,
+                                        bank_name,
+                                        "GET",
+                                        "/product-agreements",
+                                        params={"client_id": full_client_id},
+                                        headers=headers
+                                    )
+                                except Exception as retry_error:
+                                    print(f"⚠️ Ошибка при повторном получении договоров для {bank_name}: {str(retry_error)}")
+                                    continue
+                            else:
+                                print(f"⚠️ Не удалось получить новый токен для {bank_name}")
+                                continue
+                        # Если ошибка 403 (согласие истекло или не найдено), пересоздаем согласие
+                        elif "403" in error_str and ("Product agreement consent" in error_str or "consent" in error_str.lower()):
+                            print(f"🔄 Получена ошибка 403 (согласие истекло) для {bank_name}, пересоздаю согласие...")
+                            # Удаляем старое согласие из БД
+                            await db_instance.users.update_one(
+                                {f"{bank_name}.client_id_id": client_id_id},
+                                {"$set": {f"{bank_name}.$.product_agreement_consent": None}}
+                            )
+                            # Создаем новое согласие
+                            try:
+                                consent_response = await banking_client.request(
+                                    session,
+                                    bank_name,
+                                    "POST",
+                                    "/product-agreement-consents/request",
+                                    data={
+                                        "requesting_bank": team_id,
+                                        "read_product_agreements": True,
+                                        "open_product_agreements": False,
+                                        "close_product_agreements": False,
+                                        "allowed_product_types": ["deposit", "loan", "card"],
+                                        "reason": "Агрегация продуктов для мультибанк-приложения"
+                                    },
+                                    headers={"X-Requesting-Bank": team_id},
+                                    params={"client_id": full_client_id}
+                                )
+                                
+                                # Извлекаем consent_id из ответа
+                                if isinstance(consent_response, dict):
+                                    consent_id = consent_response.get("consent_id") or consent_response.get("data", {}).get("consentId")
+                                    status = consent_response.get("status") or consent_response.get("data", {}).get("status")
+                                    
+                                    if status == "approved" and consent_id:
+                                        product_agreement_consent = consent_id
+                                        # Сохраняем в БД
+                                        await db_instance.users.update_one(
+                                            {f"{bank_name}.client_id_id": client_id_id},
+                                            {"$set": {f"{bank_name}.$.product_agreement_consent": product_agreement_consent}}
+                                        )
+                                        print(f"✅ Новое согласие на product-agreements для {bank_name} создано и сохранено: {product_agreement_consent}")
+                                        # Обновляем заголовки с новым согласием
+                                        headers["X-Product-Agreement-Consent-Id"] = product_agreement_consent
+                                        # Повторяем запрос с новым согласием
+                                        try:
+                                            agreements_response = await banking_client.request(
+                                                session,
+                                                bank_name,
+                                                "GET",
+                                                "/product-agreements",
+                                                params={"client_id": full_client_id},
+                                                headers=headers
+                                            )
+                                        except Exception as retry_error:
+                                            print(f"⚠️ Ошибка при повторном получении договоров для {bank_name} после пересоздания согласия: {str(retry_error)}")
+                                            continue
+                                    elif status == "pending":
+                                        print(f"⚠️ Согласие на product-agreements для {bank_name} находится в статусе pending")
+                                        continue
+                                    else:
+                                        print(f"⚠️ Не удалось получить согласие для {bank_name}, статус: {status}")
+                                        continue
+                                else:
+                                    print(f"⚠️ Неожиданный формат ответа для согласия {bank_name}")
+                                    continue
+                            except Exception as consent_error:
+                                print(f"❌ Ошибка при пересоздании согласия на product-agreements для {bank_name}: {str(consent_error)}")
+                                continue
+                        else:
+                            print(f"⚠️ Ошибка при получении договоров для {bank_name}: {error_str}")
+                            continue
                     
                     # Извлекаем список договоров из ответа
                     agreements = []
@@ -1050,14 +1152,115 @@ async def get_products(
                         
                         # Получаем детали договора для получения account_id
                         try:
-                            agreement_details = await banking_client.request(
-                                session,
-                                bank_name,
-                                "GET",
-                                f"/product-agreements/{agreement_id}",
-                                params={"client_id": full_client_id},
-                                headers=headers
-                            )
+                            try:
+                                agreement_details = await banking_client.request(
+                                    session,
+                                    bank_name,
+                                    "GET",
+                                    f"/product-agreements/{agreement_id}",
+                                    params={"client_id": full_client_id},
+                                    headers=headers
+                                )
+                            except Exception as details_error:
+                                # Если ошибка 401, обновляем токен и повторяем запрос
+                                error_str = str(details_error)
+                                if "401" in error_str:
+                                    print(f"🔄 Получена ошибка 401 при получении деталей договора для {bank_name}, обновляю токен...")
+                                    # Обновляем токен (принудительно получаем новый)
+                                    await db_instance.access_tokens.update_one(
+                                        {"bank_name": bank_name},
+                                        {"$set": {"updated_at": datetime(1970, 1, 1, tzinfo=timezone.utc)}}
+                                    )
+                                    # Получаем новый токен
+                                    new_access_token = await bank_helper.get_access_token(bank_name=bank_name)
+                                    if new_access_token:
+                                        # Обновляем токен в banking_client
+                                        await banking_client.get_bank_token(session, bank_name)
+                                        # Повторяем запрос
+                                        try:
+                                            agreement_details = await banking_client.request(
+                                                session,
+                                                bank_name,
+                                                "GET",
+                                                f"/product-agreements/{agreement_id}",
+                                                params={"client_id": full_client_id},
+                                                headers=headers
+                                            )
+                                        except Exception as retry_error:
+                                            print(f"⚠️ Ошибка при повторном получении деталей договора для {bank_name}: {str(retry_error)}")
+                                            raise
+                                    else:
+                                        print(f"⚠️ Не удалось получить новый токен для {bank_name}")
+                                        raise
+                                # Если ошибка 403 (согласие истекло или не найдено), пересоздаем согласие
+                                elif "403" in error_str and ("Product agreement consent" in error_str or "consent" in error_str.lower()):
+                                    print(f"🔄 Получена ошибка 403 (согласие истекло) при получении деталей договора для {bank_name}, пересоздаю согласие...")
+                                    # Удаляем старое согласие из БД
+                                    await db_instance.users.update_one(
+                                        {f"{bank_name}.client_id_id": client_id_id},
+                                        {"$set": {f"{bank_name}.$.product_agreement_consent": None}}
+                                    )
+                                    # Создаем новое согласие
+                                    try:
+                                        consent_response = await banking_client.request(
+                                            session,
+                                            bank_name,
+                                            "POST",
+                                            "/product-agreement-consents/request",
+                                            data={
+                                                "requesting_bank": team_id,
+                                                "read_product_agreements": True,
+                                                "open_product_agreements": False,
+                                                "close_product_agreements": False,
+                                                "allowed_product_types": ["deposit", "loan", "card"],
+                                                "reason": "Агрегация продуктов для мультибанк-приложения"
+                                            },
+                                            headers={"X-Requesting-Bank": team_id},
+                                            params={"client_id": full_client_id}
+                                        )
+                                        
+                                        # Извлекаем consent_id из ответа
+                                        if isinstance(consent_response, dict):
+                                            consent_id = consent_response.get("consent_id") or consent_response.get("data", {}).get("consentId")
+                                            status = consent_response.get("status") or consent_response.get("data", {}).get("status")
+                                            
+                                            if status == "approved" and consent_id:
+                                                product_agreement_consent = consent_id
+                                                # Сохраняем в БД
+                                                await db_instance.users.update_one(
+                                                    {f"{bank_name}.client_id_id": client_id_id},
+                                                    {"$set": {f"{bank_name}.$.product_agreement_consent": product_agreement_consent}}
+                                                )
+                                                print(f"✅ Новое согласие на product-agreements для {bank_name} создано и сохранено: {product_agreement_consent}")
+                                                # Обновляем заголовки с новым согласием
+                                                headers["X-Product-Agreement-Consent-Id"] = product_agreement_consent
+                                                # Повторяем запрос с новым согласием
+                                                try:
+                                                    agreement_details = await banking_client.request(
+                                                        session,
+                                                        bank_name,
+                                                        "GET",
+                                                        f"/product-agreements/{agreement_id}",
+                                                        params={"client_id": full_client_id},
+                                                        headers=headers
+                                                    )
+                                                except Exception as retry_error:
+                                                    print(f"⚠️ Ошибка при повторном получении деталей договора для {bank_name} после пересоздания согласия: {str(retry_error)}")
+                                                    raise
+                                            elif status == "pending":
+                                                print(f"⚠️ Согласие на product-agreements для {bank_name} находится в статусе pending")
+                                                raise ValueError(f"Согласие для {bank_name} требует ручного одобрения")
+                                            else:
+                                                print(f"⚠️ Не удалось получить согласие для {bank_name}, статус: {status}")
+                                                raise ValueError(f"Не удалось получить согласие для {bank_name}")
+                                        else:
+                                            print(f"⚠️ Неожиданный формат ответа для согласия {bank_name}")
+                                            raise ValueError(f"Неожиданный формат ответа для согласия {bank_name}")
+                                    except Exception as consent_error:
+                                        print(f"❌ Ошибка при пересоздании согласия на product-agreements для {bank_name}: {str(consent_error)}")
+                                        raise
+                                else:
+                                    raise
                             
                             # Извлекаем account_id из деталей договора
                             account_id = None
@@ -1088,17 +1291,52 @@ async def get_products(
                                             "X-Consent-Id": account_consent
                                         }
                                         
-                                        balance_response = await banking_client.request(
-                                            session,
-                                            bank_name,
-                                            "GET",
-                                            f"/accounts/{account_id}/balances",
-                                            params={"client_id": full_client_id},
-                                            headers=balance_headers
-                                        )
+                                        try:
+                                            balance_response = await banking_client.request(
+                                                session,
+                                                bank_name,
+                                                "GET",
+                                                f"/accounts/{account_id}/balances",
+                                                params={"client_id": full_client_id},
+                                                headers=balance_headers
+                                            )
+                                        except Exception as balance_error:
+                                            # Если ошибка 401, обновляем токен и повторяем запрос
+                                            error_str = str(balance_error)
+                                            if "401" in error_str:
+                                                print(f"🔄 Получена ошибка 401 при получении баланса для {bank_name}, обновляю токен...")
+                                                # Обновляем токен (принудительно получаем новый)
+                                                await db_instance.access_tokens.update_one(
+                                                    {"bank_name": bank_name},
+                                                    {"$set": {"updated_at": datetime(1970, 1, 1, tzinfo=timezone.utc)}}
+                                                )
+                                                # Получаем новый токен
+                                                new_access_token = await bank_helper.get_access_token(bank_name=bank_name)
+                                                if new_access_token:
+                                                    # Обновляем токен в banking_client
+                                                    await banking_client.get_bank_token(session, bank_name)
+                                                    # Повторяем запрос
+                                                    try:
+                                                        balance_response = await banking_client.request(
+                                                            session,
+                                                            bank_name,
+                                                            "GET",
+                                                            f"/accounts/{account_id}/balances",
+                                                            params={"client_id": full_client_id},
+                                                            headers=balance_headers
+                                                        )
+                                                    except Exception as retry_error:
+                                                        print(f"⚠️ Ошибка при повторном получении баланса для {bank_name}: {str(retry_error)}")
+                                                        balance_response = None
+                                                else:
+                                                    print(f"⚠️ Не удалось получить новый токен для {bank_name}")
+                                                    balance_response = None
+                                            else:
+                                                print(f"⚠️ Ошибка при получении баланса для {bank_name}: {error_str}")
+                                                balance_response = None
                                         
                                         # Извлекаем баланс
-                                        if isinstance(balance_response, dict):
+                                        if balance_response and isinstance(balance_response, dict):
                                             if "data" in balance_response:
                                                 balances = balance_response["data"].get("balances", [])
                                                 if balances and isinstance(balances, list) and len(balances) > 0:
