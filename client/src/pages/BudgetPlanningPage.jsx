@@ -976,7 +976,7 @@ const BudgetPlanningPage = () => {
         </div>
       </div>
 
-      <PremiumBlock featureName="AI-планирование бюджета">
+      <PremiumBlock featureName="Планирование бюджета, используя накопительный счет (планируйте с выгодой)">
       {/* Main Content */}
       <div className="px-0">
         {/* Virtual Card VBank - Накопительный счет */}

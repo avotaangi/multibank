@@ -316,6 +316,15 @@ const TransferByAccountPage = () => {
       return;
     }
 
+    // Проверка лимита перевода (максимум 50 000 рублей)
+    const transferAmount = parseFloat(amount);
+    const TRANSFER_LIMIT = 50000;
+    
+    if (transferAmount > TRANSFER_LIMIT) {
+      setError('Лимит по переводу - 50 000 рублей');
+      return;
+    }
+
     console.log('🔍 [TransferByAccount] handleTransfer вызван');
     console.log('🔍 [TransferByAccount] selectedAccountId:', selectedAccountId);
     console.log('🔍 [TransferByAccount] Все доступные счета:', JSON.stringify(accounts, null, 2));
@@ -331,7 +340,6 @@ const TransferByAccountPage = () => {
     }
 
     // Проверка достаточности средств
-    const transferAmount = parseFloat(amount);
     const balance = selectedAccount.availableBalance || selectedAccount.balance || 0;
     // Баланс из карт уже в правильном формате (не в копейках)
     const availableBalance = balance;
@@ -598,6 +606,7 @@ const TransferByAccountPage = () => {
                 <li>Перевод выполняется мгновенно</li>
                 <li>Проверьте правильность номера счета получателя</li>
                 <li>Комиссия может быть списана дополнительно</li>
+                <li>Лимит по переводу - 50 000 рублей</li>
               </ul>
             </div>
           </div>

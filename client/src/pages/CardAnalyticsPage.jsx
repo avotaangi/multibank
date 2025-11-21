@@ -1007,19 +1007,81 @@ const CardAnalyticsPage = () => {
                     }, 0);
                   };
                   
-                  // Проверяем, находимся ли мы в Telegram WebApp
+                  // Проверяем платформу
                   const isTelegramWebApp = window.Telegram?.WebApp;
+                  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                  const isAndroid = /Android/i.test(navigator.userAgent);
                   
+                  // Определяем стратегию скачивания в зависимости от платформы
+                  
+                  // Для iOS (включая Telegram на iOS) - приоритет Web Share API
+                  if (isIOS && navigator.share) {
+                    try {
+                      const file = new File([blob], fileName, { type: 'text/plain;charset=utf-8' });
+                      
+                      // Проверяем поддержку sharing файлов (iOS 13+)
+                      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                          files: [file],
+                          title: fileName,
+                          text: 'Выписка по карте'
+                        });
+                        // Освобождаем память после успешного sharing
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        return;
+                      }
+                    } catch (shareError) {
+                      // Если sharing не удался, продолжаем с обычным скачиванием
+                      console.log('Web Share API не доступен, используем обычное скачивание:', shareError);
+                    }
+                  }
+                  
+                  // Для Telegram Web App (все платформы)
                   if (isTelegramWebApp) {
-                    // Для Telegram WebApp создаем прямой URL к API endpoint
+                    // Создаем прямой URL к API endpoint
                     const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000';
                     const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
                     const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
                     
-                    // Пробуем открыть прямой URL (Telegram может обработать скачивание)
+                    // Пробуем прямой URL - Telegram может обработать скачивание
+                    const directLink = document.createElement('a');
+                    directLink.href = directUrl;
+                    directLink.download = fileName;
+                    directLink.target = '_blank';
+                    directLink.style.display = 'none';
+                    document.body.appendChild(directLink);
+                    directLink.click();
+                    setTimeout(() => {
+                      document.body.removeChild(directLink);
+                    }, 100);
+                    
+                    // Fallback через blob для надежности (особенно важно для Android в Telegram)
+                    setTimeout(() => {
+                      downloadFile(url, fileName);
+                    }, 300);
+                  } 
+                  // Для Android (не в Telegram)
+                  else if (isAndroid) {
+                    // Для Android используем blob download (работает в большинстве случаев)
+                    downloadFile(url, fileName);
+                  } 
+                  // Для ПК и других платформ
+                  else {
+                    downloadFile(url, fileName);
+                  }
+                } catch (error) {
+                  console.error('Ошибка при скачивании выписки:', error);
+                  
+                  // Fallback: пробуем открыть прямой URL к API
+                  try {
+                    const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                    const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
+                    const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
+                    
                     const link = document.createElement('a');
                     link.href = directUrl;
-                    link.download = fileName;
+                    link.download = `Выписка_${currentBank}_${new Date().toISOString().split('T')[0]}.txt`;
                     link.target = '_blank';
                     link.style.display = 'none';
                     document.body.appendChild(link);
@@ -1027,38 +1089,10 @@ const CardAnalyticsPage = () => {
                     setTimeout(() => {
                       document.body.removeChild(link);
                     }, 100);
-                    
-                    // Также пробуем через Blob как fallback
-                    setTimeout(() => {
-                      downloadFile(url, fileName);
-                    }, 200);
-                  } else {
-                    // Для обычных браузеров
-                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-                    
-                    if (isMobile && isIOS && navigator.share) {
-                      // Для iOS используем Web Share API
-                      const file = new File([blob], fileName, { type: 'text/plain' });
-                      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        navigator.share({
-                          files: [file],
-                          title: fileName,
-                          text: 'Выписка по карте'
-                        }).catch(() => {
-                          downloadFile(url, fileName);
-                        });
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                      } else {
-                        downloadFile(url, fileName);
-                      }
-                    } else {
-                      downloadFile(url, fileName);
-                    }
+                  } catch (fallbackError) {
+                    console.error('Ошибка при fallback скачивании:', fallbackError);
+                    alert('Не удалось скачать выписку. Попробуйте позже.');
                   }
-                } catch (error) {
-                  console.error('Ошибка при скачивании выписки:', error);
-                  alert('Не удалось скачать выписку. Попробуйте позже.');
                 }
               }}
               className="flex items-center space-x-2 px-4 py-2 text-white rounded-[27px] hover:opacity-90 transition-opacity font-ibm text-sm font-medium"

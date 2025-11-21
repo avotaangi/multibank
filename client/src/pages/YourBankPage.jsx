@@ -95,6 +95,122 @@ const YourBankPage = () => {
     }, 100);
   };
 
+  // Функция для скачивания PDF файла (кроссплатформенная)
+  const handleDownloadPDF = async (e, filename) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      const pdfPath = `/documents/${filename}`;
+      
+      // Загружаем файл через fetch
+      const response = await fetch(pdfPath);
+      if (!response.ok) {
+        throw new Error('Не удалось загрузить файл');
+      }
+      
+      // Создаем blob из ответа
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Функция для скачивания через создание ссылки
+      const downloadFile = (fileUrl, fileFileName) => {
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = fileFileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        setTimeout(() => {
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(fileUrl);
+          }, 100);
+        }, 0);
+      };
+      
+      // Проверяем платформу
+      const isTelegramWebApp = window.Telegram?.WebApp;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      
+      // Определяем стратегию скачивания в зависимости от платформы
+      
+      // Для iOS (включая Telegram на iOS) - приоритет Web Share API
+      if (isIOS && navigator.share) {
+        try {
+          const file = new File([blob], filename, { type: 'application/pdf' });
+          
+          // Проверяем поддержку sharing файлов (iOS 13+)
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: filename,
+              text: 'Скачать документ'
+            });
+            // Освобождаем память после успешного sharing
+            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+            return;
+          }
+        } catch (shareError) {
+          // Если sharing не удался, продолжаем с обычным скачиванием
+          console.log('Web Share API не доступен, используем обычное скачивание:', shareError);
+        }
+      }
+      
+      // Для Telegram Web App (все платформы)
+      if (isTelegramWebApp) {
+        // Пробуем прямой URL - Telegram может обработать скачивание
+        const directLink = document.createElement('a');
+        directLink.href = pdfPath;
+        directLink.download = filename;
+        directLink.target = '_blank';
+        directLink.style.display = 'none';
+        document.body.appendChild(directLink);
+        directLink.click();
+        setTimeout(() => {
+          document.body.removeChild(directLink);
+        }, 100);
+        
+        // Fallback через blob для надежности (особенно важно для Android в Telegram)
+        setTimeout(() => {
+          downloadFile(blobUrl, filename);
+        }, 300);
+      } 
+      // Для Android (не в Telegram)
+      else if (isAndroid) {
+        // Для Android используем blob download (работает в большинстве случаев)
+        downloadFile(blobUrl, filename);
+      } 
+      // Для ПК и других платформ
+      else {
+        downloadFile(blobUrl, filename);
+      }
+    } catch (error) {
+      console.error('Ошибка при скачивании файла:', error);
+      
+      // Fallback: пробуем открыть прямой URL
+      try {
+        const pdfPath = `/documents/${filename}`;
+        const link = document.createElement('a');
+        link.href = pdfPath;
+        link.download = filename;
+        link.target = '_blank';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+        }, 100);
+      } catch (fallbackError) {
+        console.error('Ошибка при fallback скачивании:', fallbackError);
+        alert('Не удалось скачать файл. Попробуйте еще раз.');
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
@@ -201,7 +317,7 @@ const YourBankPage = () => {
                   </div>
                   <div className="flex-1">
                     <div className="text-black font-ibm text-base font-normal leading-[110%]">
-                      AI-планирование бюджета
+                      Планирование бюджета, используя накопительный счет (планируйте с выгодой)
                     </div>
                   </div>
                   <Star className="w-5 h-5 text-yellow-500 flex-shrink-0" />
@@ -290,14 +406,12 @@ const YourBankPage = () => {
                 />
                 <div className="flex-1">
                   <div className="text-gray-900 font-ibm font-medium text-sm">
-                    <a 
-                      href="/documents/personal-data-agreement.pdf" 
-                      download
-                      className="text-blue-600 underline hover:text-blue-700"
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      onClick={(e) => handleDownloadPDF(e, 'personal-data-agreement.pdf')}
+                      className="text-blue-600 underline hover:text-blue-700 text-left"
                     >
-                      Согласие на обработку персональных данных
-                    </a>
+                      Скачать выписку: Согласие на обработку персональных данных
+                    </button>
                   </div>
                   <div className="text-gray-500 font-ibm text-xs mt-1">
                     Разрешаю обработку моих персональных данных
@@ -315,14 +429,12 @@ const YourBankPage = () => {
                 />
                 <div className="flex-1">
                   <div className="text-gray-900 font-ibm font-medium text-sm">
-                    <a 
-                      href="/documents/credit-history-agreement.pdf" 
-                      download
-                      className="text-blue-600 underline hover:text-blue-700"
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      onClick={(e) => handleDownloadPDF(e, 'credit-history-agreement.pdf')}
+                      className="text-blue-600 underline hover:text-blue-700 text-left"
                     >
-                      Согласие на получение кредитной истории и доступ к счетам
-                    </a>
+                      Скачать выписку: Согласие на получение кредитной истории и доступ к счетам
+                    </button>
                   </div>
                   <div className="text-gray-500 font-ibm text-xs mt-1 space-y-1">
                     <div>• Согласие на получение кредитной истории и сведений из ГИС (включая ПДН)</div>
@@ -344,14 +456,12 @@ const YourBankPage = () => {
                 />
                 <div className="flex-1">
                   <div className="text-gray-900 font-ibm font-medium text-sm">
-                    <a 
-                      href="/documents/biometry-agreement.pdf" 
-                      download
-                      className="text-blue-600 underline hover:text-blue-700"
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      onClick={(e) => handleDownloadPDF(e, 'biometry-agreement.pdf')}
+                      className="text-blue-600 underline hover:text-blue-700 text-left"
                     >
-                      Согласие на использование биометрии для подтверждения операций
-                    </a>
+                      Скачать выписку: Согласие на использование биометрии для подтверждения операций
+                    </button>
                   </div>
                   <div className="text-gray-500 font-ibm text-xs mt-1">
                     Разрешаю использование биометрических данных для подтверждения операций
