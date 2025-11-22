@@ -316,6 +316,20 @@ async def create_payment(
         headers = {}
         if x_payment_consent_id:
             headers["X-Payment-Consent-Id"] = x_payment_consent_id
+            # Проверяем согласие через GET /payment-consents/{consent_id}
+            try:
+                access_token = await bank_helper.get_access_token(bank_name=bank)
+                consent_check = await banking_client.request(
+                    session,
+                    bank,
+                    "GET",
+                    f"/payment-consents/{x_payment_consent_id}",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    user_id=user_id
+                )
+                print(f"🔍 Проверка согласия на платеж для {bank}: {consent_check}")
+            except Exception as check_error:
+                print(f"⚠️ Ошибка при проверке согласия, продолжаю: {check_error}")
         if x_requesting_bank:
             headers["X-Requesting-Bank"] = x_requesting_bank
         else:
@@ -388,6 +402,22 @@ async def create_payment(
                     
                     if payment_consent_id:
                         print(f"✅ Payment consent создан для {bank}: {payment_consent_id}")
+                        
+                        # Проверяем согласие через GET /payment-consents/{consent_id}
+                        try:
+                            access_token = await bank_helper.get_access_token(bank_name=bank)
+                            consent_check = await banking_client.request(
+                                session,
+                                bank,
+                                "GET",
+                                f"/payment-consents/{payment_consent_id}",
+                                headers={"Authorization": f"Bearer {access_token}"},
+                                user_id=user_id
+                            )
+                            print(f"🔍 Проверка согласия на платеж для {bank}: {consent_check}")
+                        except Exception as check_error:
+                            print(f"⚠️ Ошибка при проверке согласия, продолжаю: {check_error}")
+                        
                         # Добавляем consent_id в заголовки и повторяем запрос
                         headers["X-Payment-Consent-Id"] = payment_consent_id
                         

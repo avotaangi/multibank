@@ -1088,6 +1088,42 @@ class BankHelper:
                 return None
 
     # Получить согласие на перевод
+    async def check_payment_consent(self, bank_name, access_token, consent_id):
+        """Проверяет согласие на платеж через GET /payment-consents/{consent_id}"""
+        print(f"🔍 Проверяю согласие на платеж {consent_id} для банка {bank_name}")
+        
+        async with self._session.get(
+            url=f"https://{bank_name}.{self.base_url}/payment-consents/{consent_id}",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            },
+            timeout=15
+        ) as resp:
+            if resp.status != 200:
+                text = await resp.text()
+                print(f"❌ Ошибка при проверке payment consent для {bank_name}:")
+                print(f"   Status: {resp.status}")
+                print(f"   Response: {text}")
+                raise Exception(f"Ошибка при проверке consent: {resp.status} {text}")
+            
+            result = await resp.json()
+            print(f"📋 Информация о согласии на платеж для {bank_name}:")
+            print(f"   Consent ID: {consent_id}")
+            print(f"   Status: {result.get('status') or result.get('data', {}).get('status')}")
+            print(f"   Full response: {result}")
+            
+            # Проверяем статус согласия
+            status = result.get("status") or result.get("data", {}).get("status")
+            # Валидные статусы: active, approved, Authorised
+            valid_statuses = ["active", "approved", "Authorised", "Authorized"]
+            if status not in valid_statuses:
+                print(f"⚠️ Согласие не одобрено. Статус: {status}")
+                raise Exception(f"Согласие не одобрено. Статус: {status}")
+            
+            print(f"✅ Согласие на платеж проверено и активно")
+            return result
+
     async def get_transfer_consent(self, client_id_id, from_bank, amount,
                                    from_access_token, debtor_bank_account_number,
                                     creditor_bank_account_number):
@@ -1136,6 +1172,11 @@ class BankHelper:
             
             if status == "approved" and consent_id:
                 print(f"✅ Согласие на перевод одобрено для {from_bank}: {consent_id}")
+                # Проверяем согласие через GET /payment-consents/{consent_id}
+                try:
+                    await self.check_payment_consent(from_bank, from_access_token, consent_id)
+                except Exception as e:
+                    print(f"⚠️ Ошибка при проверке согласия, продолжаю: {e}")
                 return consent_id
             elif status == "pending" and request_id:
                 print(f"⚠️ Согласие для {from_bank} требует одобрения (request_id: {request_id})")
@@ -1193,7 +1234,13 @@ class BankHelper:
                 client_id_id, from_bank, amount, from_access_token,
                 debtor_bank_account_number, creditor_bank_account_number
             )
-            if not transfer_consent:
+            if transfer_consent:
+                # Проверяем согласие через GET /payment-consents/{consent_id}
+                try:
+                    await self.check_payment_consent(from_bank, from_access_token, transfer_consent)
+                except Exception as e:
+                    print(f"⚠️ Ошибка при проверке согласия, продолжаю: {e}")
+            else:
                 print("⚠️ Не удалось получить согласие на перевод, попробуем без него")
         except Exception as e:
             print(f"⚠️ Ошибка при получении согласия на перевод, попробуем без него: {e}")
@@ -1306,6 +1353,11 @@ class BankHelper:
                         
                         if consent_status == "approved" and consent_id:
                             print(f"✅ Согласие одобрено автоматически: {consent_id}")
+                            # Проверяем согласие через GET /payment-consents/{consent_id}
+                            try:
+                                await self.check_payment_consent(from_bank, from_access_token, consent_id)
+                            except Exception as e:
+                                print(f"⚠️ Ошибка при проверке согласия, продолжаю: {e}")
                             # Повторяем запрос с согласием
                             payment_headers["X-Payment-Consent-Id"] = consent_id
                             
