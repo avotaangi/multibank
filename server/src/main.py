@@ -667,6 +667,8 @@ async def get_card_statement(
 ):
     """Получить выписку по карте в виде текстового файла"""
     try:
+        print(f"🔍 [get_card_statement] Запрос выписки для карты {card_id}, банк: {bank}, client_id: {client_id}")
+        
         if not session or not banking_client or not bank_helper:
             raise HTTPException(status_code=503, detail="Service not initialized")
         
@@ -675,8 +677,21 @@ async def get_card_statement(
         
         # Получаем consent для банка
         client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
-        access_token = await bank_helper.get_access_token(bank_name=bank)
-        consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
+        print(f"🔍 [get_card_statement] client_id_id: {client_id_id}")
+        
+        try:
+            access_token = await bank_helper.get_access_token(bank_name=bank)
+            print(f"✅ [get_card_statement] Получен access_token для {bank}")
+        except Exception as e:
+            print(f"❌ [get_card_statement] Ошибка при получении access_token: {e}")
+            raise
+        
+        try:
+            consent = await bank_helper.get_account_consent(bank_name=bank, access_token=access_token, client_id_id=client_id_id)
+            print(f"✅ [get_card_statement] Получен consent: {consent}")
+        except Exception as e:
+            print(f"❌ [get_card_statement] Ошибка при получении consent: {e}")
+            raise
         
         headers = {
             "X-Requesting-Bank": banking_client.team_id
@@ -694,20 +709,47 @@ async def get_card_statement(
             client_id_id = client_id.split('-')[-1] if '-' in client_id else client_id
             user_id = int(client_id_id) if client_id_id.isdigit() else None
         
-        card_response = await banking_client.request(
-            session,
-            bank,
-            "GET",
-            f"/cards/{card_id}",
-            params=params,
-            headers=headers,
-            user_id=user_id
-        )
+        print(f"🔍 [get_card_statement] Запрос карты {card_id} с params: {params}, headers: {headers}, user_id: {user_id}")
+        
+        try:
+            card_response = await banking_client.request(
+                session,
+                bank,
+                "GET",
+                f"/cards/{card_id}",
+                params=params,
+                headers=headers,
+                user_id=user_id
+            )
+            print(f"✅ [get_card_statement] Получен ответ от банка: {type(card_response)}")
+        except Exception as e:
+            print(f"❌ [get_card_statement] Ошибка при запросе карты: {e}")
+            raise
         
         # Извлекаем данные карты
-        card_data = card_response.get("data", {}) if isinstance(card_response, dict) else {}
-        if not card_data and isinstance(card_response, dict):
-            card_data = card_response
+        card_data = {}
+        if isinstance(card_response, dict):
+            # Проверяем разные возможные структуры ответа
+            if "data" in card_response:
+                card_data = card_response.get("data", {})
+                # Если data - это список, берем первый элемент
+                if isinstance(card_data, list) and len(card_data) > 0:
+                    card_data = card_data[0]
+                # Если data - это словарь с ключом "card" или "cards"
+                elif isinstance(card_data, dict):
+                    if "card" in card_data:
+                        card_data = card_data["card"]
+                        if isinstance(card_data, list) and len(card_data) > 0:
+                            card_data = card_data[0]
+                    elif "cards" in card_data:
+                        cards_list = card_data["cards"]
+                        if isinstance(cards_list, list) and len(cards_list) > 0:
+                            card_data = cards_list[0]
+            else:
+                # Если нет ключа "data", используем весь ответ
+                card_data = card_response
+        
+        print(f"✅ [get_card_statement] Извлечены данные карты: {list(card_data.keys()) if isinstance(card_data, dict) else 'не словарь'}")
         
         # Формируем текст выписки
         statement_lines = []
@@ -763,19 +805,30 @@ async def get_card_statement(
         date_str = datetime.now().strftime('%Y-%m-%d')
         filename = f"Выписка_{bank}_{date_str}.txt"
         
+        # Кодируем имя файла для заголовка Content-Disposition (RFC 2231)
+        from urllib.parse import quote
+        filename_encoded = quote(filename, safe='')
+        content_disposition = f"attachment; filename*=UTF-8''{filename_encoded}"
+        
+        print(f"✅ [get_card_statement] Выписка сформирована, размер: {len(statement_text)} символов")
+        
         # Возвращаем файл
         return Response(
             content=statement_text.encode('utf-8'),
             media_type="text/plain; charset=utf-8",
             headers={
-                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Disposition": content_disposition,
                 "Content-Type": "text/plain; charset=utf-8"
             }
         )
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"❌ [get_card_statement] Критическая ошибка: {e}")
+        print(f"❌ [get_card_statement] Traceback:\n{error_traceback}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при формировании выписки: {str(e)}")
 
 @app.get("/api/{client_id_id}/bank_names")
 async def get_bank_names(client_id_id) -> list:

@@ -162,22 +162,8 @@ const YourBankPage = () => {
       
       // Для Telegram Web App (все платформы)
       if (isTelegramWebApp) {
-        // Пробуем прямой URL - Telegram может обработать скачивание
-        const directLink = document.createElement('a');
-        directLink.href = pdfPath;
-        directLink.download = filename;
-        directLink.target = '_blank';
-        directLink.style.display = 'none';
-        document.body.appendChild(directLink);
-        directLink.click();
-        setTimeout(() => {
-          document.body.removeChild(directLink);
-        }, 100);
-        
-        // Fallback через blob для надежности (особенно важно для Android в Telegram)
-        setTimeout(() => {
-          downloadFile(blobUrl, filename);
-        }, 300);
+        // Используем только blob URL для скачивания (без открытия)
+        downloadFile(blobUrl, filename);
       } 
       // Для Android (не в Telegram)
       else if (isAndroid) {
@@ -191,19 +177,9 @@ const YourBankPage = () => {
     } catch (error) {
       console.error('Ошибка при скачивании файла:', error);
       
-      // Fallback: пробуем открыть прямой URL
+      // Fallback: используем blob URL для скачивания (без открытия)
       try {
-        const pdfPath = `/documents/${filename}`;
-        const link = document.createElement('a');
-        link.href = pdfPath;
-        link.download = filename;
-        link.target = '_blank';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          document.body.removeChild(link);
-        }, 100);
+        downloadFile(blobUrl, filename);
       } catch (fallbackError) {
         console.error('Ошибка при fallback скачивании:', fallbackError);
         alert('Не удалось скачать файл. Попробуйте еще раз.');

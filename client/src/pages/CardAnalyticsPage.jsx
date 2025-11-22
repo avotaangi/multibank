@@ -970,8 +970,8 @@ const CardAnalyticsPage = () => {
                     CLIENT_ID_ID
                   );
                   
-                  // Создаем Blob из ответа
-                  const blob = new Blob([response.data], { type: 'text/plain;charset=utf-8' });
+                  // Создаем Blob из ответа с типом, который не будет открываться автоматически
+                  const blob = new Blob([response.data], { type: 'application/octet-stream' });
                   const url = URL.createObjectURL(blob);
                   
                   // Получаем имя файла из заголовков или генерируем
@@ -990,20 +990,43 @@ const CardAnalyticsPage = () => {
                     }
                   }
                   
-                  // Функция для скачивания файла
+                  // Функция для скачивания файла (без открытия)
                   const downloadFile = (fileUrl, fileFileName) => {
+                    // Создаем временную ссылку для скачивания
                     const link = document.createElement('a');
                     link.href = fileUrl;
                     link.download = fileFileName;
                     link.style.display = 'none';
+                    // Критически важно: не используем target, чтобы файл не открылся
+                    // Убираем любые атрибуты, которые могут вызвать открытие
+                    
+                    // Добавляем обработчик, который предотвратит переход по ссылке
+                    const handleClick = (e) => {
+                      // Если браузер все равно пытается открыть, предотвращаем это
+                      if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    };
+                    
+                    link.addEventListener('click', handleClick, true);
                     document.body.appendChild(link);
                     
+                    // Используем MouseEvent для более надежного скачивания
+                    const clickEvent = new MouseEvent('click', {
+                      view: window,
+                      bubbles: true,
+                      cancelable: true,
+                      buttons: 1
+                    });
+                    
                     setTimeout(() => {
-                      link.click();
+                      link.dispatchEvent(clickEvent);
                       setTimeout(() => {
+                        link.removeEventListener('click', handleClick, true);
                         document.body.removeChild(link);
                         URL.revokeObjectURL(fileUrl);
-                      }, 100);
+                      }, 200);
                     }, 0);
                   };
                   
@@ -1018,7 +1041,7 @@ const CardAnalyticsPage = () => {
                   // Для iOS (включая Telegram на iOS) - приоритет Web Share API
                   if (isIOS && navigator.share) {
                     try {
-                      const file = new File([blob], fileName, { type: 'text/plain;charset=utf-8' });
+                      const file = new File([blob], fileName, { type: 'application/octet-stream' });
                       
                       // Проверяем поддержку sharing файлов (iOS 13+)
                       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1039,27 +1062,8 @@ const CardAnalyticsPage = () => {
                   
                   // Для Telegram Web App (все платформы)
                   if (isTelegramWebApp) {
-                    // Создаем прямой URL к API endpoint
-                    const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                    const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
-                    const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
-                    
-                    // Пробуем прямой URL - Telegram может обработать скачивание
-                    const directLink = document.createElement('a');
-                    directLink.href = directUrl;
-                    directLink.download = fileName;
-                    directLink.target = '_blank';
-                    directLink.style.display = 'none';
-                    document.body.appendChild(directLink);
-                    directLink.click();
-                    setTimeout(() => {
-                      document.body.removeChild(directLink);
-                    }, 100);
-                    
-                    // Fallback через blob для надежности (особенно важно для Android в Telegram)
-                    setTimeout(() => {
-                      downloadFile(url, fileName);
-                    }, 300);
+                    // Используем только blob URL для скачивания (без открытия)
+                    downloadFile(url, fileName);
                   } 
                   // Для Android (не в Telegram)
                   else if (isAndroid) {
@@ -1072,27 +1076,7 @@ const CardAnalyticsPage = () => {
                   }
                 } catch (error) {
                   console.error('Ошибка при скачивании выписки:', error);
-                  
-                  // Fallback: пробуем открыть прямой URL к API
-                  try {
-                    const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                    const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
-                    const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
-                    
-                    const link = document.createElement('a');
-                    link.href = directUrl;
-                    link.download = `Выписка_${currentBank}_${new Date().toISOString().split('T')[0]}.txt`;
-                    link.target = '_blank';
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
-                    setTimeout(() => {
-                      document.body.removeChild(link);
-                    }, 100);
-                  } catch (fallbackError) {
-                    console.error('Ошибка при fallback скачивании:', fallbackError);
-                    alert('Не удалось скачать выписку. Попробуйте позже.');
-                  }
+                  alert('Не удалось скачать выписку. Попробуйте позже.');
                 }
               }}
               className="flex items-center space-x-2 px-4 py-2 text-white rounded-[27px] hover:opacity-90 transition-opacity font-ibm text-sm font-medium"
