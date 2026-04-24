@@ -18,7 +18,7 @@ const VBankPlusPage = () => {
             <Sparkles className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2 font-ibm">
-            VBank Plus
+            Мультибанк Plus
           </h1>
           <p className="text-gray-600 font-ibm text-lg">
             Премиум подписка для вашего финансового комфорта
@@ -39,7 +39,7 @@ const VBankPlusPage = () => {
               </div>
               <div>
                 <div className="text-white font-ibm text-xl font-bold">
-                  VBank Plus
+                  Мультибанк Plus
                 </div>
                 <div className="text-white text-opacity-90 font-ibm text-sm">
                   Премиум подписка
@@ -128,4 +128,3 @@ const VBankPlusPage = () => {
 };
 
 export default VBankPlusPage;
-

@@ -4,10 +4,12 @@ import { CreditCard, Calendar, DollarSign, FileText, ChevronRight, X, Info, Repe
 import useBalanceStore from '../stores/balanceStore';
 import useTestCardsStore from '../stores/testCardsStore';
 import InfoPanel from '../components/InfoPanel';
+import AIAssistantPanel from '../components/AIAssistantPanel';
 import { usePageInfo } from '../hooks/usePageInfo';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import axios from 'axios';
 import useAuthStore from '../stores/authStore';
+import { autopayAi } from '../data/aiAssistantContent';
 
 const AutopayDetailsPage = () => {
   const navigate = useNavigate();
@@ -64,9 +66,9 @@ const AutopayDetailsPage = () => {
       setLoadingCards(true);
       try {
         const baseCards = [
-          { id: 'vbank', name: 'VBank', bankName: 'VBank', cardNumber: '5294', color: '#0055BC' },
-          { id: 'abank', name: 'ABank', bankName: 'ABank', cardNumber: '5678', color: '#DC2626' },
-          { id: 'sbank', name: 'SBank', bankName: 'SBank', cardNumber: '9012', color: '#10B981' }
+          { id: 'vbank', name: 'ВТБ', bankName: 'ВТБ', cardNumber: '5294', color: '#0055BC' },
+          { id: 'abank', name: 'Альфа-Банк', bankName: 'Альфа-Банк', cardNumber: '5678', color: '#DC2626' },
+          { id: 'sbank', name: 'Сбербанк', bankName: 'Сбербанк', cardNumber: '9012', color: '#10B981' }
         ];
 
         // Фильтруем только подключенные банки
@@ -120,10 +122,13 @@ const AutopayDetailsPage = () => {
   const getBankColor = (bankName) => {
     switch (bankName) {
       case 'ABank':
+      case 'Альфа-Банк':
         return 'bg-red-600';
       case 'VBank':
+      case 'ВТБ':
         return 'bg-blue-600';
       case 'SBank':
+      case 'Сбербанк':
         return 'bg-green-500';
       default:
         return 'bg-gray-500';
@@ -166,7 +171,7 @@ const AutopayDetailsPage = () => {
     const savedAutopays = JSON.parse(localStorage.getItem('autopays') || '[]');
     // Получаем название карты из выбранной карты
     const selectedCardData = userCards.find(card => card.id === selectedCardId);
-    const cardName = selectedCardData?.bankName || selectedCardData?.name || (selectedCardId === 'vbank' ? 'VBank' : selectedCardId === 'abank' ? 'ABank' : selectedCardId === 'sbank' ? 'SBank' : selectedCardId);
+    const cardName = selectedCardData?.bankName || selectedCardData?.name || (selectedCardId === 'vbank' ? 'ВТБ' : selectedCardId === 'abank' ? 'Альфа-Банк' : selectedCardId === 'sbank' ? 'Сбербанк' : selectedCardId);
     const updatedAutopays = savedAutopays.map(ap => 
       ap.id === autopay.id 
         ? {
@@ -223,7 +228,7 @@ const AutopayDetailsPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left ml-2">
+          <div className="flex-1 min-w-0 ml-2 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             Детали автоплатежа
           </div>
           <div className="flex items-center space-x-2">
@@ -249,6 +254,24 @@ const AutopayDetailsPage = () => {
               <Info className="w-6 h-6" />
             </button>
           </div>
+        </div>
+        <div className="mt-3 ml-12 mr-0">
+          <AIAssistantPanel
+            title="AI по автоплатежу"
+            items={autopayAi}
+            renderTrigger={({ togglePanel, icon }) => (
+              <button
+                type="button"
+                onClick={togglePanel}
+                className="w-full flex items-center text-left rounded-[24px] border border-gray-200 bg-gray-100 px-4 py-3 text-black font-ibm text-lg font-medium leading-[110%]"
+              >
+                <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                  {icon}
+                </span>
+                AI-помощник
+              </button>
+            )}
+          />
         </div>
       </div>
 
@@ -462,7 +485,7 @@ const AutopayDetailsPage = () => {
                   ></div>
                   <div className="flex-1">
                     <div className="text-black font-ibm text-sm font-medium">
-                      {selectedCard?.bankName || 'VBank'} ••••{selectedCard?.cardNumber || '5294'}
+                      {selectedCard?.bankName || 'ВТБ'} ••••{selectedCard?.cardNumber || '5294'}
                     </div>
                     <div className="text-gray-500 font-ibm text-xs">
                       {selectedCard?.balance?.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'} ₽

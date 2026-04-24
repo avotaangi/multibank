@@ -1,11 +1,11 @@
 // Общие данные о вкладах для использования на разных страницах
-// Вклад VBank синхронизируется с виртуальной картой из планирования бюджета
+// Вклад ВТБ синхронизируется с виртуальной картой из планирования бюджета
 
 export const getDepositsData = (virtualCardBalance = 0) => [
   {
     id: 1,
-    name: 'Вклад VBank',
-    bank: 'VBank',
+    name: 'Вклад ВТБ',
+    bank: 'ВТБ',
     amount: virtualCardBalance, // Используем баланс виртуальной карты из планирования
     rate: 9,
     color: '#0055BC', // blue-600
@@ -14,8 +14,8 @@ export const getDepositsData = (virtualCardBalance = 0) => [
   },
   {
     id: 2,
-    name: 'Вклад SBank',
-    bank: 'SBank',
+    name: 'Вклад Сбербанк',
+    bank: 'Сбербанк',
     amount: 200000,
     rate: 9,
     color: '#1F2937', // gray-800
@@ -24,8 +24,8 @@ export const getDepositsData = (virtualCardBalance = 0) => [
   },
   {
     id: 3,
-    name: 'Вклад ABank',
-    bank: 'ABank',
+    name: 'Вклад Альфа-Банк',
+    bank: 'Альфа-Банк',
     amount: 300000,
     rate: 13,
     color: '#EF4444', // red-500
@@ -50,4 +50,3 @@ export const getAverageRate = (virtualCardBalance = 0) => {
   }, 0);
   return Math.round(weightedRate * 10) / 10; // Округляем до 1 знака после запятой
 };
-

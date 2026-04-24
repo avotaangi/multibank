@@ -4,19 +4,22 @@ import { useQuery } from 'react-query';
 import useBalanceStore from '../stores/balanceStore';
 import useAuthStore from '../stores/authStore';
 import { getTelegramWebApp } from '../utils/telegram';
-import InfoPanel from '../components/InfoPanel';
-import PremiumBlock from '../components/PremiumBlock';
-import { usePageInfo } from '../hooks/usePageInfo';
+import AIAssistantPanel from '../components/AIAssistantPanel';
 import { useScrollToTop } from '../hooks/useScrollToTop';
-import { Info } from 'lucide-react';
 import axios from 'axios';
 import { cardManagementAPI } from '../services/api';
+import { planningAi } from '../data/aiAssistantContent';
+
+const TOP_UP_FALLBACK_CARDS = {
+  vbank: { bankName: 'ВТБ', cardNumber: '2498' },
+  abank: { bankName: 'Альфа-Банк', cardNumber: '8362' },
+  sbank: { bankName: 'Сбербанк', cardNumber: '3923' },
+  tbank: { bankName: 'Т-Банк', cardNumber: '1104', balance: 64900 },
+};
 
 const BudgetPlanningPage = () => {
   const navigate = useNavigate();
   const { bankBalances, transferMoney, virtualCardBalance, setVirtualCardBalance, updateVirtualCardBalance } = useBalanceStore();
-  const pageInfo = usePageInfo();
-  const [showInfoPanel, setShowInfoPanel] = useState(false);
   
   // Прокрутка наверх при монтировании
   useScrollToTop();
@@ -52,10 +55,6 @@ const BudgetPlanningPage = () => {
     };
     fetchConnectedBanks();
   }, [API_BASE, CLIENT_ID_ID]);
-  const [showLifestyleTip, setShowLifestyleTip] = useState(false);
-  const [showDreamTip, setShowDreamTip] = useState(false);
-  const [showGoalsTip, setShowGoalsTip] = useState(false);
-  const [showJointGoalsTip, setShowJointGoalsTip] = useState(false);
   const [showAddJointGoalModal, setShowAddJointGoalModal] = useState(false);
   const [showEditJointGoalModal, setShowEditJointGoalModal] = useState(false);
   const [showDeleteJointGoalModal, setShowDeleteJointGoalModal] = useState(false);
@@ -191,8 +190,14 @@ const BudgetPlanningPage = () => {
         return 'bg-blue-600'; // Синий цвет для VBank (как на картах)
       case 'SBank':
         return 'bg-green-500'; // Зеленый цвет для SBank (как на картах)
+      case 'ВТБ':
+        return 'bg-blue-600';
+      case 'Альфа-Банк':
+        return 'bg-red-600';
       case 'Сбербанк':
         return 'bg-green-600'; // Зеленый для Сбербанка (как на картах)
+      case 'Т-Банк':
+        return 'bg-yellow-400';
       default:
         return 'bg-gray-500'; // Серый для неизвестных банков
     }
@@ -671,7 +676,7 @@ const BudgetPlanningPage = () => {
     }
     
     const amount = parseFloat(topUpVirtualAmount);
-    const availableBalance = bankBalances?.[selectedSourceCard] || 0;
+    const availableBalance = selectedCardInfo?.balance || bankBalances?.[selectedSourceCard] || 0;
     
     if (amount > availableBalance) {
       setTopUpVirtualError('Недостаточно средств на карте');
@@ -680,18 +685,22 @@ const BudgetPlanningPage = () => {
     
     try {
       setTopUpVirtualLoading(true);
-      
-      // Переводим средства через API
-      await axios.post(`${API_BASE}/payments/make_transfer/`, {
-        user_id_id: CLIENT_ID_ID,
-        to_user_id_id: CLIENT_ID_ID,
-        from_bank: selectedSourceCard,
-        to_bank: 'vbank_savings', // Виртуальная карта накопительного счета
-        amount: amount,
-      });
-      
-      // Обновляем балансы локально
-      transferMoney(selectedSourceCard, 'vbank_savings', amount);
+
+      if (selectedSourceCard === 'tbank') {
+        setSelectedCardInfo((prev) => prev ? { ...prev, balance: Math.max(0, (prev.balance || 0) - amount) } : prev);
+      } else {
+        // Переводим средства через API
+        await axios.post(`${API_BASE}/payments/make_transfer/`, {
+          user_id_id: CLIENT_ID_ID,
+          to_user_id_id: CLIENT_ID_ID,
+          from_bank: selectedSourceCard,
+          to_bank: 'vbank_savings', // Виртуальная карта накопительного счета
+          amount: amount,
+        });
+
+        // Обновляем балансы локально
+        transferMoney(selectedSourceCard, 'vbank_savings', amount);
+      }
       
       // Обновляем баланс виртуальной карты
       updateVirtualCardBalance(amount, 'add');
@@ -719,31 +728,24 @@ const BudgetPlanningPage = () => {
       for (const bankId of banksToLoad) {
         try {
           const response = await cardManagementAPI.getCards(bankId, CLIENT_ID_ID);
-          const cards = response?.data?.data?.cards || response?.data?.cards || [];
+          const cards = response?.data?.data?.cards || response?.data?.cards || response?.cards || response?.data || [];
           
           // Получаем баланс для каждой карты
           const cardsWithBalance = await Promise.all(
             cards.map(async (card) => {
               const cardId = card.cardId || card.id;
               const balance = bankBalances?.[bankId] || 0;
-              
-              // Маппинг названий банков
-              const bankNames = {
-                'vbank': 'VBank',
-                'abank': 'ABank',
-                'sbank': 'SBank'
-              };
-              
-              const bankName = bankNames[bankId] || bankId.toUpperCase();
+              const bankMeta = TOP_UP_FALLBACK_CARDS[bankId] || { bankName: bankId.toUpperCase(), cardNumber: '3923' };
+              const bankName = bankMeta.bankName;
               
               // Получаем последние 4 цифры карты
               const cardNumber = card.maskedPan?.slice(-4) || 
                                card.pan?.slice(-4) || 
                                card.cardNumber?.slice(-4) || 
-                               '3923';
+                               bankMeta.cardNumber;
               
               return {
-                id: cardId,
+                id: bankId,
                 cardId: cardId,
                 bankId: bankId,
                 bankName: bankName,
@@ -774,40 +776,48 @@ const BudgetPlanningPage = () => {
   
   // Получаем доступные карты для пополнения
   const availableCards = useMemo(() => {
-    const cardsFromAPI = cardsData || [];
-    
-    // Если есть карты из API, возвращаем их
-    if (cardsFromAPI.length > 0) {
-      return cardsFromAPI;
-    }
-    
-    // Если карт из API нет, создаем карты из bankBalances для всех трех банков
-    const fallbackCards = [];
-    const banks = ['vbank', 'abank', 'sbank'];
-    const bankNames = {
-      'vbank': 'VBank',
-      'abank': 'ABank',
-      'sbank': 'SBank'
-    };
-    
-    banks.forEach((bankId) => {
-      const balance = bankBalances?.[bankId] || 0;
-      // Показываем карту, если есть баланс или если банк подключен
+    const cardsFromAPI = Array.isArray(cardsData) ? cardsData : [];
+    const uniqueCards = [];
+    const cardsByBank = new Map();
+
+    cardsFromAPI.forEach((card) => {
+      const bankId = card.bankId || card.id;
+      if (!cardsByBank.has(bankId)) {
+        cardsByBank.set(bankId, {
+          ...card,
+          id: bankId,
+          bankName: TOP_UP_FALLBACK_CARDS[bankId]?.bankName || card.bankName || card.name,
+        });
+      }
+    });
+
+    ['vbank', 'abank', 'sbank', 'tbank'].forEach((bankId) => {
+      if (cardsByBank.has(bankId)) {
+        uniqueCards.push(cardsByBank.get(bankId));
+        return;
+      }
+
+      if (cardsByBank.has(bankId)) {
+        return;
+      }
+
+      const balance = bankBalances?.[bankId] || TOP_UP_FALLBACK_CARDS[bankId]?.balance || 0;
       if (balance > 0 || connectedBanks.includes(bankId)) {
-        fallbackCards.push({
+        const bankMeta = TOP_UP_FALLBACK_CARDS[bankId] || { bankName: bankId.toUpperCase(), cardNumber: '3923' };
+        uniqueCards.push({
           id: bankId,
           bankId: bankId,
-          bankName: bankNames[bankId] || bankId.toUpperCase(),
-          name: bankNames[bankId] || bankId.toUpperCase(),
+          bankName: bankMeta.bankName,
+          name: `${bankMeta.bankName} ••••${bankMeta.cardNumber}`,
           balance: balance,
-          cardNumber: '3923', // Дефолтный номер карты
-          maskedPan: `••••3923`,
+          cardNumber: bankMeta.cardNumber,
+          maskedPan: `••••${bankMeta.cardNumber}`,
           isBankFallback: true
         });
       }
     });
-    
-    return fallbackCards;
+
+    return uniqueCards;
   }, [cardsData, bankBalances, connectedBanks]);
 
   // Функции для редактирования планов
@@ -1009,20 +1019,31 @@ const BudgetPlanningPage = () => {
     <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
+        <div className="flex items-center">
+          <div className="min-w-0 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             Накопительный счет
           </div>
-          <button
-            onClick={() => setShowInfoPanel(true)}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <Info className="w-6 h-6" />
-          </button>
+        </div>
+        <div className="mt-3">
+          <AIAssistantPanel
+            title="AI по целям"
+            items={planningAi}
+            renderTrigger={({ togglePanel, icon }) => (
+              <button
+                type="button"
+                onClick={togglePanel}
+                className="w-full flex items-center text-left rounded-[24px] border border-gray-200 bg-gray-100 px-4 py-3 text-black font-ibm text-lg font-medium leading-[110%]"
+              >
+                <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                  {icon}
+                </span>
+                AI-помощник
+              </button>
+            )}
+          />
         </div>
       </div>
 
-      <PremiumBlock featureName="Планирование бюджета, используя накопительный счет (планируйте с выгодой)">
       {/* Main Content */}
       <div className="px-0">
         {/* Savings Account Card */}
@@ -1031,14 +1052,7 @@ const BudgetPlanningPage = () => {
             <div className="p-4" style={{ backgroundColor: '#0055BC' }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-white font-ibm text-lg font-medium leading-[110%]">Накопительный счет</div>
-                  </div>
+                  <div className="text-white font-ibm text-lg font-medium leading-[110%]">Накопительный счет</div>
                 </div>
                 <div className="text-right">
                   <div className="text-white font-ibm text-2xl font-semibold leading-[110%]">
@@ -1123,11 +1137,6 @@ const BudgetPlanningPage = () => {
         <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#3C82F6' }}>
           <div className="p-4" style={{ backgroundColor: '#3C82F6' }}>
             <div className="flex items-center mb-3">
-              <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 11h14M7 15h10" />
-                </svg>
-              </div>
               <div className="text-white font-ibm text-lg font-medium leading-[110%]">Мои категории планирования</div>
             </div>
             <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
@@ -1154,28 +1163,12 @@ const BudgetPlanningPage = () => {
         {/* Lifestyle Section */}
         <div className="bg-gray-100 rounded-[27px] mb-4">
           <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <h3 className="text-black font-ibm text-lg font-medium leading-[110%]">Образ жизни</h3>
-              <button 
-                onClick={() => setShowLifestyleTip(!showLifestyleTip)}
-                className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-colors"
-              >
-                <span className="text-black font-ibm text-sm font-medium">i</span>
-              </button>
             </div>
             <div className="text-gray-600 font-ibm text-base font-light leading-[110%] mb-2">
               {lifestylePlans.reduce((sum, plan) => sum + plan.currentAmount, 0).toLocaleString('ru-RU')} ₽ / {lifestylePlans.reduce((sum, plan) => sum + plan.targetAmount, 0).toLocaleString('ru-RU')} ₽
             </div>
-            {showLifestyleTip && (
-              <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                <div className="text-gray-700 font-ibm text-sm leading-[110%]">
-                  В среднем вы тратите 3 000₽ в месяц на кофе. Если сократить потребление до 1 чашки в день вместо 2, вы будете здоровее и сэкономите 1 500₽ в месяц. Это поддержит ваш образ жизни и поможет быстрее достичь целей
-                </div>
-                <div className="text-gray-500 font-ibm text-xs mt-1">
-                  ИИ-совет от МультиБанка
-                </div>
-              </div>
-            )}
           </div>
           <div className="bg-white border-t border-gray-200 rounded-b-[27px] p-4">
             {lifestylePlans.map((plan) => {
@@ -1183,16 +1176,7 @@ const BudgetPlanningPage = () => {
               return (
                 <div key={plan.id} className={`mb-4 last:mb-0 ${isCompleted ? 'opacity-75' : ''}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-full ${isCompleted ? 'bg-green-200' : 'bg-pink-200'}`}>
-                        {isCompleted && (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                            </svg>
-                          </div>
-                        )}
-                      </div>
+                    <div className="flex items-center">
                       <span className={`font-ibm text-lg font-medium leading-[110%] ${isCompleted ? 'text-green-700 line-through' : 'text-black'}`}>
                         {plan.name}
                       </span>
@@ -1238,28 +1222,12 @@ const BudgetPlanningPage = () => {
         {/* Dream Section */}
         <div className="bg-gray-100 rounded-[27px] mb-4">
           <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <h3 className="text-black font-ibm text-lg font-medium leading-[110%]">Мечта</h3>
-          <button 
-                onClick={() => setShowDreamTip(!showDreamTip)}
-                className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-colors"
-              >
-                <span className="text-black font-ibm text-sm font-medium">i</span>
-              </button>
             </div>
             <div className="text-gray-600 font-ibm text-base font-light leading-[110%] mb-2">
               {dreamPlans.reduce((sum, plan) => sum + plan.currentAmount, 0).toLocaleString('ru-RU')} ₽ / {dreamPlans.reduce((sum, plan) => sum + plan.targetAmount, 0).toLocaleString('ru-RU')} ₽
             </div>
-            {showDreamTip && (
-              <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                <div className="text-gray-700 font-ibm text-sm leading-[110%]">
-                  В среднем вы тратите 4 500₽ в месяц на доставку еды. Если готовить дома 3 раза в неделю вместо заказа, вы будете здоровее и сэкономите 2 700₽ в месяц. Это ускорит накопление на путешествие на 3 месяца
-                </div>
-                <div className="text-gray-500 font-ibm text-xs mt-1">
-                  ИИ-совет от МультиБанка
-                </div>
-              </div>
-            )}
           </div>
           <div className="bg-white border-t border-gray-200 rounded-b-[27px] p-4">
             {/* Пример с учетом страховки для отпуска */}
@@ -1293,16 +1261,7 @@ const BudgetPlanningPage = () => {
               return (
                 <div key={plan.id} className={`mb-4 last:mb-0 ${isCompleted ? 'opacity-75' : ''}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-full ${isCompleted ? 'bg-green-200' : 'bg-green-500'}`}>
-                        {isCompleted && (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                            </svg>
-                          </div>
-                        )}
-                      </div>
+                    <div className="flex items-center">
                       <span className={`font-ibm text-lg font-medium leading-[110%] ${isCompleted ? 'text-green-700 line-through' : 'text-black'}`}>
                         {plan.name}
                       </span>
@@ -1335,7 +1294,7 @@ const BudgetPlanningPage = () => {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1">
                   <div 
-                    className={`h-1 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-green-500'}`}
+                    className="h-1 rounded-full bg-green-500"
                     style={{ width: `${Math.min((plan.currentAmount / plan.targetAmount) * 100, 100)}%` }}
                   ></div>
                 </div>
@@ -1440,7 +1399,7 @@ const BudgetPlanningPage = () => {
                           <div 
                             className={`h-1 rounded-full ${isCompleted ? 'bg-green-500' : ''}`}
                             style={{ 
-                              width: `${Math.min((plan.currentAmount / plan.targetAmount) * 100, 100)}%`,
+                              width: `${Math.min((plan.currentAmount / plan.targetAmount) * 100, 100) }%`,
                               backgroundColor: isCompleted ? undefined : category.color
                             }}
                           ></div>
@@ -1469,11 +1428,6 @@ const BudgetPlanningPage = () => {
         <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#EF4444' }}>
           <div className="p-4" style={{ backgroundColor: '#EF4444' }}>
             <div className="flex items-center mb-3">
-              <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.79-4 4m8 0a4 4 0 01-4 4m0-12v2m0 8v2m-4-6H6m12 0h-2" />
-                </svg>
-              </div>
               <div className="text-white font-ibm text-lg font-medium leading-[110%]">Мои цели</div>
             </div>
             <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
@@ -1551,11 +1505,6 @@ const BudgetPlanningPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="flex items-center mb-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
                 <div className="text-white font-ibm text-lg font-medium leading-[110%]">
                   Совместные цели
                 </div>
@@ -1926,7 +1875,7 @@ const BudgetPlanningPage = () => {
               {/* Bank Cards */}
               <div className="space-y-2">
                 <div 
-                  onClick={() => handleSelectCard({ id: 1, name: 'VBank', number: '**** 3923', balance: bankBalances.vbank, color: 'bg-blue-500' })}
+                  onClick={() => handleSelectCard({ id: 1, name: 'ВТБ', number: '**** 3923', balance: bankBalances.vbank, color: 'bg-blue-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 1 
                       ? 'bg-blue-100 border-2 border-blue-500' 
@@ -1937,7 +1886,7 @@ const BudgetPlanningPage = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
                       <div>
-                        <div className="text-black font-ibm text-base font-medium">VBank</div>
+                        <div className="text-black font-ibm text-base font-medium">ВТБ</div>
                         <div className="text-gray-600 font-ibm text-sm">**** 3923</div>
                       </div>
                     </div>
@@ -1946,7 +1895,7 @@ const BudgetPlanningPage = () => {
                 </div>
 
                 <div 
-                  onClick={() => handleSelectCard({ id: 2, name: 'ABank', number: '**** 5678', balance: bankBalances.abank, color: 'bg-red-500' })}
+                  onClick={() => handleSelectCard({ id: 2, name: 'Альфа-Банк', number: '**** 5678', balance: bankBalances.abank, color: 'bg-red-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 2 
                       ? 'bg-red-100 border-2 border-red-500' 
@@ -1957,7 +1906,7 @@ const BudgetPlanningPage = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-red-500 rounded-full"></div>
                       <div>
-                        <div className="text-black font-ibm text-base font-medium">ABank</div>
+                        <div className="text-black font-ibm text-base font-medium">Альфа-Банк</div>
                         <div className="text-gray-600 font-ibm text-sm">**** 5678</div>
                       </div>
                     </div>
@@ -1966,7 +1915,7 @@ const BudgetPlanningPage = () => {
                 </div>
 
                 <div 
-                  onClick={() => handleSelectCard({ id: 3, name: 'SBank', number: '**** 9012', balance: bankBalances.sbank, color: 'bg-green-500' })}
+                  onClick={() => handleSelectCard({ id: 3, name: 'Сбербанк', number: '**** 9012', balance: bankBalances.sbank, color: 'bg-green-500' })}
                   className={`rounded-2xl p-4 cursor-pointer transition-colors ${
                     selectedCard?.id === 3 
                       ? 'bg-green-100 border-2 border-green-500' 
@@ -1977,7 +1926,7 @@ const BudgetPlanningPage = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-green-500 rounded-full"></div>
                       <div>
-                        <div className="text-black font-ibm text-base font-medium">SBank</div>
+                        <div className="text-black font-ibm text-base font-medium">Сбербанк</div>
                         <div className="text-gray-600 font-ibm text-sm">**** 9012</div>
                       </div>
                     </div>
@@ -2716,9 +2665,9 @@ const BudgetPlanningPage = () => {
             </label>
             <div className="space-y-2">
               <button
-                onClick={() => setSelectedCard('VBank')}
+                onClick={() => setSelectedCard('ВТБ')}
                 className={`w-full p-3 rounded-xl border-2 transition-all ${
-                  selectedCard === 'VBank' 
+                  selectedCard === 'ВТБ' 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
@@ -2729,7 +2678,7 @@ const BudgetPlanningPage = () => {
                       <span className="text-white font-bold text-sm">А</span>
                     </div>
                     <div className="text-left">
-                      <div className="text-black font-ibm text-sm font-medium">VBank</div>
+                      <div className="text-black font-ibm text-sm font-medium">ВТБ</div>
                       <div className="text-gray-500 font-ibm text-xs">**** 3923</div>
                     </div>
                   </div>
@@ -2740,9 +2689,9 @@ const BudgetPlanningPage = () => {
               </button>
 
               <button
-                onClick={() => setSelectedCard('ABank')}
+                onClick={() => setSelectedCard('Альфа-Банк')}
                 className={`w-full p-3 rounded-xl border-2 transition-all ${
-                  selectedCard === 'ABank' 
+                  selectedCard === 'Альфа-Банк' 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
@@ -2753,7 +2702,7 @@ const BudgetPlanningPage = () => {
                       <span className="text-white font-bold text-sm">В</span>
                     </div>
                     <div className="text-left">
-                      <div className="text-black font-ibm text-sm font-medium">ABank</div>
+                      <div className="text-black font-ibm text-sm font-medium">Альфа-Банк</div>
                       <div className="text-gray-500 font-ibm text-xs">**** 5678</div>
                     </div>
                   </div>
@@ -2764,9 +2713,9 @@ const BudgetPlanningPage = () => {
               </button>
 
               <button
-                onClick={() => setSelectedCard('SBank')}
+                onClick={() => setSelectedCard('Сбербанк')}
                 className={`w-full p-3 rounded-xl border-2 transition-all ${
-                  selectedCard === 'SBank' 
+                  selectedCard === 'Сбербанк' 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
@@ -2777,7 +2726,7 @@ const BudgetPlanningPage = () => {
                       <span className="text-white font-bold text-sm">S</span>
                     </div>
                     <div className="text-left">
-                      <div className="text-black font-ibm text-sm font-medium">SBank</div>
+                      <div className="text-black font-ibm text-sm font-medium">Сбербанк</div>
                       <div className="text-gray-500 font-ibm text-xs">**** 9012</div>
                     </div>
                   </div>
@@ -2831,7 +2780,7 @@ const BudgetPlanningPage = () => {
           <div className="bg-white rounded-3xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-black font-ibm text-xl font-medium leading-[110%]">
-                Пополнить накопительный счет VBank
+                Пополнить накопительный счет
               </h2>
               <button 
                 onClick={handleCloseTopUpVirtualCardModal}
@@ -2845,7 +2794,8 @@ const BudgetPlanningPage = () => {
 
             <div className="mb-4">
               <div className="bg-blue-50 rounded-2xl p-3 mb-3">
-                <h3 className="text-black font-ibm text-lg font-medium mb-2">VBank Накопительный счет</h3>
+                <h3 className="text-black font-ibm text-lg font-medium mb-1">Мультибанк</h3>
+                <div className="text-gray-700 font-ibm text-sm mb-2">Накопительный счет</div>
                 <div className="text-gray-600 font-ibm text-base">
                   Текущий баланс: {formatCurrency(virtualCardBalance)}
                 </div>
@@ -2957,16 +2907,6 @@ const BudgetPlanningPage = () => {
           </div>
         </div>
       )}
-      </PremiumBlock>
-
-      {/* Info Panel */}
-      <InfoPanel
-        isOpen={showInfoPanel}
-        onClose={() => setShowInfoPanel(false)}
-        title={pageInfo.title}
-        content={pageInfo.content}
-        color={pageInfo.color}
-      />
     </div>
   );
 };

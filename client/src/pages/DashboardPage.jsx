@@ -12,6 +12,7 @@ import { useScrollToTop } from '../hooks/useScrollToTop';
 import BankCardStack from '../components/BankCardStack';
 import InfoPanel from '../components/InfoPanel';
 import LoadingOverlay from '../components/LoadingOverlay';
+import AIAssistantPanel from '../components/AIAssistantPanel';
 
 import { usePageInfo } from '../hooks/usePageInfo';
 import { useTelegramUser } from '../hooks/useTelegramUser';
@@ -20,6 +21,7 @@ import { useAndroidAdaptation } from '../hooks/useAndroidAdaptation';
 import AndroidTestPanel from '../components/AndroidTestPanel';
 import { Info } from 'lucide-react';
 import { getDepositsData } from '../data/depositsData';
+import { dashboardCreditsAi, dashboardDepositsAi, dashboardOverviewAi } from '../data/aiAssistantContent';
 
 // =========================
 // ENV / API
@@ -208,7 +210,7 @@ const DashboardPage = () => {
     },
     {
       id: 3,
-      name: 'Подписка VBank+',
+      name: 'Подписка Мультибанк+',
       category: 'Прочие',
       amount: 299,
       frequency: 'monthly',
@@ -404,7 +406,7 @@ const DashboardPage = () => {
           amount: 8500,
           frequency: 'monthly',
           nextDate: '2025-12-01',
-          card: 'VBank',
+          card: 'ВТБ',
           status: 'active'
         },
         {
@@ -414,17 +416,17 @@ const DashboardPage = () => {
           amount: 25000,
           frequency: 'monthly',
           nextDate: '2025-12-05',
-          card: 'ABank',
+          card: 'Альфа-Банк',
           status: 'active'
         },
         {
           id: 3,
-          name: 'Подписка VBank+',
+          name: 'Подписка Мультибанк+',
           category: 'Прочие',
           amount: 299,
           frequency: 'monthly',
           nextDate: '2025-12-01',
-          card: 'VBank',
+          card: 'ВТБ',
           status: 'active'
         }
       ];
@@ -873,26 +875,31 @@ const DashboardPage = () => {
       <div className="relative z-10 px-5 py-2 ">
         <div className="rounded-[27px] border border-gray-200 overflow-hidden bg-gray-100">
           <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+            <AIAssistantPanel
+              title="AI по накоплениям"
+              items={dashboardDepositsAi}
+              panelClassName="mb-3"
+              renderTrigger={({ togglePanel, icon }) => (
+                <div className="flex items-center justify-between mb-3">
+                  <button type="button" onClick={togglePanel} className="flex items-center text-left">
+                    <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      {icon}
+                    </span>
+                    <span className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
+                      Вклады
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/deposits')}
+                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 </div>
-                <div className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
-                  Вклады
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/deposits')}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
+              )}
+            />
             <div className="text-gray-600 font-ibm text-sm font-normal leading-[110%] mb-4">
               Накопительные счета и депозиты
             </div>
@@ -943,7 +950,7 @@ const DashboardPage = () => {
               return (
                   <div key={depositId || index} className="bg-white rounded-2xl p-4 border border-gray-200">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
+                    <div>
                       <div>
                         <div className="text-black font-ibm text-base font-medium leading-[110%]">
                             {depositName}
@@ -960,7 +967,7 @@ const DashboardPage = () => {
                             : parseFloat(depositAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           } ₽
                       </div>
-                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      <div className={`font-ibm text-sm leading-[110%] ${depositStatus === 'active' ? 'text-green-600' : 'text-gray-600'}`}>
                           {depositStatus === 'active' ? 'Активен' : 'Неактивен'}
                       </div>
                     </div>
@@ -977,26 +984,31 @@ const DashboardPage = () => {
       <div className="relative z-10 px-5 py-2 ">
         <div className="rounded-[27px] border border-gray-200 overflow-hidden bg-gray-100">
           <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+            <AIAssistantPanel
+              title="AI по кредитам"
+              items={dashboardCreditsAi}
+              panelClassName="mb-3"
+              renderTrigger={({ togglePanel, icon }) => (
+                <div className="flex items-center justify-between mb-3">
+                  <button type="button" onClick={togglePanel} className="flex items-center text-left">
+                    <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      {icon}
+                    </span>
+                    <span className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
+                      Кредиты
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/credits')}
+                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 </div>
-                <div className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
-                  Кредиты
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/credits')}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
+              )}
+            />
             <div className="text-gray-600 font-ibm text-sm font-normal leading-[110%] mb-4">
               Управляйте кредитами и отслеживайте погашение
             </div>
@@ -1041,20 +1053,12 @@ const DashboardPage = () => {
                   : 0;
                 
                 // Цвет банка
-                const bankColor = '#6B7280';
+                const bankColor = loan.bank === 'vbank' ? '#0055BC' : loan.bank === 'abank' ? '#EF3124' : loan.bank === 'sbank' ? '#00A859' : '#6B7280';
                 
                 return (
                   <div key={loan.agreement_id || index} className="bg-white rounded-2xl p-4 border border-gray-200">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                        <div 
-                          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{ backgroundColor: `${bankColor}20` }}
-                        >
-                          <svg className="w-5 h-5" style={{ color: bankColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
+                <div>
                   <div>
                     <div className="text-black font-ibm text-base font-medium leading-[110%]">
                             {loanName}
@@ -1099,24 +1103,29 @@ const DashboardPage = () => {
       <div className="relative z-10 px-5 py-2 ">
         <div className="rounded-[27px] border border-gray-200 overflow-hidden bg-gray-100">
           <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
+            <AIAssistantPanel
+              title="AI по автоплатежам"
+              items={dashboardOverviewAi}
+              panelClassName="mb-3"
+              renderTrigger={({ togglePanel, icon }) => (
+                <div className="flex items-center justify-between mb-3">
+                  <button type="button" onClick={togglePanel} className="flex items-center text-left">
+                    <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      {icon}
+                    </span>
+                    <span className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
+                      Автоплатежи
+                    </span>
+                  </button>
                 </div>
-                <div className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
-                  Автоплатежи
-                </div>
-              </div>
-            </div>
+              )}
+            />
             <div className="text-gray-600 font-ibm text-sm font-normal leading-[110%] mb-4">
               Настройте автоматические платежи для регулярных трат
             </div>
             <button
               onClick={handleAddAutopay}
-              className="bg-gray-800 text-white font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-700 transition-colors"
+              className="bg-blue-600 text-white font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors"
             >
               Создать автоплатеж
             </button>
@@ -1126,18 +1135,15 @@ const DashboardPage = () => {
           {/* Autopay List */}
           <div className="space-y-3 px-4 pb-4 pt-0">
             {autopays.map((autopay) => (
+              (() => {
+                return (
               <div 
                 key={autopay.id} 
                 className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => navigate(`/autopay-details/${autopay.id}`, { state: { autopay } })}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-200">
-                      <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                    </div>
+                  <div>
                     <div>
                       <div className="text-black font-ibm text-base font-medium leading-[110%]">
                         {autopay.name}
@@ -1181,6 +1187,8 @@ const DashboardPage = () => {
                   </div>
                 </div>
               </div>
+                );
+              })()
             ))}
             {autopays.length === 0 && (
               <div className="bg-white rounded-2xl p-4 border border-gray-200 text-center">
@@ -1189,6 +1197,22 @@ const DashboardPage = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 px-5 py-2 pb-6">
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden bg-gray-100">
+          <div className="p-4">
+            <div className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
+              AI-сводка
+            </div>
+            <AIAssistantPanel
+              title="AI-сводка"
+              items={dashboardOverviewAi}
+              defaultOpen={true}
+              hideTrigger={true}
+            />
           </div>
         </div>
       </div>

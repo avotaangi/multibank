@@ -40,24 +40,24 @@ const TransferByAccountPage = () => {
     const baseCards = [
       {
         id: 'vbank',
-        name: 'VBank',
-        bankName: 'VBank',
+        name: 'ВТБ',
+        bankName: 'ВТБ',
         balance: bankBalances.vbank || 0,
         cardNumber: '5294',
         currency: 'RUB'
       },
       {
         id: 'abank',
-        name: 'ABank',
-        bankName: 'ABank',
+        name: 'Альфа-Банк',
+        bankName: 'Альфа-Банк',
         balance: bankBalances.abank || 0,
         cardNumber: '3568',
         currency: 'RUB'
       },
       {
         id: 'sbank',
-        name: 'SBank',
-        bankName: 'SBank',
+        name: 'Сбербанк',
+        bankName: 'Сбербанк',
         balance: bankBalances.sbank || 0,
         cardNumber: '6352',
         currency: 'RUB'
@@ -70,9 +70,9 @@ const TransferByAccountPage = () => {
       id: card.id || `test-${card.bankId}`,
       name: card.name || card.bankId,
       bankName: card.bankId === 'sberbank' ? 'Сбербанк' : 
-                card.bankId === 'vbank' ? 'VBank' : 
-                card.bankId === 'abank' ? 'ABank' : 
-                card.bankId === 'sbank' ? 'SBank' : card.bankId,
+                card.bankId === 'vbank' ? 'ВТБ' : 
+                card.bankId === 'abank' ? 'Альфа-Банк' : 
+                card.bankId === 'sbank' ? 'Сбербанк' : card.bankId,
       balance: bankBalances[card.bankId] || card.balance || 0,
       cardNumber: card.cardNumber?.replace(/\s/g, '').slice(-4) || '0000',
       currency: 'RUB'
@@ -157,23 +157,23 @@ const TransferByAccountPage = () => {
       if (accountNumber) {
         // Определяем банк по cardId или по порядку
         let bank = 'vbank';
-        let bankName = 'VBank';
+        let bankName = 'ВТБ';
         if (card.cardId) {
           if (card.cardId.includes('abank')) {
             bank = 'abank';
-            bankName = 'ABank';
+            bankName = 'Альфа-Банк';
           } else if (card.cardId.includes('sbank')) {
             bank = 'sbank';
-            bankName = 'SBank';
+            bankName = 'Сбербанк';
           }
         } else {
           // Определяем банк по индексу в общем массиве
           if (index >= vbankCards.length + abankCards.length) {
             bank = 'sbank';
-            bankName = 'SBank';
+            bankName = 'Сбербанк';
           } else if (index >= vbankCards.length) {
             bank = 'abank';
-            bankName = 'ABank';
+            bankName = 'Альфа-Банк';
           }
         }
         

@@ -5,8 +5,10 @@ import { CreditCard, FileText, CheckCircle, Clock, XCircle, Plus, Search, Info }
 import { creditProductsAPI, cashLoanApplicationsAPI, productsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import InfoPanel from '../components/InfoPanel';
+import AIAssistantPanel from '../components/AIAssistantPanel';
 import { usePageInfo } from '../hooks/usePageInfo';
 import useAuthStore from '../stores/authStore';
+import { creditsAi } from '../data/aiAssistantContent';
 
 const CreditsPage = () => {
   const navigate = useNavigate();
@@ -397,8 +399,8 @@ const CreditsPage = () => {
     <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4 ">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             Кредиты
           </div>
           <button
@@ -407,6 +409,24 @@ const CreditsPage = () => {
           >
             <Info className="w-6 h-6" />
           </button>
+        </div>
+        <div className="mt-3 px-0">
+          <AIAssistantPanel
+            title="AI по кредитам"
+            items={creditsAi}
+            renderTrigger={({ togglePanel, icon }) => (
+              <button
+                type="button"
+                onClick={togglePanel}
+                className="w-full flex items-center text-left rounded-[24px] border border-gray-200 bg-gray-100 px-4 py-3 text-black font-ibm text-lg font-medium leading-[110%]"
+              >
+                <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                  {icon}
+                </span>
+                AI-помощник
+              </button>
+            )}
+          />
         </div>
       </div>
 

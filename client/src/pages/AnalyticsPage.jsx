@@ -4,9 +4,11 @@ import useTestCardsStore from '../stores/testCardsStore';
 import useTransfersStore from '../stores/transfersStore';
 import InfoPanel from '../components/InfoPanel';
 import PremiumBlock from '../components/PremiumBlock';
+import AIAssistantPanel from '../components/AIAssistantPanel';
 import { usePageInfo } from '../hooks/usePageInfo';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import { Info } from 'lucide-react';
+import { analyticsAi } from '../data/aiAssistantContent';
 
 const AnalyticsPage = () => {
   const navigate = useNavigate();
@@ -24,9 +26,9 @@ const AnalyticsPage = () => {
   // Функция для форматирования перевода
   const formatTransfer = (transfer) => {
     const bankNames = {
-      'abank': 'ABank',
-      'vbank': 'VBank', 
-      'sbank': 'SBank'
+      'abank': 'Альфа-Банк',
+      'vbank': 'ВТБ', 
+      'sbank': 'Сбербанк'
     };
     
     const fromBankName = bankNames[transfer.fromBank] || transfer.fromBank;
@@ -78,10 +80,10 @@ const AnalyticsPage = () => {
   const baseCards = [
     {
       id: 'vbank',
-      name: 'VBank',
+      name: 'ВТБ',
       balance: '45 230 ₽',
       color: '#0055BC',
-      logo: 'VBank',
+      logo: 'ВТБ',
       cardNumber: '3568 **** **** 8362',
       analytics: {
         income: '45 230 ₽',
@@ -97,10 +99,10 @@ const AnalyticsPage = () => {
     },
     {
       id: 'abank',
-      name: 'ABank',
+      name: 'Альфа-Банк',
       balance: '10 544,40 ₽',
       color: '#EF3124',
-      logo: 'ABank',
+      logo: 'Альфа-Банк',
       cardNumber: '5294 **** **** 2498',
       analytics: {
         income: '125 600 ₽',
@@ -116,10 +118,10 @@ const AnalyticsPage = () => {
     },
     {
       id: 'sbank',
-      name: 'SBank',
+      name: 'Сбербанк',
       balance: '67 890 ₽',
       color: '#00A859',
-      logo: 'SBank',
+      logo: 'Сбербанк',
       cardNumber: '6352 **** **** 3923',
       analytics: {
         income: '67 890 ₽',
@@ -147,13 +149,13 @@ const AnalyticsPage = () => {
   // Функция для определения карты операции
   const getOperationCard = (operationType) => {
     const cardMapping = {
-      'magnit': 'abank',      // Магнит - ABank
-      'yandex_taxi': 'vbank',  // Яндекс.Такси - VBank
-      'samokat': 'sbank',    // Самокат - SBank
-      'yandex_plus': 'abank', // Яндекс.Плюс - ABank
-      'okko': 'vbank',         // Кинотеатр okko - VBank
-      'vbank_plus': 'vbank',   // VBank+ - VBank
-      'static_transfer': 'abank' // Статический перевод - ABank
+      'magnit': 'abank',
+      'yandex_taxi': 'vbank',
+      'samokat': 'sbank',
+      'yandex_plus': 'abank',
+      'okko': 'vbank',
+      'vbank_plus': 'vbank',
+      'static_transfer': 'abank'
     };
     return cardMapping[operationType];
   };
@@ -275,8 +277,8 @@ const AnalyticsPage = () => {
     <div className="min-h-screen bg-white overflow-x-hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }} onClick={handleOutsideClick}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             Аналитика
           </div>
           <button
@@ -285,6 +287,26 @@ const AnalyticsPage = () => {
           >
             <Info className="w-6 h-6" />
           </button>
+        </div>
+        <div className="mt-3">
+          <AIAssistantPanel
+            title="AI-анализ расходов"
+            items={analyticsAi}
+            renderTrigger={({ togglePanel, icon }) => (
+              <button
+                type="button"
+                onClick={togglePanel}
+                className="w-full flex items-center text-left rounded-[24px] border border-gray-200 bg-gray-100 px-4 py-3"
+              >
+                <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                  {icon}
+                </span>
+                <span className="text-black font-ibm text-lg font-medium leading-[110%]">
+                  AI-помощник
+                </span>
+              </button>
+            )}
+          />
         </div>
       </div>
 
@@ -722,7 +744,7 @@ const AnalyticsPage = () => {
           </div>
           )}
 
-          {/* VBank+ */}
+          {/* Мультибанк+ */}
           {shouldShowOperation('vbank_plus') && (
           <div className="bg-gray-100 rounded-[32px] flex items-center px-3 min-[360px]:px-4 py-2 min-[360px]:py-3">
             <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 bg-white rounded-full flex items-center justify-center mr-3 min-[360px]:mr-4 border border-gray-300">
@@ -732,7 +754,7 @@ const AnalyticsPage = () => {
             </div>
             <div className="flex-1">
               <div className="flex items-center">
-                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">VBank+</div>
+                <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">Мультибанк+</div>
                 <div className="ml-2">
                   <div 
                     className="w-12 h-8 rounded-md flex items-center justify-between px-1 shadow-sm"

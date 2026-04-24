@@ -193,7 +193,7 @@ const YourBankPage = () => {
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-start">
           <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-left">
-            VBank
+            Мультибанк
           </div>
         </div>
       </div>
@@ -270,7 +270,7 @@ const YourBankPage = () => {
                 <div className="text-white font-ibm text-lg font-medium leading-[110%]">Премиум-функции</div>
               </div>
               <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
-                В подписке «VBank Плюс»
+                В подписке «Мультибанк Плюс»
               </div>
             </div>
             <div className="px-4 pb-4 pt-4 bg-white">
@@ -480,7 +480,7 @@ const YourBankPage = () => {
                   backgroundColor: (agreement1 && agreement2 && agreement3) ? '#3C82F6' : undefined
                 }}
               >
-                Войти с подпиской VBank+
+                Войти с подпиской Мультибанк+
               </button>
               
               <button

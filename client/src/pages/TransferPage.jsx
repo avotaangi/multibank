@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { usePageInfo } from '../hooks/usePageInfo';
 import InfoPanel from '../components/InfoPanel';
+import AIAssistantPanel from '../components/AIAssistantPanel';
 import { Info } from 'lucide-react';
 import useBalanceStore from '../stores/balanceStore';
 import useTransfersStore from '../stores/transfersStore';
@@ -11,6 +12,7 @@ import { useTelegramUser } from '../hooks/useTelegramUser';
 import useAuthStore from '../stores/authStore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getTelegramWebApp } from '../utils/telegram';
+import { transferAi } from '../data/aiAssistantContent';
 
 const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
 
@@ -117,9 +119,9 @@ const TransferPage = () => {
 
   // 🎨 Стили банков
   const bankStyles = {
-    vbank: { color: '#0055BC', logo: 'VBank' },
-    abank: { color: '#EF3124', logo: 'ABank' },
-    sbank: { color: '#00A859', logo: 'SBank' },
+    vbank: { color: '#0055BC', logo: 'ВТБ', label: 'ВТБ', cardNumber: '2498' },
+    abank: { color: '#EF3124', logo: 'Альфа-Банк', label: 'Альфа-Банк', cardNumber: '8362' },
+    sbank: { color: '#00A859', logo: 'Сбербанк', label: 'Сбербанк', cardNumber: '3923' },
   };
 
   // 📊 Формат баланса
@@ -131,11 +133,13 @@ const TransferPage = () => {
 
   // 💳 Карты текущего пользователя
   const userCards = Object.entries(bankBalances || {}).map(([bankId, balance]) => {
-    const style = bankStyles[bankId] || { color: '#777', logo: bankId.toUpperCase() };
+    const style = bankStyles[bankId] || { color: '#777', logo: bankId.toUpperCase(), label: bankId.toUpperCase(), cardNumber: '0000' };
     return {
       id: bankId,
-      name: bankId.toUpperCase(),
+      name: style.label,
       logo: style.logo,
+      label: style.label,
+      cardNumber: style.cardNumber,
       color: style.color,
       balance: fmtBalance(balance),
     };
@@ -251,15 +255,34 @@ const TransferPage = () => {
     <div className="min-h-screen bg-white w-full pb-20">
       {/* Header */}
       <div className="relative z-20 px-4 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="w-10"></div>
-          <div className="text-black text-2xl font-medium flex-1 text-center">Между банками</div>
+        <div className="flex items-start justify-between">
+          <div className="flex-1 text-black text-2xl font-medium text-left">
+            Между банками
+          </div>
           <button
             onClick={() => setShowInfoPanel(true)}
             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
           >
             <Info className="w-6 h-6" />
           </button>
+        </div>
+        <div className="mt-3">
+          <AIAssistantPanel
+            title="AI по переводу"
+            items={transferAi}
+            renderTrigger={({ togglePanel, icon }) => (
+              <button
+                type="button"
+                onClick={togglePanel}
+                className="w-full flex items-center text-left rounded-[24px] border border-gray-200 bg-gray-100 px-4 py-3 text-black font-ibm text-lg font-medium leading-[110%]"
+              >
+                <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                  {icon}
+                </span>
+                AI-помощник
+              </button>
+            )}
+          />
         </div>
       </div>
 
@@ -270,14 +293,18 @@ const TransferPage = () => {
           {userCards.map((bank) => (
             <div
               key={bank.id}
-              className={`w-[95px] h-[100px] rounded-[18px] cursor-pointer flex flex-col items-center justify-center p-3 transition-all ${
+              className={`w-[110px] h-[100px] rounded-[18px] cursor-pointer flex flex-col justify-between p-3 transition-all ${
                 selectedFromBank === bank.id ? 'ring-2 ring-red-500 shadow-lg' : ''
               }`}
               style={{ backgroundColor: bank.color }}
               onClick={() => setSelectedFromBank(bank.id)}
             >
-              <div className="text-white font-bold text-lg mb-1">{bank.logo}</div>
-              <div className="text-white text-sm">{telegramUser.shortName}</div>
+              <div className="text-white text-xs font-medium opacity-90 leading-[110%]">
+                {bank.label}
+              </div>
+              <div className="text-white text-sm font-semibold leading-[110%]">
+                •••• {bank.cardNumber}
+              </div>
             </div>
           ))}
         </div>
@@ -290,20 +317,13 @@ const TransferPage = () => {
             Доступно на карте:
           </div>
           <div className="flex items-center justify-between p-3 bg-gray-200 rounded-[20px]">
-            <div className="flex items-center space-x-3">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{
-                  backgroundColor: userCards.find(b => b.id === selectedFromBank)?.color,
-                }}
-              >
-                <div className="text-white text-sm font-bold">
-                  {userCards.find(b => b.id === selectedFromBank)?.logo}
-                </div>
-              </div>
+            <div>
               <div>
                 <div className="text-black text-sm font-medium">
                   {userCards.find(b => b.id === selectedFromBank)?.name}
+                </div>
+                <div className="text-gray-600 text-xs">
+                  •••• {userCards.find(b => b.id === selectedFromBank)?.cardNumber}
                 </div>
               </div>
             </div>
@@ -344,18 +364,22 @@ const TransferPage = () => {
             selectedRecipient.bank_names
               .filter((b) => !(selectedRecipient.id === 'self' && b === selectedFromBank))
               .map((bank) => {
-                const style = bankStyles[bank] || { color: '#777', logo: bank.toUpperCase() };
+                const style = bankStyles[bank] || { color: '#777', logo: bank.toUpperCase(), label: bank.toUpperCase(), cardNumber: '0000' };
                 return (
                   <div
                     key={bank}
-                    className={`w-[95px] h-[100px] rounded-[18px] cursor-pointer flex flex-col items-center justify-center p-3 transition-all ${
+                    className={`w-[110px] h-[100px] rounded-[18px] cursor-pointer flex flex-col justify-between p-3 transition-all ${
                       selectedToBank === bank ? 'ring-2 ring-red-500 shadow-lg' : ''
                     }`}
                     style={{ backgroundColor: style.color }}
                     onClick={() => setSelectedToBank(bank)}
                   >
-                    <div className="text-white font-bold text-lg mb-1">{style.logo}</div>
-                    <div className="text-white text-sm">{bank.toUpperCase()}</div>
+                    <div className="text-white text-xs font-medium opacity-90 leading-[110%]">
+                      {style.label}
+                    </div>
+                    <div className="text-white text-sm font-semibold leading-[110%]">
+                      •••• {style.cardNumber}
+                    </div>
                   </div>
                 );
               })}

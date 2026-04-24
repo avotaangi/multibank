@@ -116,7 +116,7 @@ const VBankPlusDetailsPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="text-lg font-bold text-gray-900 font-ibm">VBank Plus</h1>
+          <h1 className="text-lg font-bold text-gray-900 font-ibm">Мультибанк Plus</h1>
           <div className="w-10"></div>
         </div>
       </div>
@@ -130,7 +130,7 @@ const VBankPlusDetailsPage = () => {
             </div>
           </div>
           <h2 className="text-2xl font-bold text-white text-center mb-2 font-ibm">
-            VBank Plus
+            Мультибанк Plus
           </h2>
           <p className="text-white text-opacity-90 text-center font-ibm text-sm mb-4">
             Премиум подписка с эксклюзивными возможностями
@@ -146,10 +146,10 @@ const VBankPlusDetailsPage = () => {
         </div>
       </div>
 
-      {/* VBank Plus Features */}
+      {/* Multibank Plus Features */}
       <div className="px-4 mb-8">
         <h3 className="text-xl font-bold text-gray-900 mb-4 font-ibm">
-          Возможности VBank Plus
+          Возможности Мультибанк Plus
         </h3>
         <div className="space-y-3">
           {vbankPlusFeatures.map((feature, index) => (
@@ -189,7 +189,7 @@ const VBankPlusDetailsPage = () => {
           </p>
           <div className="bg-white bg-opacity-10 rounded-2xl p-3 mb-4">
             <div className="text-white font-ibm text-center text-sm">
-              <span className="font-bold">Включено</span> в подписку VBank Plus
+              <span className="font-bold">Включено</span> в подписку Мультибанк Plus
             </div>
           </div>
         </div>
@@ -261,4 +261,3 @@ const VBankPlusDetailsPage = () => {
 };
 
 export default VBankPlusDetailsPage;
-

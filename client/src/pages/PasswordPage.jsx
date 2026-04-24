@@ -120,7 +120,7 @@ const PasswordPage = () => {
               </div>
               {hasSubscription && (
                 <div className="mt-2 inline-block bg-white text-[#3C82F6] text-xs font-ibm font-medium px-3 py-1 rounded-full">
-                  VBank+ Подписка активна
+                  Мультибанк+ Подписка активна
                 </div>
               )}
             </div>
@@ -227,4 +227,3 @@ const PasswordPage = () => {
 };
 
 export default PasswordPage;
-

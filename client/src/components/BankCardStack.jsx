@@ -45,24 +45,34 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
   // Функция для форматирования номера карты из API
   const formatCardNumber = (encryptedPan) => {
     if (!encryptedPan) return null;
+    const rawValue = String(encryptedPan).trim();
+    if (rawValue.includes('*')) return rawValue;
+
+    const digitsOnly = rawValue.replace(/[^\d]/g, '');
+    if (digitsOnly.length >= 16) {
+      const first4 = digitsOnly.substring(0, 4);
+      const last4 = digitsOnly.substring(digitsOnly.length - 4);
+      return `${first4} **** **** ${last4}`;
+    }
+
     try {
-      const decoded = atob(encryptedPan);
-      // Форматируем как XXXX **** **** XXXX
-      if (decoded.length >= 16) {
-        const first4 = decoded.substring(0, 4);
-        const last4 = decoded.substring(decoded.length - 4);
+      const decoded = atob(rawValue);
+      const decodedDigits = decoded.replace(/[^\d]/g, '');
+      if (decodedDigits.length >= 16) {
+        const first4 = decodedDigits.substring(0, 4);
+        const last4 = decodedDigits.substring(decodedDigits.length - 4);
         return `${first4} **** **** ${last4}`;
       }
       return decoded;
     } catch (e) {
-      // Если не base64, пробуем использовать как есть
-      if (encryptedPan.length >= 16) {
-        const first4 = encryptedPan.substring(0, 4);
-        const last4 = encryptedPan.substring(encryptedPan.length - 4);
-        return `${first4} **** **** ${last4}`;
-      }
-      return encryptedPan;
+      return rawValue;
     }
+  };
+
+  const preferredCardIds = {
+    vbank: 'vbank-card-1',
+    abank: 'abank-card-1',
+    sbank: 'sbank-card-1',
   };
 
   // Загружаем карты для каждого банка из API
@@ -443,21 +453,23 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
           if (cardsList.length === 0) {
             console.log(`⚠️ [BankCardStack] Список карт пустой для ${card.id}, используем дефолтный номер`);
           } else {
-          const firstCard = cardsList[0];
-          if (firstCard) {
-            console.log(`🔍 [BankCardStack] Первая карта для ${card.id}:`, firstCard);
+          const primaryCard =
+            cardsList.find((item) => item.cardId === preferredCardIds[card.id] || item.publicId === preferredCardIds[card.id]) ||
+            cardsList[0];
+          if (primaryCard) {
+            console.log(`🔍 [BankCardStack] Основная карта для ${card.id}:`, primaryCard);
             // Используем cardNumber из API (уже маскированный)
-            const cardNumber = firstCard.cardNumberFull || firstCard.cardNumber;
-            console.log(`🔍 [BankCardStack] cardNumber из firstCard для ${card.id}:`, cardNumber);
+            const cardNumber = primaryCard.cardNumberFull || primaryCard.cardNumber;
+            console.log(`🔍 [BankCardStack] cardNumber из primaryCard для ${card.id}:`, cardNumber);
             if (cardNumber) {
               // Если номер уже маскирован (содержит *), используем как есть
               realCardNumber = cardNumber.includes('*') ? cardNumber : formatCardNumber(cardNumber);
               console.log(`✅ [BankCardStack] Номер из списка для ${card.id}:`, realCardNumber);
             } else {
-              console.warn(`⚠️ [BankCardStack] cardNumber не найден в firstCard для ${card.id}`);
+              console.warn(`⚠️ [BankCardStack] cardNumber не найден в primaryCard для ${card.id}`);
             }
           } else {
-            console.warn(`⚠️ [BankCardStack] firstCard не найден для ${card.id}, cardsList.length:`, cardsList.length);
+            console.warn(`⚠️ [BankCardStack] primaryCard не найдена для ${card.id}, cardsList.length:`, cardsList.length);
             }
           }
         }

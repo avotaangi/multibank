@@ -146,24 +146,24 @@ const InsuranceDetailsPage = () => {
     const baseCards = [
       {
         id: 'vbank',
-        name: 'VBank',
-        bankName: 'VBank',
+        name: 'ВТБ',
+        bankName: 'ВТБ',
         balance: (bankBalances && bankBalances.vbank !== undefined) ? bankBalances.vbank : 10000,
         cardNumber: '5294',
         color: '#0055BC'
       },
       {
         id: 'abank',
-        name: 'ABank',
-        bankName: 'ABank',
+        name: 'Альфа-Банк',
+        bankName: 'Альфа-Банк',
         balance: (bankBalances && bankBalances.abank !== undefined) ? bankBalances.abank : 30000,
         cardNumber: '3568',
         color: '#EF3124'
       },
       {
         id: 'sbank',
-        name: 'SBank',
-        bankName: 'SBank',
+        name: 'Сбербанк',
+        bankName: 'Сбербанк',
         balance: (bankBalances && bankBalances.sbank !== undefined) ? bankBalances.sbank : 20000,
         cardNumber: '6352',
         color: '#00A859'
@@ -191,9 +191,9 @@ const InsuranceDetailsPage = () => {
         id: card.id || `test-${card.bankId}`,
         name: card.name || card.bankId,
         bankName: card.bankId === 'sberbank' ? 'Сбербанк' : 
-                  card.bankId === 'vbank' ? 'VBank' : 
-                  card.bankId === 'abank' ? 'ABank' : 
-                  card.bankId === 'sbank' ? 'SBank' : card.bankId,
+                  card.bankId === 'vbank' ? 'ВТБ' : 
+                  card.bankId === 'abank' ? 'Альфа-Банк' : 
+                  card.bankId === 'sbank' ? 'Сбербанк' : card.bankId,
         balance: (bankBalances && bankBalances[card.bankId] !== undefined) ? bankBalances[card.bankId] : (card.balance || 0),
         cardNumber: card.cardNumber?.replace(/\s/g, '').slice(-4) || '0000',
         color: card.bankId === 'sberbank' ? '#21A038' : 
@@ -202,7 +202,7 @@ const InsuranceDetailsPage = () => {
                card.bankId === 'sbank' ? '#00A859' : '#6366F1'
       }));
     
-    // Объединяем: сначала базовые карты (VBank, ABank, SBank), затем тестовые
+    // Объединяем: сначала базовые карты, затем тестовые
     const allCards = [...baseCards, ...testCardsWithBalance];
     
     // Отладочный вывод
@@ -371,7 +371,7 @@ const InsuranceDetailsPage = () => {
                   ></div>
                   <div className="flex-1">
                     <div className="text-black font-ibm text-sm font-medium">
-                      {selectedCard?.bankName || 'VBank'} ••••{selectedCard?.cardNumber || '5294'}
+                      {selectedCard?.bankName || 'ВТБ'} ••••{selectedCard?.cardNumber || '5294'}
                     </div>
                     <div className="text-gray-500 font-ibm text-xs">
                       {selectedCard?.balance?.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'} ₽

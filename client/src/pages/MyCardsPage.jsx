@@ -4,11 +4,13 @@ import { Info } from "lucide-react";
 import { useQuery } from "react-query";
 import { useTelegramUser } from "../hooks/useTelegramUser";
 import InfoPanel from "../components/InfoPanel";
+import AIAssistantPanel from "../components/AIAssistantPanel";
 import { usePageInfo } from "../hooks/usePageInfo";
 import { cardManagementAPI } from "../services/api";
 import axios from "axios";
 import useAuthStore from "../stores/authStore";
 import LoadingOverlay from "../components/LoadingOverlay";
+import { cardsAi } from "../data/aiAssistantContent";
 
 // Создаем axios instance с правильным baseURL
 const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000'
@@ -184,23 +186,31 @@ const MyCardsPage = () => {
   const formatCardNumber = (cardNumber) => {
     if (!cardNumber) return null;
     
-    // Убираем пробелы и дефисы
-    const cleaned = cardNumber.replace(/\s|-/g, '');
-    
-    // Если номер карты в формате XXXX **** **** XXXX или уже отформатирован
-    if (cleaned.includes('*')) {
-      return cardNumber;
+    const rawValue = String(cardNumber).trim();
+    if (rawValue.includes('*')) {
+      return rawValue;
     }
-    
-    // Если номер карты полный (16+ цифр), маскируем средние цифры
-    if (cleaned.length >= 16) {
-      const first4 = cleaned.substring(0, 4);
-      const last4 = cleaned.substring(cleaned.length - 4);
+
+    const digitsOnly = rawValue.replace(/[^\d]/g, '');
+    if (digitsOnly.length >= 16) {
+      const first4 = digitsOnly.substring(0, 4);
+      const last4 = digitsOnly.substring(digitsOnly.length - 4);
       return `${first4} **** **** ${last4}`;
     }
-    
-    // Если номер короткий, возвращаем как есть
-    return cardNumber;
+
+    try {
+      const decoded = atob(rawValue);
+      const decodedDigits = decoded.replace(/[^\d]/g, '');
+      if (decodedDigits.length >= 16) {
+        const first4 = decodedDigits.substring(0, 4);
+        const last4 = decodedDigits.substring(decodedDigits.length - 4);
+        return `${first4} **** **** ${last4}`;
+      }
+    } catch (e) {
+      // Не base64, продолжаем fallback ниже.
+    }
+
+    return null;
   };
 
   // Загружаем карты для каждого банка отдельно
@@ -330,16 +340,10 @@ const MyCardsPage = () => {
       // Если не получили из деталей, пробуем из списка карт
       if (!realCardNumber && firstCard) {
         // Пробуем разные поля, где может быть номер карты
-        // cardNumber уже маскирован в формате "**** **** **** 7564"
-        const cardNumber = firstCard.cardNumberFull || firstCard.cardNumber || firstCard.number || firstCard.pan || firstCard.maskedPan || firstCard.identification;
+        const cardNumber = firstCard.cardNumberFull || firstCard.cardNumber || firstCard.number || firstCard.pan || firstCard.maskedPan;
         
         if (cardNumber) {
-          // Если номер уже в формате "**** **** **** XXXX", используем как есть
-          if (cardNumber.includes('*')) {
-            realCardNumber = cardNumber;
-          } else {
-            realCardNumber = formatCardNumber(cardNumber);
-          }
+          realCardNumber = formatCardNumber(cardNumber);
         }
       }
       
@@ -387,7 +391,13 @@ const MyCardsPage = () => {
             : bank === "sbank"
             ? "Сбер"
             : bank.toUpperCase(),
-        cardNumber: realCardNumber || "**** **** **** 3923",
+        cardNumber: realCardNumber || (bank === 'vbank'
+          ? '5294 **** **** 2498'
+          : bank === 'abank'
+          ? '3568 **** **** 8362'
+          : bank === 'sbank'
+          ? '6352 **** **** 3923'
+          : '0000 **** **** 0000'),
         cardholderName: telegramUser.displayName || "Клиент",
       };
     });
@@ -413,17 +423,36 @@ const MyCardsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-28" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 7rem)' }}>
       {/* Header */}
-      <div className="bg-white px-5 pt-6 pb-4 flex justify-between items-center">
-        <div className="w-10"></div>
-        <div className="text-black font-ibm text-2xl font-medium">Мои карты</div>
-        <button
-          onClick={() => setShowInfoPanel(true)}
-          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
-        >
-          <Info className="w-6 h-6" />
-        </button>
+      <div className="bg-white px-5 pt-6 pb-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 text-black font-ibm text-2xl font-medium text-left">Мои карты</div>
+          <button
+            onClick={() => setShowInfoPanel(true)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Info className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="mt-3">
+          <AIAssistantPanel
+            title="AI по картам"
+            items={cardsAi}
+            renderTrigger={({ togglePanel, icon }) => (
+              <button
+                type="button"
+                onClick={togglePanel}
+                className="w-full flex items-center text-left rounded-[24px] border border-gray-200 bg-gray-100 px-4 py-3 text-black font-ibm text-lg font-medium leading-[110%]"
+              >
+                <span className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                  {icon}
+                </span>
+                AI-помощник
+              </button>
+            )}
+          />
+        </div>
       </div>
 
       {/* Cards */}
