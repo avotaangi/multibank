@@ -1,11 +1,16 @@
 import { create } from "zustand";
 
 const useBalanceStore = create((set, get) => ({
-  // 🏦 Изначально пусто, всё приходит с API
-  bankBalances: {},
+  // 🏦 Локальный стартовый контур, синхронизирован с backend seed
+  bankBalances: {
+    vbank: 185430.55,
+    abank: 92340.10,
+    sbank: 148220.87,
+    vbank_savings: 264500.0,
+  },
   
   // 💰 Виртуальная карта VBank (накопительный счет) - синхронизируется со страницей планирования
-  virtualCardBalance: 0,
+  virtualCardBalance: 264500.0,
 
   // 🔹 Установить баланс одного банка
   setBalance: (bankId, amount) => {

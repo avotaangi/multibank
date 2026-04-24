@@ -1,8 +1,8 @@
 import axios from 'axios'
 
 // Create axios instance
-// Используем FastAPI вместо Node.js бэкенда
-const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Всегда работаем с локальным backend-контуром.
+const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000'
 // Убеждаемся, что baseURL заканчивается на /api для всех запросов
 const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
 const api = axios.create({

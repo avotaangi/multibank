@@ -11,7 +11,7 @@ import useTestCardsStore from '../stores/testCardsStore';
 import { productsAPI } from '../services/api';
 import useAuthStore from '../stores/authStore';
 
-const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
 const CLIENT_ID_ID = import.meta.env.VITE_CLIENT_ID_ID;
 
 const DepositsPage = () => {
@@ -33,22 +33,24 @@ const DepositsPage = () => {
   // Загружаем продукты из API
   const clientId = getClientId();
   console.log('🔍 [DepositsPage] clientId:', clientId);
-  const { data: productsData, isLoading: isLoadingProducts, error: productsError } = useQuery(
+  const { data: productsData, isLoading: isLoadingProducts } = useQuery(
     ['bankProducts', clientId],
     async () => {
-      console.log('🚀 [DepositsPage] Fetching products with client_id:', clientId);
-      const response = await productsAPI.getBankProducts({ client_id: clientId });
-      console.log('📦 [DepositsPage] Raw API response:', response);
-      return response;
+      try {
+        console.log('🚀 [DepositsPage] Fetching products with client_id:', clientId);
+        const response = await productsAPI.getBankProducts({ client_id: clientId });
+        console.log('📦 [DepositsPage] Raw API response:', response);
+        return response;
+      } catch (error) {
+        console.error('❌ [DepositsPage] Error fetching products:', error);
+        return { data: { data: { products: [] }, products: [] }, products: [] };
+      }
     },
     {
       enabled: !!clientId,
       refetchOnWindowFocus: false,
       staleTime: 60000, // 1 минута
       retry: 2,
-      onError: (error) => {
-        console.error('❌ [DepositsPage] Error fetching products:', error);
-      },
       onSuccess: (data) => {
         console.log('✅ [DepositsPage] Successfully fetched products:', data);
       }
@@ -138,9 +140,9 @@ const DepositsPage = () => {
   // Загружаем балансы карт из store (не вызываем старый endpoint)
   useEffect(() => {
         const baseCards = [
-          { id: 'vbank', name: 'VBank', bankName: 'VBank', cardNumber: '5294', color: '#0055BC' },
-          { id: 'abank', name: 'ABank', bankName: 'ABank', cardNumber: '5678', color: '#DC2626' },
-          { id: 'sbank', name: 'SBank', bankName: 'SBank', cardNumber: '9012', color: '#10B981' }
+          { id: 'vbank', name: 'ВТБ', bankName: 'ВТБ', cardNumber: '5294', color: '#0055BC' },
+          { id: 'abank', name: 'Альфа-Банк', bankName: 'Альфа-Банк', cardNumber: '5678', color: '#DC2626' },
+          { id: 'sbank', name: 'Сбербанк', bankName: 'Сбербанк', cardNumber: '9012', color: '#10B981' }
         ];
         
     const cardsWithBal = baseCards.map((card) => {
@@ -255,7 +257,7 @@ const DepositsPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             Вклады
           </div>
           <button
@@ -298,10 +300,6 @@ const DepositsPage = () => {
             {isLoadingProducts ? (
               <div className="text-center py-8 text-gray-500 font-ibm text-sm">
                 Загрузка вкладов...
-              </div>
-            ) : productsError ? (
-              <div className="text-center py-8 text-red-500 font-ibm text-sm">
-                Ошибка загрузки вкладов: {productsError.message}
               </div>
             ) : deposits.length === 0 ? (
               <div className="text-center py-8 text-gray-500 font-ibm text-sm">
@@ -346,11 +344,11 @@ const DepositsPage = () => {
                             ? depositAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : parseFloat(depositAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           } ₽
-                        </div>
-                        <div className="text-white font-ibm text-sm font-normal leading-[110%]">
-                          {depositName}
-                        </div>
                       </div>
+                      <div className="text-white font-ibm text-sm font-normal leading-[110%]">
+                          {depositName}
+                      </div>
+                    </div>
                     <div className="text-white font-ibm text-sm font-medium leading-[110%]">
                         {depositRate}% годовых
                     </div>

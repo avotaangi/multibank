@@ -232,8 +232,7 @@ const InsuranceDetailsPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <div className="w-10"></div>
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             Детали страховки
           </div>
           <button

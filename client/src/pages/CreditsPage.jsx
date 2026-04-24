@@ -18,9 +18,16 @@ const CreditsPage = () => {
   
   // Загружаем продукты из API
   const clientId = getClientId();
-  const { data: productsData, isLoading: isLoadingBankProducts, error: productsError } = useQuery(
+  const { data: productsData, isLoading: isLoadingBankProducts } = useQuery(
     ['bankProducts', clientId],
-    () => productsAPI.getBankProducts({ client_id: clientId }),
+    async () => {
+      try {
+        return await productsAPI.getBankProducts({ client_id: clientId });
+      } catch (error) {
+        console.error('Error loading credit products:', error);
+        return { data: { data: { products: [] }, products: [] }, products: [] };
+      }
+    },
     {
       enabled: !!clientId,
       refetchOnWindowFocus: false,
@@ -391,8 +398,7 @@ const CreditsPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4 ">
         <div className="flex items-center justify-between">
-          <div className="w-10"></div>
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             Кредиты
           </div>
           <button
@@ -475,10 +481,6 @@ const CreditsPage = () => {
                 {isLoadingBankProducts ? (
                   <div className="flex justify-center py-8">
                     <LoadingSpinner size="lg" />
-                  </div>
-                ) : productsError ? (
-                  <div className="text-center py-8 text-red-500 font-ibm text-sm">
-                    Ошибка загрузки кредитов: {productsError.message}
                   </div>
                 ) : !apiLoans || apiLoans.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
@@ -676,12 +678,6 @@ const CreditsPage = () => {
                 <div className="px-4 pb-4 pt-4 bg-white">
                   <div className="flex justify-center py-8">
                     <LoadingSpinner size="lg" />
-                  </div>
-                </div>
-              ) : productsError ? (
-                <div className="px-4 pb-4 pt-4 bg-white">
-                  <div className="text-center py-8 text-red-500 font-ibm text-sm">
-                    Ошибка загрузки кредитов: {productsError.message}
                   </div>
                 </div>
               ) : apiLoans.length > 0 ? (

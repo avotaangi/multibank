@@ -12,7 +12,7 @@ import useAuthStore from '../stores/authStore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getTelegramWebApp } from '../utils/telegram';
 
-const API_BASE = import.meta.env.VITE_API_BASE; // 🔗 твой FastAPI endpoint
+const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
 
 const TransferPage = () => {
   const pageInfo = usePageInfo();

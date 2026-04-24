@@ -11,8 +11,6 @@ import { useScrollToTop } from '../hooks/useScrollToTop';
 
 import BankCardStack from '../components/BankCardStack';
 import InfoPanel from '../components/InfoPanel';
-import InsuranceCard from '../components/InsuranceCard';
-import PremiumBlock from '../components/PremiumBlock';
 import LoadingOverlay from '../components/LoadingOverlay';
 
 import { usePageInfo } from '../hooks/usePageInfo';
@@ -20,13 +18,14 @@ import { useTelegramUser } from '../hooks/useTelegramUser';
 import { useAndroidAdaptation } from '../hooks/useAndroidAdaptation';
 
 import AndroidTestPanel from '../components/AndroidTestPanel';
-import { Info, ChevronRight } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { getDepositsData } from '../data/depositsData';
 
 // =========================
 // ENV / API
 // =========================
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+const LOCAL_BANKS = ['vbank', 'abank', 'sbank'];
 
 // =========================
 // Утилиты
@@ -133,9 +132,9 @@ const DashboardPage = () => {
       const fullClientId = `${teamId}-${CLIENT_ID_ID}`;
       return transactionAPI.getTransactions({
         client_id: fullClientId,
-        startDate: monthStart,
-        endDate: monthEnd,
-        limit: 1000 // Получаем все транзакции за месяц
+      startDate: monthStart,
+      endDate: monthEnd,
+      limit: 1000 // Получаем все транзакции за месяц
       });
     },
     {
@@ -194,7 +193,7 @@ const DashboardPage = () => {
       amount: 8500,
       frequency: 'monthly',
       nextDate: '2025-12-01',
-      card: 'VBank',
+      card: 'ВТБ',
       status: 'active'
     },
     {
@@ -204,7 +203,7 @@ const DashboardPage = () => {
       amount: 25000,
       frequency: 'monthly',
       nextDate: '2025-12-05',
-      card: 'ABank',
+      card: 'Альфа-Банк',
       status: 'active'
     },
     {
@@ -214,7 +213,7 @@ const DashboardPage = () => {
       amount: 299,
       frequency: 'monthly',
       nextDate: '2025-12-01',
-      card: 'VBank',
+      card: 'ВТБ',
       status: 'active'
     }
   ]);
@@ -236,11 +235,11 @@ const DashboardPage = () => {
   // Функция для получения цвета банка
   const getBankColor = (bankName) => {
     switch (bankName) {
-      case 'ABank':
+      case 'Альфа-Банк':
         return 'bg-red-600';
-      case 'VBank':
+      case 'ВТБ':
         return 'bg-blue-600';
-      case 'SBank':
+      case 'Сбербанк':
         return 'bg-green-500';
       default:
         return 'bg-gray-500';
@@ -435,7 +434,7 @@ const DashboardPage = () => {
   }, []);
 
   // Состояние реальных банков/балансов (из API)
-  const [availableBanks, setAvailableBanks] = useState([]);   // ['vbank', 'abank', ...] — с API
+  const [availableBanks, setAvailableBanks] = useState(LOCAL_BANKS);   // ['vbank', 'abank', ...] — с API
   const [isLoadingBanks, setIsLoadingBanks] = useState(true);
   const [balanceFetchError, setBalanceFetchError] = useState(null);
   const [isCardsLoading, setIsCardsLoading] = useState(false); // Начинаем с false, так как карты не блокируют загрузку
@@ -453,9 +452,9 @@ const DashboardPage = () => {
 
     // 🎨 Цвета и человекочитаемые имена для всех банков
   const allBanksMap = {
-    vbank:  { name: 'VBank',        color: 'bg-blue-500'  },
-    abank:  { name: 'ABank',        color: 'bg-red-500'   },
-    sbank:  { name: 'SBank',        color: 'bg-green-500' },
+    vbank:  { name: 'ВТБ',          color: 'bg-blue-500'  },
+    abank:  { name: 'Альфа-Банк',   color: 'bg-red-500'   },
+    sbank:  { name: 'Сбербанк',     color: 'bg-green-500' },
     gazprombank: { name: 'Газпромбанк', color: 'bg-orange-500' },
     raiffeisen: { name: 'Райффайзенбанк', color: 'bg-purple-500' },
     rosbank: { name: 'Росбанк', color: 'bg-indigo-500' }
@@ -513,15 +512,16 @@ const DashboardPage = () => {
         const banks = res.data?.banks || res.data || [];
         const names = banks.map(bank => bank.id || bank); // Извлекаем id банков
         
-        setAvailableBanks(names);
+        setAvailableBanks(names.length > 0 ? names : LOCAL_BANKS);
 
         // сразу подтянем балансы и пробросим в глобальный стор
-        await hydrateBalances(names);
+        await hydrateBalances(names.length > 0 ? names : LOCAL_BANKS);
       } catch (err) {
         if (cancelled) return;
         console.error('❌ Ошибка загрузки списка банков:', err);
-        setBalanceFetchError('Не удалось получить список банков.');
-        setAvailableBanks([]); // пустой список
+        setBalanceFetchError(null);
+        setAvailableBanks(LOCAL_BANKS);
+        await hydrateBalances(LOCAL_BANKS);
       } finally {
         if (!cancelled) setIsLoadingBanks(false);
       }
@@ -536,17 +536,31 @@ const DashboardPage = () => {
   // Подтянуть балансы и положить в store
   // =========================
   const hydrateBalances = async (bankList) => {
-    if (!Array.isArray(bankList) || bankList.length === 0) return;
+    if (!Array.isArray(bankList) || bankList.length === 0) {
+      console.warn('⚠️ [hydrateBalances] bankList пустой или не массив:', bankList);
+      return;
+    }
 
     const { setAllBalances } = useBalanceStore.getState();
+    console.log('🔍 [hydrateBalances] Начинаю загрузку балансов для банков:', bankList);
+    console.log('🔍 [hydrateBalances] API_BASE:', API_BASE);
+    console.log('🔍 [hydrateBalances] CLIENT_ID_ID:', CLIENT_ID_ID);
 
     try {
-      const requests = bankList.map((bank) =>
-        axios
-          .get(`${API_BASE}/api/available_balance/${bank}/${CLIENT_ID_ID}`)
-          .then((r) => ({ bank, ok: true, data: r.data }))
-          .catch((e) => ({ bank, ok: false, error: e }))
-      );
+      const requests = bankList.map((bank) => {
+        const url = `${API_BASE}/api/available_balance/${bank}/${CLIENT_ID_ID}`;
+        console.log(`🔍 [hydrateBalances] Запрос баланса для ${bank}:`, url);
+        return axios
+          .get(url)
+          .then((r) => {
+            console.log(`✅ [hydrateBalances] Баланс ${bank} получен:`, r.data);
+            return { bank, ok: true, data: r.data };
+          })
+          .catch((e) => {
+            console.error(`❌ [hydrateBalances] Ошибка для ${bank}:`, e?.message || e);
+            return { bank, ok: false, error: e };
+          });
+      });
 
       const results = await Promise.all(requests);
       const balances = {};
@@ -557,15 +571,20 @@ const DashboardPage = () => {
           balances[bank] = 0;
           return;
         }
-        const numeric = parseAmount(data?.balance ?? data);
+        // Обрабатываем разные форматы ответа API
+        const balanceValue = data?.balance ?? data?.data?.balance ?? data;
+        const numeric = parseAmount(balanceValue);
+        console.log(`✅ Баланс ${bank}:`, balanceValue, '->', numeric);
         balances[bank] = numeric;
       });
 
+      console.log('💰 [hydrateBalances] Итоговые балансы:', balances);
       // ✅ Устанавливаем всё одним вызовом
       setAllBalances(balances);
+      console.log('✅ [hydrateBalances] Балансы установлены в store');
     } catch (e) {
       console.error('❌ Ошибка при сборе балансов:', e);
-      setBalanceFetchError('Не удалось получить балансы банков.');
+      setBalanceFetchError(null);
     }
   };
 
@@ -722,10 +741,6 @@ const DashboardPage = () => {
           {/* показываем лоадер, если банки ещё грузятся */}
           {isLoadingBanks ? 'Загрузка…' : totalBudget}
         </div>
-        {/* Ошибку покажем строкой ниже, если была */}
-        {!isLoadingBanks && balanceFetchError && (
-          <div className="text-red-500 text-xs mt-1">{balanceFetchError}</div>
-        )}
       </div>
 
       {/* Bank Cards Stack */}
@@ -854,264 +869,34 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Insurance Section */}
-      <PremiumBlock featureName="Агрегация страховок">
-      <div className="relative z-10 px-5 py-2 ">
-        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#10B981' }}>
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
-                  Страхование
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/insurance-details')}
-                className="text-white text-opacity-80 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
-              Управляйте всеми страховыми полисами в одном месте
-            </div>
-            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
-          </div>
-
-          {/* Insurance List */}
-          <div className="space-y-3 px-4 pb-4 pt-0">
-            {[
-              {
-                id: 'osago-1',
-                type: 'OSAGO',
-                company: 'Ингосстрах',
-                policyNumber: 'ОСА-1234567890',
-                expiryDate: '2026-06-15',
-                insuredAmount: 500000,
-                nextPaymentDate: '2025-06-15',
-                monthlyPayment: 4500
-              },
-              {
-                id: 'dms-1',
-                type: 'DMS',
-                company: 'ВСК',
-                policyNumber: 'ДМС-9876543210',
-                expiryDate: '2025-12-31',
-                insuredAmount: 300000,
-                remainingVisits: 3,
-                monthlyPayment: 3500
-              }
-            ].map((policy) => (
-              <div 
-                key={policy.id} 
-                className="bg-white rounded-2xl p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => navigate(`/insurance-details/${policy.id}`, { state: { policy } })}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-100">
-                      {policy.type === 'OSAGO' || policy.type === 'CASCO' ? (
-                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                        {policy.type === 'OSAGO' ? 'ОСАГО' : policy.type === 'DMS' ? 'ДМС' : policy.type}
-                      </div>
-                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                        {policy.company} • {policy.policyNumber}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                      {policy.monthlyPayment?.toLocaleString('ru-RU')} ₽
-                    </div>
-                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                      Ежемесячно
-                    </div>
-                  </div>
-                </div>
-                  
-                <div className="flex items-center justify-between">
-                  <div className="text-gray-600 font-ibm text-sm">
-                    {policy.nextPaymentDate ? `Следующий платёж: ${formatDate(policy.nextPaymentDate)}` : `Действует до: ${formatDate(policy.expiryDate)}`}
-                  </div>
-                  <div className="px-3 py-1 rounded-lg font-ibm text-sm font-medium bg-green-100 text-green-700">
-                    Активен
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => navigate('/insurance-casco')}
-              className="w-full bg-white rounded-2xl p-4 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
-            >
-              <span className="text-gray-700 font-ibm text-sm font-medium">Оформить КАСКО</span>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
-        </div>
-      </div>
-      </PremiumBlock>
-
-      {/* Analytics Section */}
-      <div className="relative z-10 px-5 py-2 ">
-        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#F59E0C' }}>
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
-                  Аналитика
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/analytics')}
-                className="text-white text-opacity-80 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
-              Отслеживайте доходы и расходы по всем банкам
-            </div>
-            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
-          </div>
-
-          {/* Analytics Data */}
-          <div className="space-y-3 px-4 pb-4 pt-0">
-            {analyticsData.isLoading ? (
-              <div className="bg-white rounded-2xl p-4 border border-gray-200 text-center">
-                <div className="text-gray-500 font-ibm text-sm">Загрузка данных...</div>
-              </div>
-            ) : (
-              <>
-                <div className="bg-white rounded-2xl p-4 border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-green-100">
-                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M7 14l5-5 5 5z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                          Доходы
-                        </div>
-                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                          {currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                        {analyticsData.income.toLocaleString('ru-RU')} ₽
-                      </div>
-                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                        {incomeChange}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="h-2 bg-green-500 rounded-full" 
-                      style={{ 
-                        width: `${Math.min((analyticsData.income / Math.max(analyticsData.income + analyticsData.expenses, 1)) * 100, 100)}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-4 border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-red-100">
-                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M7 10l5 5 5-5z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="text-black font-ibm text-base font-medium leading-[110%]">
-                          Расходы
-                        </div>
-                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                          {currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-black font-ibm text-lg font-medium leading-[110%]">
-                        {analyticsData.expenses.toLocaleString('ru-RU')} ₽
-                      </div>
-                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                        {expensesChange}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="h-2 bg-red-500 rounded-full" 
-                      style={{ 
-                        width: `${Math.min((analyticsData.expenses / Math.max(analyticsData.income + analyticsData.expenses, 1)) * 100, 100)}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Deposits Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#EC4899' }}>
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden bg-gray-100">
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                <div className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
                   Вклады
                 </div>
               </div>
               <button
                 onClick={() => navigate('/deposits')}
-                className="text-white text-opacity-80 hover:text-white transition-colors"
+                className="text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
-            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+            <div className="text-gray-600 font-ibm text-sm font-normal leading-[110%] mb-4">
               Накопительные счета и депозиты
             </div>
-            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+            <div className="mt-4 mb-0 h-px w-full bg-gray-200"></div>
           </div>
 
           {/* Deposits List */}
@@ -1155,33 +940,33 @@ const DashboardPage = () => {
                   ? (agreementData?.status || deposit.status || 'active')
                   : deposit.status;
                 
-                return (
+              return (
                   <div key={depositId || index} className="bg-white rounded-2xl p-4 border border-gray-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div>
-                          <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <div className="text-black font-ibm text-base font-medium leading-[110%]">
                             {depositName}
-                          </div>
-                          <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                        </div>
+                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
                             Ставка {depositRate}% годовых
-                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                    </div>
+                    <div className="text-right">
+                      <div className="text-black font-ibm text-lg font-medium leading-[110%]">
                           {typeof depositAmount === 'number' 
                             ? depositAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : parseFloat(depositAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           } ₽
-                        </div>
-                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      </div>
+                      <div className="text-gray-600 font-ibm text-sm leading-[110%]">
                           {depositStatus === 'active' ? 'Активен' : 'Неактивен'}
-                        </div>
                       </div>
                     </div>
                   </div>
-                );
+                </div>
+              );
               })
             )}
           </div>
@@ -1190,38 +975,38 @@ const DashboardPage = () => {
 
       {/* Credits Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#EF4444' }}>
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden bg-gray-100">
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                <div className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
                   Кредиты
                 </div>
               </div>
               <button
                 onClick={() => navigate('/credits')}
-                className="text-white text-opacity-80 hover:text-white transition-colors"
+                className="text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
-            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+            <div className="text-gray-600 font-ibm text-sm font-normal leading-[110%] mb-4">
               Управляйте кредитами и отслеживайте погашение
             </div>
-            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+            <div className="mt-4 mb-0 h-px w-full bg-gray-200"></div>
           </div>
 
           {/* Credits Data */}
           <div className="space-y-3 px-4 pb-4 pt-0">
             {isLoadingProducts ? (
-              <div className="text-center py-4 text-white font-ibm text-sm">
+              <div className="text-center py-4 text-gray-500 font-ibm text-sm">
                 Загрузка кредитов...
               </div>
             ) : !apiLoans || apiLoans.length === 0 ? (
@@ -1256,43 +1041,43 @@ const DashboardPage = () => {
                   : 0;
                 
                 // Цвет банка
-                const bankColor = loan.bank === 'vbank' ? '#0055BC' : loan.bank === 'abank' ? '#EF3124' : loan.bank === 'sbank' ? '#00A859' : '#6366F1';
+                const bankColor = '#6B7280';
                 
                 return (
                   <div key={loan.agreement_id || index} className="bg-white rounded-2xl p-4 border border-gray-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
                         <div 
                           className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                           style={{ backgroundColor: `${bankColor}20` }}
                         >
                           <svg className="w-5 h-5" style={{ color: bankColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="text-black font-ibm text-base font-medium leading-[110%]">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-black font-ibm text-base font-medium leading-[110%]">
                             {loanName}
-                          </div>
-                          <div className="text-gray-600 font-ibm text-sm leading-[110%]">
-                            Осталось до погашения
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-black font-ibm text-lg font-medium leading-[110%]">
+                    </div>
+                    <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                      Осталось до погашения
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-black font-ibm text-lg font-medium leading-[110%]">
                           {typeof outstandingAmount === 'number' 
                             ? outstandingAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             : parseFloat(outstandingAmount || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           } ₽
-                        </div>
-                        <div className="text-gray-600 font-ibm text-sm leading-[110%]">
+                  </div>
+                  <div className="text-gray-600 font-ibm text-sm leading-[110%]">
                           {loanStatus === 'active' ? 'Активен' : 'Неактивен'}
-                        </div>
-                      </div>
-                    </div>
+                  </div>
+                </div>
+              </div>
                     {loanAmount > 0 && (
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className="h-2 rounded-full" 
                           style={{ 
@@ -1300,9 +1085,9 @@ const DashboardPage = () => {
                             backgroundColor: bankColor
                           }}
                         ></div>
-                      </div>
+              </div>
                     )}
-                  </div>
+            </div>
                 );
               })
             )}
@@ -1312,30 +1097,30 @@ const DashboardPage = () => {
 
       {/* Autopays Section */}
       <div className="relative z-10 px-5 py-2 ">
-        <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#844FD9' }}>
+        <div className="rounded-[27px] border border-gray-200 overflow-hidden bg-gray-100">
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center">
-                <div className="w-10 h-10 bg-white bg-opacity-30 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
                 </div>
-                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                <div className="text-gray-900 font-ibm text-lg font-medium leading-[110%]">
                   Автоплатежи
                 </div>
               </div>
             </div>
-            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+            <div className="text-gray-600 font-ibm text-sm font-normal leading-[110%] mb-4">
               Настройте автоматические платежи для регулярных трат
             </div>
             <button
               onClick={handleAddAutopay}
-              className="bg-white text-[#844FD9] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+              className="bg-gray-800 text-white font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-700 transition-colors"
             >
               Создать автоплатеж
             </button>
-            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+            <div className="mt-4 mb-0 h-px w-full bg-gray-200"></div>
           </div>
 
           {/* Autopay List */}
@@ -1348,8 +1133,8 @@ const DashboardPage = () => {
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getBankColor(autopay.card)}`}>
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-200">
+                      <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                     </div>
@@ -1404,27 +1189,6 @@ const DashboardPage = () => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* Digital Ruble Section */}
-      <div className="relative z-10 px-5 py-2 ">
-        <div className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 text-left">
-              <div className="text-black font-ibm font-medium text-sm leading-[110%] mb-1">
-                Цифровой рубль
-              </div>
-              <div className="text-gray-500 font-ibm font-normal text-xs leading-[110%]">
-                В разработке
-              </div>
-            </div>
-            <div className="text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
           </div>
         </div>
       </div>
@@ -1660,9 +1424,9 @@ const DashboardPage = () => {
                     }}
                   >
                     <option value="" className="bg-white py-2">Выберите карту</option>
-                    <option value="VBank" className="bg-white py-2">VBank</option>
-                    <option value="ABank" className="bg-white py-2">ABank</option>
-                    <option value="SBank" className="bg-white py-2">SBank</option>
+                    <option value="ВТБ" className="bg-white py-2">ВТБ</option>
+                    <option value="Альфа-Банк" className="bg-white py-2">Альфа-Банк</option>
+                    <option value="Сбербанк" className="bg-white py-2">Сбербанк</option>
                   </select>
                 </div>
               </div>

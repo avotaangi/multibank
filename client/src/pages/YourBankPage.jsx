@@ -191,8 +191,8 @@ const YourBankPage = () => {
     <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
-        <div className="flex items-center justify-center">
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+        <div className="flex items-center justify-start">
+          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             VBank
           </div>
         </div>
@@ -508,4 +508,3 @@ const YourBankPage = () => {
 };
 
 export default YourBankPage;
-

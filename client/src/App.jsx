@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import useAuthStore from './stores/authStore'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { getTelegramWebApp } from './utils/telegram'
 import { useTelegramButtons } from './hooks/useTelegramButtons'
 import { useScrollToTop } from './hooks/useScrollToTop'
@@ -8,7 +8,6 @@ import { useScrollToTop } from './hooks/useScrollToTop'
 // Components
 import Layout from './components/Layout'
 import LoadingSpinner from './components/LoadingSpinner'
-import PasswordAuth from './components/PasswordAuth'
 
 // Pages
 import LoginPage from './pages/LoginPage'
@@ -38,7 +37,6 @@ import AutopayDetailsPage from './pages/AutopayDetailsPage'
 import VBankPlusPage from './pages/VBankPlusPage'
 import VBankPlusDetailsPage from './pages/VBankPlusDetailsPage'
 import PasswordPage from './pages/PasswordPage'
-import YourBankPage from './pages/YourBankPage'
 
 // Component to scroll to top on route change
 function ScrollToTop() {
@@ -81,7 +79,6 @@ function App() {
   const shouldShowPasswordAuth = !isAuthenticated && !isLoading
   const location = useLocation()
   const isPasswordPage = location.pathname === '/password'
-  const isYourBankPage = location.pathname === '/your-bank'
   const isVBankPlusPage = location.pathname.startsWith('/vbank-plus')
 
   if (isLoading) {
@@ -95,9 +92,9 @@ function App() {
     )
   }
 
-  // Показываем страницу "Ваш банк" только если не аутентифицирован и не на других страницах
+  // Неаутентифицированный пользователь сразу попадает на экран ввода кода.
   if (shouldShowPasswordAuth && !isPasswordPage && !isVBankPlusPage) {
-    return <YourBankPage />
+    return <Navigate to="/password" replace />
   }
 
   return (
@@ -112,7 +109,7 @@ function App() {
         <Route path="/vbank-plus" element={<VBankPlusPage />} />
         <Route path="/vbank-plus/details" element={<VBankPlusDetailsPage />} />
         <Route path="/password" element={<PasswordPage />} />
-        <Route path="/your-bank" element={<YourBankPage />} />
+        <Route path="/your-bank" element={<Navigate to="/password" replace />} />
         
         {/* Protected routes - temporarily disabled for testing */}
             <Route 

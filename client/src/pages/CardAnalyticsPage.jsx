@@ -115,6 +115,7 @@ const CardAnalyticsPage = () => {
     if (cardId === 'vbank') return 0; // Синяя карта - первая
     if (cardId === 'abank') return 1;  // Красная карта - вторая  
     if (cardId === 'sbank') return 2; // Зеленая карта - третья
+    if (cardId === 'tbank') return 3; // Желтая карта - четвертая
     return 0; // По умолчанию
   });
   const [isDragging, setIsDragging] = useState(false);
@@ -205,10 +206,10 @@ const CardAnalyticsPage = () => {
   const cardsBase = useMemo(() => [
     {
       id: 'vbank',
-      name: 'VBank',
+      name: 'ВТБ',
       balance: getFormattedBalance('vbank'),
       color: '#0055BC',
-      logo: 'VBank',
+      logo: 'ВТБ',
       cardNumber: '5294 **** **** 2498',
       operations: [
         { name: 'Surf Coffee', category: 'Кофейня', amount: '- 650 ₽', icon: '☕', iconColor: 'bg-blue-100', textColor: 'text-blue-600' },
@@ -229,13 +230,13 @@ const CardAnalyticsPage = () => {
     },
     {
       id: 'abank',
-      name: 'ABank',
+      name: 'Альфа-Банк',
       balance: getFormattedBalance('abank'),
       color: '#EF3124',
-      logo: 'ABank',
+      logo: 'Альфа',
       cardNumber: '3568 **** **** 8362',
       operations: [
-        { name: 'Перевод', category: 'Переводы', amount: '- 150 ₽', icon: 'VBank', iconColor: 'bg-blue-100', textColor: 'text-blue-600' },
+        { name: 'Перевод', category: 'Переводы', amount: '- 150 ₽', icon: 'ВТБ', iconColor: 'bg-blue-100', textColor: 'text-blue-600' },
         { name: 'Яндекс.Такси', category: 'Такси', amount: '- 578 ₽', icon: 'YT', iconColor: 'bg-yellow-100', textColor: 'text-yellow-600' },
         { name: 'Самокат', category: 'Продукты', amount: '- 1 150 ₽', icon: 'S', iconColor: 'bg-pink-100', textColor: 'text-pink-600' }
       ],
@@ -253,10 +254,10 @@ const CardAnalyticsPage = () => {
     },
     {
       id: 'sbank',
-      name: 'SBank',
+      name: 'Сбербанк',
       balance: getFormattedBalance('sbank'),
       color: '#00A859',
-      logo: 'SBank',
+      logo: 'Сбер',
       cardNumber: '6352 **** **** 3923',
       operations: [
         { name: 'Магнит', category: 'Продукты', amount: '- 78 ₽', icon: 'M', iconColor: 'bg-red-100', textColor: 'text-red-600' },
@@ -272,6 +273,30 @@ const CardAnalyticsPage = () => {
           { name: 'Кафе', amount: '5 200 ₽', percentage: 18 },
           { name: 'Услуги', amount: '4 800 ₽', percentage: 17 },
           { name: 'Остальное', amount: '9 840 ₽', percentage: 35 }
+        ]
+      }
+    },
+    {
+      id: 'tbank',
+      name: 'Т-Банк',
+      balance: '64 900,00 ₽',
+      color: '#F2C94C',
+      logo: 'Т-Банк',
+      cardNumber: '4377 **** **** 1104',
+      operations: [
+        { name: 'Яндекс Go', category: 'Такси', amount: '- 890 ₽', icon: 'YG', iconColor: 'bg-yellow-100', textColor: 'text-yellow-700' },
+        { name: 'Золотое яблоко', category: 'Покупки', amount: '- 3 450 ₽', icon: 'ЗЯ', iconColor: 'bg-amber-100', textColor: 'text-amber-700' },
+        { name: 'Ozon', category: 'Маркетплейс', amount: '- 1 780 ₽', icon: 'OZ', iconColor: 'bg-blue-100', textColor: 'text-blue-600' }
+      ],
+      analytics: {
+        income: '82 300 ₽',
+        expenses: '41 120 ₽',
+        transactions: 31,
+        categories: [
+          { name: 'Маркетплейсы', amount: '12 400 ₽', percentage: 30 },
+          { name: 'Такси', amount: '6 100 ₽', percentage: 15 },
+          { name: 'Кафе', amount: '7 620 ₽', percentage: 19 },
+          { name: 'Остальное', amount: '14 000 ₽', percentage: 36 }
         ]
       }
     }
@@ -314,7 +339,7 @@ const CardAnalyticsPage = () => {
     ['cards', currentBank, CLIENT_ID_ID],
     () => cardManagementAPI.getCards(currentBank, CLIENT_ID_ID),
     {
-      enabled: !!CLIENT_ID_ID && !!currentBank,
+      enabled: !!CLIENT_ID_ID && !!currentBank && currentBank !== 'tbank',
       refetchOnWindowFocus: false,
       retry: 1,
       staleTime: 5 * 60 * 1000
@@ -333,7 +358,7 @@ const CardAnalyticsPage = () => {
     ['accounts', currentBank, CLIENT_ID_ID],
     () => accountAPI.getBankingAccounts({ bank: currentBank, client_id: `team096-${CLIENT_ID_ID}` }),
     {
-      enabled: !!CLIENT_ID_ID && !!currentBank,
+      enabled: !!CLIENT_ID_ID && !!currentBank && currentBank !== 'tbank',
       refetchOnWindowFocus: false,
       retry: 1,
       staleTime: 5 * 60 * 1000
@@ -471,21 +496,26 @@ const CardAnalyticsPage = () => {
   }, [firstCard, accountsData]);
 
   // Load transactions for account
-  const { data: transactionsData, isLoading: isLoadingTransactions, error: transactionsError } = useQuery(
+  const { data: transactionsData, isLoading: isLoadingTransactions } = useQuery(
     ['transactions', accountId, currentBank, CLIENT_ID_ID],
-    () => {
-      console.log('🔍 [CardAnalyticsPage] Запрос транзакций:', {
-        accountId,
-        currentBank,
-        CLIENT_ID_ID,
-        client_id: `team096-${CLIENT_ID_ID}`
-      });
-      return transactionAPI.getAccountTransactions(accountId, {
-        bank: currentBank,
-        client_id: `team096-${CLIENT_ID_ID}`,
-        limit: 20,
-        page: 1
-      });
+    async () => {
+      try {
+        console.log('🔍 [CardAnalyticsPage] Запрос транзакций:', {
+          accountId,
+          currentBank,
+          CLIENT_ID_ID,
+          client_id: `team096-${CLIENT_ID_ID}`
+        });
+        return await transactionAPI.getAccountTransactions(accountId, {
+          bank: currentBank,
+          client_id: `team096-${CLIENT_ID_ID}`,
+          limit: 20,
+          page: 1
+        });
+      } catch (error) {
+        console.error('❌ [CardAnalyticsPage] Ошибка получения транзакций:', error);
+        return { data: { transactions: [], transaction: [] } };
+      }
     },
     {
       enabled: !!accountId && !!CLIENT_ID_ID && !!currentBank,
@@ -494,9 +524,6 @@ const CardAnalyticsPage = () => {
       staleTime: 2 * 60 * 1000,
       onSuccess: (data) => {
         console.log('✅ [CardAnalyticsPage] Транзакции получены:', data);
-      },
-      onError: (error) => {
-        console.error('❌ [CardAnalyticsPage] Ошибка получения транзакций:', error);
       }
     }
   );
@@ -812,7 +839,7 @@ const CardAnalyticsPage = () => {
         {/* Header */}
         <div className="px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
-            <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+            <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
               {currentCard?.name || 'Аналитика карт'}
             </div>
             <button
@@ -970,8 +997,8 @@ const CardAnalyticsPage = () => {
                     CLIENT_ID_ID
                   );
                   
-                  // Создаем Blob из ответа с типом, который не будет открываться автоматически
-                  const blob = new Blob([response.data], { type: 'application/octet-stream' });
+                  // Создаем Blob из ответа
+                  const blob = new Blob([response.data], { type: 'text/plain;charset=utf-8' });
                   const url = URL.createObjectURL(blob);
                   
                   // Получаем имя файла из заголовков или генерируем
@@ -990,43 +1017,20 @@ const CardAnalyticsPage = () => {
                     }
                   }
                   
-                  // Функция для скачивания файла (без открытия)
+                  // Функция для скачивания файла
                   const downloadFile = (fileUrl, fileFileName) => {
-                    // Создаем временную ссылку для скачивания
                     const link = document.createElement('a');
                     link.href = fileUrl;
                     link.download = fileFileName;
                     link.style.display = 'none';
-                    // Критически важно: не используем target, чтобы файл не открылся
-                    // Убираем любые атрибуты, которые могут вызвать открытие
-                    
-                    // Добавляем обработчик, который предотвратит переход по ссылке
-                    const handleClick = (e) => {
-                      // Если браузер все равно пытается открыть, предотвращаем это
-                      if (e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }
-                    };
-                    
-                    link.addEventListener('click', handleClick, true);
                     document.body.appendChild(link);
                     
-                    // Используем MouseEvent для более надежного скачивания
-                    const clickEvent = new MouseEvent('click', {
-                      view: window,
-                      bubbles: true,
-                      cancelable: true,
-                      buttons: 1
-                    });
-                    
                     setTimeout(() => {
-                      link.dispatchEvent(clickEvent);
+                      link.click();
                       setTimeout(() => {
-                        link.removeEventListener('click', handleClick, true);
                         document.body.removeChild(link);
                         URL.revokeObjectURL(fileUrl);
-                      }, 200);
+                      }, 100);
                     }, 0);
                   };
                   
@@ -1041,7 +1045,7 @@ const CardAnalyticsPage = () => {
                   // Для iOS (включая Telegram на iOS) - приоритет Web Share API
                   if (isIOS && navigator.share) {
                     try {
-                      const file = new File([blob], fileName, { type: 'application/octet-stream' });
+                      const file = new File([blob], fileName, { type: 'text/plain;charset=utf-8' });
                       
                       // Проверяем поддержку sharing файлов (iOS 13+)
                       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1062,21 +1066,60 @@ const CardAnalyticsPage = () => {
                   
                   // Для Telegram Web App (все платформы)
                   if (isTelegramWebApp) {
-                    // Используем только blob URL для скачивания (без открытия)
-                    downloadFile(url, fileName);
+                    // Создаем прямой URL к API endpoint
+                    const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+                    const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
+                    const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
+                    
+                    // Пробуем прямой URL - Telegram может обработать скачивание
+                    const directLink = document.createElement('a');
+                    directLink.href = directUrl;
+                    directLink.download = fileName;
+                    directLink.target = '_blank';
+                    directLink.style.display = 'none';
+                    document.body.appendChild(directLink);
+                    directLink.click();
+                    setTimeout(() => {
+                      document.body.removeChild(directLink);
+                    }, 100);
+                    
+                    // Fallback через blob для надежности (особенно важно для Android в Telegram)
+                    setTimeout(() => {
+                      downloadFile(url, fileName);
+                    }, 300);
                   } 
                   // Для Android (не в Telegram)
                   else if (isAndroid) {
                     // Для Android используем blob download (работает в большинстве случаев)
-                    downloadFile(url, fileName);
-                  } 
+                        downloadFile(url, fileName);
+                      }
                   // Для ПК и других платформ
                   else {
-                    downloadFile(url, fileName);
+                      downloadFile(url, fileName);
                   }
                 } catch (error) {
                   console.error('Ошибка при скачивании выписки:', error);
+                  
+                  // Fallback: пробуем открыть прямой URL к API
+                  try {
+                    const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+                    const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
+                    const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
+                    
+                    const link = document.createElement('a');
+                    link.href = directUrl;
+                    link.download = `Выписка_${currentBank}_${new Date().toISOString().split('T')[0]}.txt`;
+                    link.target = '_blank';
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                      document.body.removeChild(link);
+                    }, 100);
+                  } catch (fallbackError) {
+                    console.error('Ошибка при fallback скачивании:', fallbackError);
                   alert('Не удалось скачать выписку. Попробуйте позже.');
+                  }
                 }
               }}
               className="flex items-center space-x-2 px-4 py-2 text-white rounded-[27px] hover:opacity-90 transition-opacity font-ibm text-sm font-medium"
@@ -1439,18 +1482,6 @@ const CardAnalyticsPage = () => {
             <div className="text-center py-8">
               <LoadingSpinner />
               <div className="text-gray-500 font-ibm text-sm mt-4">Загрузка транзакций...</div>
-            </div>
-          ) : transactionsError ? (
-            <div className="text-center py-8">
-              <div className="text-red-500 font-ibm text-lg mb-2">Ошибка загрузки транзакций</div>
-              <div className="text-gray-500 font-ibm text-sm">
-                {transactionsError?.response?.data?.detail || transactionsError?.message || 'Неизвестная ошибка'}
-              </div>
-              {!accountId && (
-                <div className="text-gray-400 font-ibm text-xs mt-2">
-                  Не удалось определить accountId для счета
-                </div>
-              )}
             </div>
           ) : transactions.length > 0 ? (
             transactions.map((transaction, index) => {

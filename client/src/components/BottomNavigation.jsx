@@ -9,7 +9,7 @@ const BottomNavigation = () => {
     { path: '/transfer-by-account', label: 'Платежи' },
     { path: '/my-cards', label: 'Мультибанк' },
     { path: '/analytics', label: 'Аналитика' },
-    { path: '/budget-planning', label: 'Цели' },
+    { path: '/budget-planning', label: 'Планы' },
   ]
 
   // Агрессивная функция прокрутки наверх

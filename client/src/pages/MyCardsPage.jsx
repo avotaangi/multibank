@@ -11,7 +11,7 @@ import useAuthStore from "../stores/authStore";
 import LoadingOverlay from "../components/LoadingOverlay";
 
 // Создаем axios instance с правильным baseURL
-const apiBase = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000'
 const apiClient = axios.create({
   baseURL: apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`,
   timeout: 10000,
@@ -20,8 +20,22 @@ const apiClient = axios.create({
   },
 })
 
-// 🔗 Укажи публичный адрес своего FastAPI (через cloudflared/ngrok)
-const API_BASE = import.meta.env.VITE_API_BASE; // 🔗 твой FastAPI endpoint
+const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+const LOCAL_BANKS = ['vbank', 'abank', 'sbank'];
+const LOCAL_BALANCES = {
+  vbank: 185430.55,
+  abank: 92340.10,
+  sbank: 148220.87,
+};
+const TBANK_CARD = {
+  id: 'tbank',
+  name: 'Т-Банк',
+  balance: '64 900,00 ₽',
+  color: '#F2C94C',
+  logo: 'Т-Банк',
+  cardNumber: '4377 **** **** 1104',
+  cardholderName: 'Клиент',
+};
 
 const MyCardsPage = () => {
   const navigate = useNavigate();
@@ -36,8 +50,8 @@ const MyCardsPage = () => {
   const CLIENT_ID_ID = normalizeId(getClientIdId());
 
   const [showInfoPanel, setShowInfoPanel] = useState(false);
-  const [banks, setBanks] = useState([]);
-  const [balances, setBalances] = useState({});
+  const [banks, setBanks] = useState(LOCAL_BANKS);
+  const [balances, setBalances] = useState(LOCAL_BALANCES);
   const [loading, setLoading] = useState(true);
   const isMountedRef = useRef(true);
   const banksRef = useRef([]);
@@ -72,7 +86,14 @@ const MyCardsPage = () => {
           });
         }
       } catch (err) {
-        // Игнорируем ошибки, чтобы не вызывать обновления состояния
+        if (!cancelled && isMountedRef.current) {
+          requestAnimationFrame(() => {
+            if (isMountedRef.current && !cancelled) {
+              banksRef.current = LOCAL_BANKS;
+              setBanks(LOCAL_BANKS);
+            }
+          });
+        }
       }
     };
     
@@ -123,7 +144,7 @@ const MyCardsPage = () => {
             }
           } catch (err) {
             if (!cancelled && isMountedRef.current) {
-              results[bank] = 0;
+              results[bank] = LOCAL_BALANCES[bank] ?? 0;
             }
           }
         }
@@ -141,6 +162,7 @@ const MyCardsPage = () => {
         if (!cancelled && isMountedRef.current) {
           requestAnimationFrame(() => {
             if (isMountedRef.current && !cancelled) {
+              setBalances(LOCAL_BALANCES);
               setLoading(false);
             }
           });
@@ -340,7 +362,14 @@ const MyCardsPage = () => {
 
       return {
         id: bank,
-        name: bank.toUpperCase(),
+        name:
+          bank === 'vbank'
+            ? 'ВТБ'
+            : bank === 'abank'
+            ? 'Альфа-Банк'
+            : bank === 'sbank'
+            ? 'Сбербанк'
+            : bank.toUpperCase(),
         balance: formatBalance(balances[bank]),
         color:
           bank === "vbank"
@@ -352,17 +381,28 @@ const MyCardsPage = () => {
             : "#333333",
         logo:
           bank === "vbank"
-            ? "VBank"
+            ? "ВТБ"
             : bank === "abank"
-            ? "ABank"
+            ? "Альфа"
             : bank === "sbank"
-            ? "SBank"
+            ? "Сбер"
             : bank.toUpperCase(),
         cardNumber: realCardNumber || "**** **** **** 3923",
         cardholderName: telegramUser.displayName || "Клиент",
       };
     });
   }, [banks, balances, vbankCards, abankCards, sbankCards, telegramUser.displayName]);
+
+  const visibleCards = useMemo(
+    () => [
+      ...cards,
+      {
+        ...TBANK_CARD,
+        cardholderName: telegramUser.displayName || 'Клиент',
+      },
+    ],
+    [cards, telegramUser.displayName]
+  );
 
   const handleCardClick = (card) => {
     navigate(`/card-analytics/${card.id}`);
@@ -388,10 +428,13 @@ const MyCardsPage = () => {
 
       {/* Cards */}
       <div className="px-5 py-2 space-y-4">
-        {cards.map((card) => (
+        {visibleCards.map((card) => (
           <div
             key={card.id}
-            onClick={() => handleCardClick(card)}
+            onClick={() => {
+              if (card.id === 'tbank') return;
+              handleCardClick(card);
+            }}
             className="relative w-full h-[189px] rounded-[27px] cursor-pointer transition-all hover:scale-105"
             style={{
               backgroundColor: card.color,
@@ -400,12 +443,12 @@ const MyCardsPage = () => {
           >
             <div className="p-6 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <div className="text-white text-2xl font-bold">{card.logo}</div>
-                <div className="text-white text-lg font-normal font-ibm">{card.balance}</div>
+                <div className={`text-2xl font-bold ${card.id === 'tbank' ? 'text-black' : 'text-white'}`}>{card.logo}</div>
+                <div className={`text-lg font-normal font-ibm ${card.id === 'tbank' ? 'text-black' : 'text-white'}`}>{card.balance}</div>
               </div>
               <div>
-                <div className="text-white text-sm mb-1">{card.cardholderName}</div>
-                <div className="text-white text-sm">{card.cardNumber}</div>
+                <div className={`text-sm mb-1 ${card.id === 'tbank' ? 'text-black' : 'text-white'}`}>{card.cardholderName}</div>
+                <div className={`text-sm ${card.id === 'tbank' ? 'text-black' : 'text-white'}`}>{card.cardNumber}</div>
               </div>
             </div>
           </div>
@@ -425,5 +468,3 @@ const MyCardsPage = () => {
 };
 
 export default MyCardsPage;
-
-

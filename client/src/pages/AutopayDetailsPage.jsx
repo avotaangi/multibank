@@ -7,6 +7,7 @@ import InfoPanel from '../components/InfoPanel';
 import { usePageInfo } from '../hooks/usePageInfo';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import axios from 'axios';
+import useAuthStore from '../stores/authStore';
 
 const AutopayDetailsPage = () => {
   const navigate = useNavigate();
@@ -31,8 +32,9 @@ const AutopayDetailsPage = () => {
   const [cardsWithBalances, setCardsWithBalances] = useState([]);
   const [loadingCards, setLoadingCards] = useState(true);
 
-  const API_BASE = import.meta.env.VITE_API_BASE;
-  const CLIENT_ID_ID = import.meta.env.VITE_CLIENT_ID_ID;
+  const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+  const getClientIdId = useAuthStore((state) => state.getClientIdId);
+  const CLIENT_ID_ID = getClientIdId() === 0 ? 1 : getClientIdId();
 
   useScrollToTop();
 
@@ -221,7 +223,7 @@ const AutopayDetailsPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left ml-2">
             Детали автоплатежа
           </div>
           <div className="flex items-center space-x-2">
@@ -607,5 +609,3 @@ const AutopayDetailsPage = () => {
 };
 
 export default AutopayDetailsPage;
-
-

@@ -36,7 +36,7 @@ const BudgetPlanningPage = () => {
   };
   const CLIENT_ID_ID = normalizeId(getClientIdId());
   
-  const API_BASE = import.meta.env.VITE_API_BASE;
+  const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
   
   // Загружаем список подключенных банков из API
   useEffect(() => {
@@ -1010,8 +1010,8 @@ const BudgetPlanningPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
-            Планирование бюджета
+          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
+            Накопительный счет
           </div>
           <button
             onClick={() => setShowInfoPanel(true)}
@@ -1025,7 +1025,7 @@ const BudgetPlanningPage = () => {
       <PremiumBlock featureName="Планирование бюджета, используя накопительный счет (планируйте с выгодой)">
       {/* Main Content */}
       <div className="px-0">
-        {/* Virtual Card VBank - Накопительный счет */}
+        {/* Savings Account Card */}
         <div className="px-4 mb-4">
           <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#0055BC' }}>
             <div className="p-4" style={{ backgroundColor: '#0055BC' }}>
@@ -1037,8 +1037,7 @@ const BudgetPlanningPage = () => {
                     </svg>
                   </div>
                   <div>
-                    <div className="text-white font-ibm text-lg font-medium leading-[110%]">VBank</div>
-                    <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%]">Накопительный счет</div>
+                    <div className="text-white font-ibm text-lg font-medium leading-[110%]">Накопительный счет</div>
                   </div>
                 </div>
                 <div className="text-right">

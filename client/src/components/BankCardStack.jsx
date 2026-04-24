@@ -302,15 +302,15 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
   const baseCardsData = [
     {
       id: 'vbank',
-      name: 'VBank',
+      name: 'ВТБ',
       balance: (() => {
         const balance = getFormattedBalance('vbank');
         console.log('🔄 BankCardStack - VBank баланс:', balance);
         return balance;
       })(),
       color: '#0055BC',
-      logo: 'VBank',
-      cardNumber: '3568 **** **** 8362',
+      logo: 'ВТБ',
+      cardNumber: '5294 **** **** 2498',
       analytics: {
         income: '45 230 ₽',
         expenses: '12 450 ₽',
@@ -325,15 +325,15 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
     },
     {
       id: 'abank',
-      name: 'ABank',
+      name: 'Альфа-Банк',
       balance: (() => {
         const balance = getFormattedBalance('abank');
         console.log('🔄 BankCardStack - ABank баланс:', balance);
         return balance;
       })(),
       color: '#EF3124',
-      logo: 'ABank',
-      cardNumber: '5294 **** **** 2498',
+      logo: 'Альфа',
+      cardNumber: '3568 **** **** 8362',
       cardholderName: 'София Львова',
       analytics: {
         income: '125 600 ₽',
@@ -349,14 +349,14 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
     },
     {
       id: 'sbank',
-      name: 'SBank',
+      name: 'Сбербанк',
       balance: (() => {
         const balance = getFormattedBalance('sbank');
         console.log('🔄 BankCardStack - SBank баланс:', balance);
         return balance;
       })(),
       color: '#00A859',
-      logo: 'SBank',
+      logo: 'Сбер',
       cardNumber: '6352 **** **** 3923',
       analytics: {
         income: '67 890 ₽',
@@ -443,21 +443,21 @@ const BankCardStack = ({ onLoadingChange, availableBanks = [] }) => {
           if (cardsList.length === 0) {
             console.log(`⚠️ [BankCardStack] Список карт пустой для ${card.id}, используем дефолтный номер`);
           } else {
-            const firstCard = cardsList[0];
-            if (firstCard) {
-              console.log(`🔍 [BankCardStack] Первая карта для ${card.id}:`, firstCard);
-              // Используем cardNumber из API (уже маскированный)
-              const cardNumber = firstCard.cardNumberFull || firstCard.cardNumber;
-              console.log(`🔍 [BankCardStack] cardNumber из firstCard для ${card.id}:`, cardNumber);
-              if (cardNumber) {
-                // Если номер уже маскирован (содержит *), используем как есть
-                realCardNumber = cardNumber.includes('*') ? cardNumber : formatCardNumber(cardNumber);
-                console.log(`✅ [BankCardStack] Номер из списка для ${card.id}:`, realCardNumber);
-              } else {
-                console.warn(`⚠️ [BankCardStack] cardNumber не найден в firstCard для ${card.id}`);
-              }
+          const firstCard = cardsList[0];
+          if (firstCard) {
+            console.log(`🔍 [BankCardStack] Первая карта для ${card.id}:`, firstCard);
+            // Используем cardNumber из API (уже маскированный)
+            const cardNumber = firstCard.cardNumberFull || firstCard.cardNumber;
+            console.log(`🔍 [BankCardStack] cardNumber из firstCard для ${card.id}:`, cardNumber);
+            if (cardNumber) {
+              // Если номер уже маскирован (содержит *), используем как есть
+              realCardNumber = cardNumber.includes('*') ? cardNumber : formatCardNumber(cardNumber);
+              console.log(`✅ [BankCardStack] Номер из списка для ${card.id}:`, realCardNumber);
             } else {
-              console.warn(`⚠️ [BankCardStack] firstCard не найден для ${card.id}, cardsList.length:`, cardsList.length);
+              console.warn(`⚠️ [BankCardStack] cardNumber не найден в firstCard для ${card.id}`);
+            }
+          } else {
+            console.warn(`⚠️ [BankCardStack] firstCard не найден для ${card.id}, cardsList.length:`, cardsList.length);
             }
           }
         }

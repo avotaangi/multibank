@@ -49,8 +49,7 @@ const InsuranceCascoPage = () => {
       <div className="min-h-screen bg-white overflow-x-hidden pb-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="bg-white px-5 pt-6 pb-4">
           <div className="flex items-center justify-between">
-            <div className="w-10"></div>
-            <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+            <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
               Заявка принята
             </div>
             <div className="w-10"></div>
@@ -85,8 +84,7 @@ const InsuranceCascoPage = () => {
       {/* Header */}
       <div className="bg-white px-5 pt-6 pb-4">
         <div className="flex items-center justify-between">
-          <div className="w-10"></div>
-          <div className="text-black font-ibm text-2xl font-medium leading-[110%] text-center">
+          <div className="flex-1 text-black font-ibm text-2xl font-medium leading-[110%] text-left">
             Оформление КАСКО
           </div>
           <button
@@ -315,4 +313,3 @@ const InsuranceCascoPage = () => {
 };
 
 export default InsuranceCascoPage;
-
