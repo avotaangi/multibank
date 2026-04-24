@@ -45,7 +45,7 @@ const BudgetPlanningPage = () => {
   useEffect(() => {
     const fetchConnectedBanks = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/${CLIENT_ID_ID}/bank_names`);
+        const res = await axios.get(`${API_BASE}/api/${CLIENT_ID_ID}/bank_names`);
         setConnectedBanks(res.data || []);
         console.log('✅ Подключенные банки:', res.data);
       } catch (err) {
@@ -575,7 +575,7 @@ const BudgetPlanningPage = () => {
     
     // Переводим средства с выбранной карты на виртуальную карту через API
     try {
-      await axios.post(`${API_BASE}/payments/make_transfer/`, {
+      await axios.post(`${API_BASE}/api/payments/make_transfer/`, {
         user_id_id: CLIENT_ID_ID,
         to_user_id_id: CLIENT_ID_ID,
         from_bank: selectedCard.id === 1 ? 'vbank' : selectedCard.id === 2 ? 'abank' : 'sbank',
@@ -690,7 +690,7 @@ const BudgetPlanningPage = () => {
         setSelectedCardInfo((prev) => prev ? { ...prev, balance: Math.max(0, (prev.balance || 0) - amount) } : prev);
       } else {
         // Переводим средства через API
-        await axios.post(`${API_BASE}/payments/make_transfer/`, {
+        await axios.post(`${API_BASE}/api/payments/make_transfer/`, {
           user_id_id: CLIENT_ID_ID,
           to_user_id_id: CLIENT_ID_ID,
           from_bank: selectedSourceCard,

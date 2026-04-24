@@ -44,7 +44,7 @@ const AutopayDetailsPage = () => {
   useEffect(() => {
     const fetchConnectedBanks = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/${CLIENT_ID_ID}/bank_names`);
+        const res = await axios.get(`${API_BASE}/api/${CLIENT_ID_ID}/bank_names`);
         setConnectedBanks(res.data || []);
         console.log('✅ Подключенные банки:', res.data);
       } catch (err) {
@@ -79,7 +79,7 @@ const AutopayDetailsPage = () => {
         const cardsWithBal = await Promise.all(
           connectedCards.map(async (card) => {
             try {
-              const res = await axios.get(`${API_BASE}/available_balance/${card.id}/${CLIENT_ID_ID}`);
+              const res = await axios.get(`${API_BASE}/api/available_balance/${card.id}/${CLIENT_ID_ID}`);
               const balance = parseFloat(res.data?.balance || 0);
               return { ...card, balance };
             } catch (err) {
