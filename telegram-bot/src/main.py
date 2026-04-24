@@ -2,6 +2,7 @@ import os
 import asyncio
 import aiohttp
 from aiogram import Bot, Dispatcher, types, F
+from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -650,7 +651,10 @@ async def set_bot_commands():
         types.BotCommand(command="help", description="Помощь"),
         types.BotCommand(command="webapp", description="Открыть веб-приложение")
     ]
-    await bot.set_my_commands(commands)
+    try:
+        await bot.set_my_commands(commands, request_timeout=60)
+    except TelegramNetworkError as exc:
+        print(f"⚠️ Could not set bot commands: {exc}")
 
 # Обработка ошибок
 @dp.errors()
@@ -662,16 +666,20 @@ async def error_handler(update: types.Update, exception: Exception):
 # Главная функция
 async def main():
     """Главная функция запуска бота"""
-    # Устанавливаем команды
-    await set_bot_commands()
-    
-    print("🤖 MultiBank Telegram Bot started")
-    print(f"📱 Bot username: {os.getenv('TELEGRAM_BOT_USERNAME', 'Not set')}")
-    print(f"🌐 WebApp URL: {WEBAPP_URL}")
-    print(f"🔗 API URL: {API_URL}")
-    
-    # Запускаем бота
-    await dp.start_polling(bot)
+    while True:
+        try:
+            await set_bot_commands()
+
+            print("🤖 MultiBank Telegram Bot started")
+            print(f"📱 Bot username: {os.getenv('TELEGRAM_BOT_USERNAME', 'Not set')}")
+            print(f"🌐 WebApp URL: {WEBAPP_URL}")
+            print(f"🔗 API URL: {API_URL}")
+
+            await dp.start_polling(bot)
+            break
+        except TelegramNetworkError as exc:
+            print(f"⚠️ Telegram network error, retrying in 10s: {exc}")
+            await asyncio.sleep(10)
 
 if __name__ == "__main__":
     try:
@@ -680,4 +688,3 @@ if __name__ == "__main__":
         print("Bot stopped")
     finally:
         asyncio.run(bot.session.close())
-
