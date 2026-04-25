@@ -108,7 +108,7 @@ const PasswordPage = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Welcome Banner */}
-      <div className="px-4 mb-4">
+      <div className="px-5 pt-6 pb-4">
         <div className="rounded-[27px] border border-gray-200 overflow-hidden" style={{ backgroundColor: '#3C82F6' }}>
           <div className="p-4" style={{ backgroundColor: '#3C82F6' }}>
             <div className="text-center">

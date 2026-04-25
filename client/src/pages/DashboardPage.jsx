@@ -691,8 +691,8 @@ const DashboardPage = () => {
       style={styles.container}
     >
       {/* Top Header with Profile */}
-      <div className="relative z-10 bg-gray-100 px-5 pt-6 pb-4 rounded-[40px] ">
-        <div className="flex items-center justify-between">
+      <div className="relative z-10 bg-gray-100 px-5 pt-6 pb-4 rounded-[40px] min-h-[98px] flex items-center">
+        <div className="flex items-center justify-between w-full">
           <div
             className="flex items-center space-x-4 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => navigate('/rewards')}
