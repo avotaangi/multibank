@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Create axios instance
 // Всегда работаем с локальным backend-контуром.
-const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000'
+const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001'
 // Убеждаемся, что baseURL заканчивается на /api для всех запросов
 const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
 const api = axios.create({

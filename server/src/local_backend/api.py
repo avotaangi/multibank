@@ -197,9 +197,9 @@ def seed_state() -> Dict[str, Any]:
         },
         "token": "local-dev-token",
         "banks": {
-            "vbank": {"id": "vbank", "name": "ВТБ", "url": "http://localhost:8000/local/vbank"},
-            "abank": {"id": "abank", "name": "Альфа-Банк", "url": "http://localhost:8000/local/abank"},
-            "sbank": {"id": "sbank", "name": "Сбербанк", "url": "http://localhost:8000/local/sbank"},
+            "vbank": {"id": "vbank", "name": "ВТБ", "url": "http://localhost:8001/local/vbank"},
+            "abank": {"id": "abank", "name": "Альфа-Банк", "url": "http://localhost:8001/local/abank"},
+            "sbank": {"id": "sbank", "name": "Сбербанк", "url": "http://localhost:8001/local/sbank"},
         },
         "connected_banks": ["vbank", "abank", "sbank"],
         "balances": {

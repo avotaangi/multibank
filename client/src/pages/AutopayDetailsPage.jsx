@@ -34,7 +34,7 @@ const AutopayDetailsPage = () => {
   const [cardsWithBalances, setCardsWithBalances] = useState([]);
   const [loadingCards, setLoadingCards] = useState(true);
 
-  const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+  const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001';
   const getClientIdId = useAuthStore((state) => state.getClientIdId);
   const CLIENT_ID_ID = getClientIdId() === 0 ? 1 : getClientIdId();
 

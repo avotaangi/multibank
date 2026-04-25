@@ -184,7 +184,7 @@ const AnalyticsPage = () => {
       { type: 'samokat', amount: 1150 },
       { type: 'yandex_plus', amount: 399 },
       { type: 'okko', amount: 199 },
-      { type: 'vbank_plus', amount: 299 },
+      { type: 'vbank_plus', amount: 199 },
       { type: 'static_transfer', amount: 1500 }
     ];
     
@@ -773,7 +773,7 @@ const AnalyticsPage = () => {
               </div>
               <div className="text-gray-500 font-ibm text-xs font-normal leading-[110%]">Подписки</div>
             </div>
-            <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 299 ₽</div>
+            <div className="text-black font-ibm text-sm min-[360px]:text-base min-[375px]:text-lg font-medium leading-[110%]">- 199 ₽</div>
           </div>
           )}
         </div>

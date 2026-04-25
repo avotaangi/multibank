@@ -1067,7 +1067,7 @@ const CardAnalyticsPage = () => {
                   // Для Telegram Web App (все платформы)
                   if (isTelegramWebApp) {
                     // Создаем прямой URL к API endpoint
-                    const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+                    const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001';
                     const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
                     const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
                     
@@ -1102,7 +1102,7 @@ const CardAnalyticsPage = () => {
                   
                   // Fallback: пробуем открыть прямой URL к API
                   try {
-                    const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+                    const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001';
                     const baseURL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
                     const directUrl = `${baseURL}/cards/${cardIdForAPI}/statement?bank=${currentBank}&client_id=team096-${CLIENT_ID_ID}&_t=${Date.now()}`;
                     

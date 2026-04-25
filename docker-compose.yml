@@ -35,7 +35,7 @@ services:
       BASE_URL: ${BASE_URL:-open.bankingapi.ru}
       CLIENT_ID_ID: ${CLIENT_ID_ID:-1}
     ports:
-      - "8000:8000"
+      - "8001:8000"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -56,9 +56,9 @@ services:
       context: ./client
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_BASE:-http://localhost:8000}
-        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
-        VITE_LOCAL_API_BASE: ${VITE_LOCAL_API_BASE:-http://localhost:8000}
+        VITE_API_URL: ${VITE_API_BASE:-http://localhost:8001}
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8001}
+        VITE_LOCAL_API_BASE: ${VITE_LOCAL_API_BASE:-http://localhost:8001}
         VITE_CLIENT_ID_ID: ${CLIENT_ID_ID:-1}
         VITE_TELEGRAM_BOT_USERNAME: ${VITE_TELEGRAM_BOT_USERNAME:-multibank_bot}
         VITE_TELEGRAM_WEBAPP_URL: ${VITE_TELEGRAM_WEBAPP_URL:-http://localhost:5173}

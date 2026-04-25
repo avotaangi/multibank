@@ -39,7 +39,7 @@ const BudgetPlanningPage = () => {
   };
   const CLIENT_ID_ID = normalizeId(getClientIdId());
   
-  const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+  const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001';
   
   // Загружаем список подключенных банков из API
   useEffect(() => {
@@ -1134,29 +1134,31 @@ const BudgetPlanningPage = () => {
         </div>
 
         {/* My Planning Categories Container */}
-        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#3C82F6' }}>
-          <div className="p-4" style={{ backgroundColor: '#3C82F6' }}>
+        <div className="rounded-[27px] border-2 mb-4 overflow-hidden bg-white" style={{ borderColor: '#3C82F6' }}>
+          <div className="p-4 bg-white">
             <div className="flex items-center mb-3">
-              <div className="text-white font-ibm text-lg font-medium leading-[110%]">Мои категории планирования</div>
+              <div className="font-ibm text-lg font-medium leading-[110%]" style={{ color: '#3C82F6' }}>Мои категории планирования</div>
             </div>
-            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+            <div className="font-ibm text-sm font-normal leading-[110%] mb-4" style={{ color: '#3C82F6' }}>
               Добавляйте категории и распределяйте бюджет по направлениям
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleAddPlan}
-                className="bg-white text-[#3C82F6] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+                className="bg-white border font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-blue-50 transition-colors"
+                style={{ color: '#3C82F6', borderColor: '#3C82F6' }}
               >
                 Добавить план
               </button>
               <button
                 onClick={handleAddCategory}
-                className="bg-white text-[#3C82F6] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+                className="bg-white border font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-blue-50 transition-colors"
+                style={{ color: '#3C82F6', borderColor: '#3C82F6' }}
               >
                 Добавить категорию
               </button>
             </div>
-            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+            <div className="mt-4 mb-0 h-px w-full" style={{ backgroundColor: '#BFDBFE' }}></div>
           </div>
           <div className="px-4 pb-4 pt-0">
 
@@ -1425,21 +1427,22 @@ const BudgetPlanningPage = () => {
 
 
         {/* My Goals Container */}
-        <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#EF4444' }}>
-          <div className="p-4" style={{ backgroundColor: '#EF4444' }}>
+        <div className="rounded-[27px] border-2 mb-4 overflow-hidden bg-white" style={{ borderColor: '#EF4444' }}>
+          <div className="p-4 bg-white">
             <div className="flex items-center mb-3">
-              <div className="text-white font-ibm text-lg font-medium leading-[110%]">Мои цели</div>
+              <div className="font-ibm text-lg font-medium leading-[110%]" style={{ color: '#EF4444' }}>Мои цели</div>
             </div>
-            <div className="text-white text-opacity-80 font-ibm text-sm font-normal leading-[110%] mb-4">
+            <div className="font-ibm text-sm font-normal leading-[110%] mb-4" style={{ color: '#EF4444' }}>
               Создавайте финансовые цели и отслеживайте прогресс накоплений
             </div>
             <button
               onClick={handleAddGoal}
-              className="bg-white text-[#EF4444] font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+              className="bg-white border font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-red-50 transition-colors"
+              style={{ color: '#EF4444', borderColor: '#EF4444' }}
             >
               Создать цель
             </button>
-            <div className="mt-4 mb-0 h-px w-full bg-white bg-opacity-30"></div>
+            <div className="mt-4 mb-0 h-px w-full" style={{ backgroundColor: '#FECACA' }}></div>
           </div>
           <div className="px-4 pb-4 pt-0">
             <div className="bg-white rounded-[27px] p-4">
@@ -1497,24 +1500,25 @@ const BudgetPlanningPage = () => {
       </div>
 
       {/* Joint Goals Container */}
-      <div className="rounded-[27px] border border-gray-200 mb-4 overflow-hidden" style={{ backgroundColor: '#F59E0C' }}>
+      <div className="rounded-[27px] border-2 mb-4 overflow-hidden bg-white" style={{ borderColor: '#F59E0C' }}>
         {/* Header removed per request */}
 
         {/* New Joint Goal Section */}
-        <div className="p-4 border-t border-white/20">
+        <div className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="flex items-center mb-3">
-                <div className="text-white font-ibm text-lg font-medium leading-[110%]">
+                <div className="font-ibm text-lg font-medium leading-[110%]" style={{ color: '#F59E0C' }}>
                   Совместные цели
                 </div>
               </div>
-              <div className="text-white/90 font-ibm text-sm font-normal leading-[110%] mb-4">
+              <div className="font-ibm text-sm font-normal leading-[110%] mb-4" style={{ color: '#F59E0C' }}>
                 Настройте новую цель с указанием суммы, срока и участников
               </div>
               <button 
                 onClick={handleAddJointGoal}
-                className="bg-white text-orange-600 font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/90 transition-colors"
+                className="bg-white border text-orange-600 font-ibm text-sm font-medium px-4 py-2 rounded-xl hover:bg-orange-50 transition-colors"
+                style={{ borderColor: '#F59E0C' }}
               >
                 Создать цель
               </button>
@@ -1523,7 +1527,7 @@ const BudgetPlanningPage = () => {
         </div>
 
         {/* Joint Goals List */}
-        <div className="space-y-3 p-4 border-t border-white/20">
+        <div className="space-y-3 p-4 border-t" style={{ borderColor: '#FDE68A' }}>
           {jointGoals.map((goal) => (
             <div key={goal.id} className="bg-white rounded-2xl p-4 border border-gray-200">
               <div className="flex items-center justify-between mb-3">

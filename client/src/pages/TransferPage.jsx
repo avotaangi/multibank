@@ -14,7 +14,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getTelegramWebApp } from '../utils/telegram';
 import { transferAi } from '../data/aiAssistantContent';
 
-const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001';
 
 const TransferPage = () => {
   const pageInfo = usePageInfo();

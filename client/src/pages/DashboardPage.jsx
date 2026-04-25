@@ -26,7 +26,7 @@ import { dashboardCreditsAi, dashboardDepositsAi, dashboardOverviewAi } from '..
 // =========================
 // ENV / API
 // =========================
-const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001';
 const LOCAL_BANKS = ['vbank', 'abank', 'sbank'];
 
 // =========================

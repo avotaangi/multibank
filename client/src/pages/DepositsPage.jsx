@@ -13,7 +13,7 @@ import { productsAPI } from '../services/api';
 import useAuthStore from '../stores/authStore';
 import { depositsAi } from '../data/aiAssistantContent';
 
-const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001';
 const CLIENT_ID_ID = import.meta.env.VITE_CLIENT_ID_ID;
 
 const DepositsPage = () => {

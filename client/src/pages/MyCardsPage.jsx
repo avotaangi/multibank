@@ -13,7 +13,7 @@ import LoadingOverlay from "../components/LoadingOverlay";
 import { cardsAi } from "../data/aiAssistantContent";
 
 // Создаем axios instance с правильным baseURL
-const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000'
+const apiBase = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001'
 const apiClient = axios.create({
   baseURL: apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`,
   timeout: 10000,
@@ -22,7 +22,7 @@ const apiClient = axios.create({
   },
 })
 
-const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_LOCAL_API_BASE || 'http://localhost:8001';
 const LOCAL_BANKS = ['vbank', 'abank', 'sbank'];
 const LOCAL_BALANCES = {
   vbank: 185430.55,
